@@ -1,0 +1,567 @@
+<?php
+function menteesearch_menu() {
+	$items['mentee/search'] = array(
+    'title' => t('Search mentee'),
+  	'description' => t('Search Mentee'),
+  	'page callback' => 'menteesearch_page',
+  	'access callback' => TRUE,
+  );
+  
+  return $items;
+}
+
+/*function menteesearch_page() {
+	return drupal_get_form('menteesearch_form');
+}*/
+
+function menteesearch_page() {
+	
+	$build = array();
+
+  
+  	//$build['form_one'] = drupal_get_form('menteesearch_keyword_form');
+  	$build['form_two'] = drupal_get_form('menteesearch_form');
+
+  	return $build;
+	 
+}
+
+function menteesearch_keyword_form($form, &$form_state) {
+  
+  $form['keywordsearch'] = array(
+	    '#type'   => 'container',    
+	    '#weight' => -10,
+	    '#theme' => 'menteesearch_keywordtheme_form',	    
+  	);
+  	
+  $form['keywordsearch']['keyword'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Keyword',
+    '#maxlength' => 255,
+    '#required' => TRUE,
+  );
+  $form['keywordsearch']['submit'] = array(
+	'#type' => 'submit',
+	'#value' => 'Go',
+  	);
+  	
+  $form['#attached']['css'] = array(
+    drupal_get_path('module', 'menteesearch') . '/menteesearch.css',
+  );
+  return $form;
+}
+
+function menteesearch_theme() {
+
+  return array(
+    'menteesearch_keywordtheme_form' => array(
+      'render element' => 'form'
+    ),
+    'menteesearch_filtertheme_form' => array(
+      'render element' => 'form'
+    ),
+  	'multicolumn_options' => array(
+  				'arguments' => array('element' => NULL),
+  				'file' => 'mentorsearch.module',
+  				'path' => drupal_get_path('module','mentorsearch'),
+  	),
+  );
+}
+
+function theme_menteesearch_keywordtheme_form($variables) {
+	$output='';
+	$submit_rendered = '';
+	$form = $variables['form'];
+	$keyword_comp = '';
+    foreach ($form as $key => $element) {
+    	$allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+    	if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+    		if($element['#type'] == 'submit') {
+      			$submit_rendered = drupal_render($element);
+      			$submit_rendered = '<span style="padding-left:40px;">'.$submit_rendered.'</span>';
+      		}
+      		if($key == 'keyword') {
+      			$keyword_comp = drupal_render($element);
+      		}
+    	}
+    }
+    $keyword_block = '<div style="width: 100%; overflow: hidden;">';
+    
+    //$keyword_block .= '<div style="float: left; padding-top:5px;"><b>Keyword:&nbsp;</b></div>';
+    $keyword_block .= '<div style="float: left; padding-top:5px;padding-left: 13px;"><label for="edit-keyword">Keyword<span class="form-required" title="This field is required.">*</span></label></div>';
+    //$keyword_block .= '<div style="float: left;">' . $keyword_comp . '</div></div>';
+    
+    $keyword_block .= '<div style="float: left;">: &nbsp;<input type="text" id="edit-keyword" name="keyword" value="" size="60" maxlength="255" class="form-text required error" />'.$submit_rendered.'</div></div>';
+    //$keyword_block .= '&nbsp;'. $keyword_comp . '</div></div>';
+    $output = '<div style="border: 1px solid #c0c0c0;"><div style = "padding-top: 10px; padding-bottom: 10px; padding-left: 5px; font-size: 14px;"><b>Keyword Search</b></div>'.$keyword_block.'</div>';
+    $output .= '<div style="padding-top:25px;"></div>'; 
+    return $output;
+}
+
+function theme_menteesearch_filtertheme_form($variables) {
+	$output='';
+	$submit_rendered = '';
+	$form = $variables['form'];
+	$name_component = '<div class="menteesearch-form-heading1">';
+	$region_component = '<div class="menteesearch-form-heading1">';
+	//$school_component = '<div style="width: 100%; overflow: hidden; padding-top: 35px; padding-left: 13px;">';
+	$areamentoring_component = '<div class="menteesearch-form-heading1">';
+	$spec_component = '<div class="menteesearch-form-heading1">';
+	foreach ($form as $key => $element) {
+    	$allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+    	if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+    	if($element['#type'] == 'submit' && $key == 'submit') {
+      			$submit_rendered = drupal_render($element);
+      			$submit_rendered = '<div style="  padding: 1% 45%;">'.$submit_rendered.'</div>'; 
+      		}
+      		if($element['#type'] == 'submit' && $key == 'filtersubmit') {
+      			$submit_rendered1 = drupal_render($element);
+      			$submit_rendered1 = '<div style="text-align:center; padding: 0.5%;">'.$submit_rendered1.'</div>'; 
+      		}
+      		if($key == 'firstname') {
+      			$name_component .= '<div class="menteesearch-form-element-div2 container-inline" >';
+      			$name_component .= 		'<div class="menteesearch-form-element-div2">&nbsp;';
+      			$name_component .= 			drupal_render($element);
+      			$name_component .= 		'</div>';
+      			$name_component .= '</div>';
+      		}
+      		if($key == 'lastname') {
+      			$name_component .= '<div class="menteesearch-form-element-div2 container-inline">';
+      			$name_component .= '<div class="menteesearch-form-element-div2">&nbsp;';
+      			$name_component .= drupal_render($element);
+      			$name_component .= '</div>';
+      			$name_component .= '</div>';
+      		}
+      		if($key == 'city') {
+      			$region_component .= '<div class="menteesearch-form-element-div2 container-inline">';
+      			$region_component .= '<div class="menteesearch-form-element-div2">&nbsp';
+      			$region_component .= drupal_render($element);
+      			$region_component .= '</div>';
+      			$region_component .= '</div>'; 	
+      		}
+      		if($key == 'state') {
+      			$region_component .= '<div class="menteesearch-form-element-div2 container-inline">';
+      			$region_component .= '<div class="menteesearch-form-element-div2">&nbsp;';
+      			$region_component .= drupal_render($element);
+      			$region_component .= '</div>';
+      			$region_component .= '</div>'; 	
+      		}
+      		if($key == 'school') {
+      			$region_component .= '<div class="menteesearch-form-element-div2 container-inline" style="padding-right: 2%;">';
+      			$region_component .= '<div class="menteesearch-form-element-div2">&nbsp;';
+      			$region_component .= drupal_render($element);
+      			$region_component .= '</div>';
+      			$region_component .= '</div>';
+      		}
+    		if($key == 'areaofmentoring') {
+      			$areamentoring_component .= '<div class="menteesearch-form-element-div2 menteesearch-form-element-div3 container-inline">';
+      			$areamentoring_component .= '<div class="menteesearch-form-element-div4">';
+      			$areamentoring_component .= '<label for="areaofmentoring">Area Need Mentoring In:</label>';
+      			$areamentoring_component .= '</div>';
+      			$areamentoring_component .= '<div id= "aomoverflowdiv" class="menteesearch-form-element-div5">';
+      			$areamentoring_component .= drupal_render($element);
+      			$areamentoring_component .= '</div>';
+      			$areamentoring_component .= '<a name="aomoverflowdiv" class="show_more_results">More Filters</a>';
+      			$areamentoring_component .= '</div>';
+      		}
+      		if($key == 'fieldOfStudy') {
+      			$spec_component .= '<div class="menteesearch-form-element-div2 menteesearch-form-element-div3  container-inline">';
+      			$spec_component .= '<div class="menteesearch-form-element-div4">';
+      			$spec_component .= '<label for="fieldOfStudy">Field Of Study:</label>';
+      			$spec_component .= '</div>';
+      			$spec_component .= '<div class="menteesearch-form-element-div2">&nbsp;';
+      			$spec_component .= drupal_render($element);
+      			$spec_component .= '</div>';
+      			$spec_component .= '</div>';
+      		}
+      		if($key == 'fieldOfSpecialization') {
+      			$spec_component .= '<div id="fieldOfSpecializationCon" class="menteesearch-form-element-div3 menteesearch-form-element-div2 container-inline">';
+      			$spec_component .= '<div class="menteesearch-form-element-div4">';
+      			$spec_component .= '<label for="fieldOfSpecialization">Field Of Specialization:</label>';
+      			$spec_component .= '</div>';
+      			$spec_component .= '<div id= "fosoverflowdiv" class="menteesearch-form-element-div6">';
+      			$spec_component .= '<div class="my_checkboxes">';
+	   	 		$spec_component .= drupal_render($element);
+      			$spec_component .= '</div>';
+      			$spec_component .= '</div>';
+      			$spec_component .= '<a name="fosoverflowdiv" class="show_more_results">More Filters</a>';
+      			$spec_component .= '</div>';
+      		}
+    	}
+    }
+    $name_component .= '</div>';
+    
+    $region_component .= '</div>';
+    
+    $areamentoring_component .= '</div>';
+    
+    //$school_component .= '</div>';
+    
+    $spec_component .= '</div>';
+    
+    
+    $output .= '<div class = "menteesearch-filter-heading1">
+    		<b class="menteesearch-filter-heading2">Search</b>';
+	$output .= $name_component.$region_component;
+	$output .= $submit_rendered1.'</div>';
+
+	$output .= '<div id="advanceSearchPanel" class="button790 menteesearch-filter-heading3">
+			';
+	$output .= $areamentoring_component.$spec_component;
+	$output .= '</div>';
+	$output .= '<div><div id="filters" class="button790 menteesearch-filter-div1">
+			 <div  class="button790 filterbar-filter-button" id="showASP">
+			<img id="updownArrow" style="max-width: 10px;" src="/sites/all/modules/custom/faqs/down.png"> Advance Search: </div></div>
+			<div id="advancesearchGobutton" class="menteesearch-form-element-div2 menteesearch-form-element-div3">'.$submit_rendered.'</div>
+			</div>';
+// Drupal.behaviors.menteesearch for attaching function on every change in this module.
+	$output .= '<script type="text/javascript">
+		(function ($) {
+			$("#advancesearchGobutton").hide();
+			$("#advanceSearchPanel").hide();
+			$("#showASP").click(function(){
+				$("#advanceSearchPanel").slideToggle(300);
+				$("#advancesearchGobutton").slideToggle();
+				if($("#advancesearchGobutton").is(":hidden")){
+					$("#updownArrow").attr("src","/sites/all/modules/custom/faqs/down.png");
+				}else{
+					$("#updownArrow").attr("src","/sites/all/modules/custom/faqs/up.png");
+				}	
+			});
+			$("h1").hide();
+			$("label").hide();
+			$("#fieldOfSpecializationCon").hide();
+			if($("#edit-fieldofstudy").val() > 0)
+					$("#fieldOfSpecializationCon").show();
+			$("#edit-fieldofstudy").change(function(){
+				if($("#edit-fieldofstudy").val() > 0)
+					$("#fieldOfSpecializationCon").show();
+				else
+					$("#fieldOfSpecializationCon").hide();
+			});
+			$("label").each(function(){
+				var textLabel = $(this).text();
+				if($(this).attr("for").indexOf("areaofmentoring") > -1){
+					$(this).show();
+				}else if($(this).attr("for").indexOf("fieldOfSpecialization") > -1){
+					$(this).show();
+				}else if($(this).attr("for").indexOf("fieldofspecialization") > -1){
+					$(this).show();
+				}else if($(this).attr("for").indexOf("fieldOfStudy") > -1){
+					$(this).show();
+				}else if($(this).attr("for").indexOf("edit-m-type") > -1){
+						$(this).show();
+				}else if($(this).attr("for").indexOf("edit-degree") > -1){
+						$(this).show();
+				}
+				
+			});
+			
+			$("a.show_more_results").each(function(){
+						var name = this.name;
+						$(this).click(function(){
+								if(this.text == "More Filters"){
+									$("#"+name).css("height","auto");
+									$("#"+name).css("overflow","auto");
+									this.text = "Reduce Filters";
+								}else{
+									$("#"+name).css("height","30px");
+									$("#"+name).css("overflow","hidden");
+									this.text = "More Filters";
+								}
+							});
+			});
+			$(".form-text").each(function(){
+								var titleText = $(this).siblings("label").text();
+								if(!$(this).val()){
+									$(this).val(titleText) ;
+									$(this).css("color","#ABA6A6");
+							    }else if($(this).val() == titleText){
+									$(this).css("color","#ABA6A6");
+							    }
+								$(this).keydown(function(){
+									if(this.value == titleText) {
+							            this.value = "";
+							            $(this).css("color","black");
+									}
+							    });
+	
+							    $(this).blur(function(){
+							    	if(this.value == "") {
+							            this.value = titleText;
+							            $(this).css("color","#ABA6A6");
+									}
+							    });
+							});
+			
+		})(jQuery);
+			
+		Drupal.behaviors.menteesearch = {
+ 					 attach: function (context, settings) {
+						(function ($) {
+						$("#edit-fieldofstudy").change(function(){
+								$("input:checkbox[id^=edit-fieldofspecialization]:checked").each(function(){
+									$(this).attr("checked",false);
+									$(this).change();
+								});
+							});	
+							$(".form-checkbox").once("menteesearch").each(function(){
+								var checkBoxId = $(this).attr("id");
+								if($(this).attr("checked") == true){
+										var labelText = $(this).siblings("label").text();
+										$("#filters").append("<div id=\""+$(this).attr("id")+"_filter_div\"class=\"filterbar-filter\">"+labelText+"<span id=\""+$(this).attr("id")+"_filter_span\"class=\"filterbar-filter-span\"><img style=\"height : 15px;vertical-align: middle;\" src=\"/sites/default/files/close.png\" ></span></div>");
+										$("#"+checkBoxId+"_filter_span").click(function(){
+											$(this).parent().remove();
+											$("#"+checkBoxId).attr("checked",false);
+											});
+								}
+								$(this).change(function(){
+									if($(this).attr("checked") == true){
+									var labelText = $(this).siblings("label").text();
+									$("#filters").append("<div id=\""+$(this).attr("id")+"_filter_div\"class=\"filterbar-filter\">"+labelText+"<span id=\""+$(this).attr("id")+"_filter_span\"class=\"filterbar-filter-span\"><img style=\"height : 15px;vertical-align: middle;\" src=\"/sites/default/files/close.png\" ></span></div>");
+									$("#"+checkBoxId+"_filter_span").click(function(){
+										$(this).parent().remove();
+										$("#"+checkBoxId).attr("checked",false);
+									});
+									}else{
+										$("#"+checkBoxId+"_filter_div").remove();
+									}
+								});
+							});
+						})(jQuery);								
+   		 	 		}
+			};
+	</script>';
+	
+	return $output; 		
+}
+
+function menteesearch_form($form, &$form_state) {
+	$form['filtersearch'] = array(
+	    '#type'   => 'container',    
+	    '#weight' => -10,
+	    '#theme' => 'menteesearch_filtertheme_form',
+	    //'#attributes' => array('class' => array('container-inline')),	    
+  	);
+  	$form['filtersearch']['firstname'] = array(
+	    '#type' => 'textfield',
+	    '#title' => 'First Name',
+   		'#maxlength' => 255,
+	   '#default_value' => isset($_REQUEST['firstname']) ? (!empty($_REQUEST['firstname'])?$_REQUEST['firstname']:NULL) : NULL,
+	   // '#autocomplete_path' => 'menteefirstname/autocomplete',
+  			'#size' => '20',
+  	);
+  	$form['filtersearch']['lastname'] = array(
+	    '#title' => 'Last Name',
+   		'#type' => 'textfield',
+	    '#maxlength' => 255,
+	    '#default_value' => isset($_REQUEST['lastname']) ? (!empty($_REQUEST['lastname'])?$_REQUEST['lastname']:NULL) : NULL,
+	    //'#autocomplete_path' => 'menteelastname/autocomplete',
+  			'#size' => '20',
+  	);
+  	$form['filtersearch']['city'] = array(
+	    '#title' => 'City',
+   		'#type' => 'textfield',
+	    '#maxlength' => 255,
+	   '#default_value' => isset($_REQUEST['city']) ? (!empty($_REQUEST['city'])?$_REQUEST['city']:NULL) : NULL,
+	   // '#autocomplete_path' => 'cities/autocomplete',
+  			'#size' => '20',
+  	);
+  	$form['filtersearch']['state'] = array(
+	    '#title' => 'State',
+   		'#type' => 'textfield',
+	    '#maxlength' => 255,
+	    '#default_value' => isset($_REQUEST['state']) ? (!empty($_REQUEST['state'])?$_REQUEST['state']:NULL) : NULL,
+	   //'#autocomplete_path' => 'states/autocomplete',
+  			'#size' => '20',
+  	);
+  	$form['filtersearch']['school'] = array(
+    '#title' => 'School',
+   	'#type' => 'textfield',
+    '#maxlength' => 255,
+    '#default_value' => isset($_REQUEST['school']) ? (!empty($_REQUEST['school'])?$_REQUEST['school']:NULL) : NULL,
+	   //'#autocomplete_path' => 'menteeschool/autocomplete',
+  			'#size' => '20',
+  );
+  
+  $entries = db_query("SELECT aid, name FROM {area_mentoring}");
+
+  $options = array();
+  //$options[0] = '--- SELECT --------------';
+  foreach($entries as $record)
+  {
+    $options[$record->aid] =$record->name;
+  }
+  $aomDefaultValues;
+  $aomIndex = 0;
+  if(isset($_REQUEST['area_mentoring'])){
+  	foreach ($_REQUEST['area_mentoring'] as $key => $value){
+  		$aomDefaultValues[$aomIndex++] = $value;
+  	}
+  }
+   $form['filtersearch']['areaofmentoring'] = array(
+    '#type' => 'checkboxes',
+    '#multiple' => true,
+    '#prefix' => '<div class="my_checkboxes">',
+   	'#suffix' => '</div>',
+   	'#options' =>  $options ,
+   	'#theme' => array('multicolumn_options'),
+   	'#columns' => 2,
+   	'#default_value' => $aomDefaultValues,
+  );
+  
+  $entries = db_query("SELECT cid, name FROM {specialization_category}");
+
+  $options = array();
+  $options[0] = '--- SELECT ---';
+  foreach($entries as $record)
+  {
+    $options[$record->cid] =$record->name;
+  }
+  
+  	if(isset($_REQUEST['field_study'])){
+  		$form_state['values']['fieldOfStudy'] = $_REQUEST['field_study'];
+  	}
+  	$value_field_of_study = isset($form_state['values']['fieldOfStudy']) ? $form_state['values']['fieldOfStudy'] : key($options);
+	
+  	$field_of_specializations_value;
+	$index = 0;
+	if(isset($_REQUEST['field_spec'])){
+		foreach ($_REQUEST['field_spec'] as $key => $value){
+			$field_of_specializations_value[$index++] = $value;
+		}
+	}
+  
+  $form['filtersearch']['fieldOfStudy'] = array(
+    '#type' => 'select',
+    '#options' => $options,
+    '#ajax' => array(
+   'event' => 'change',
+        'callback' => 'menteesearch_ajax_callback',
+        'progress' => array(
+        'message' => '',
+      ),
+        'wrapper' => 'menteesearch_dropdown_specialization_replace',
+      ),
+      /*'#states' => array(
+      'visible' => array(
+        ':input[name="areaofmentoring"]' => array('value' => '1'),
+      ),
+    ),*/
+  	'#default_value' => $value_field_of_study,
+  );
+  
+  $form['filtersearch']['fieldOfSpecialization'] = array(
+    '#type' => 'checkboxes',
+    '#multiple' => true,
+    '#prefix' => '<div id="menteesearch_dropdown_specialization_replace">',
+    '#suffix' => '</div>',
+    '#options' => menteesearch_specialization_dropdown_options($value_field_of_study),
+    '#theme' => array('multicolumn_options'),
+   	'#columns' => 2,
+  	'#default_value' => $field_of_specializations_value,
+   	/*'#states' => array(
+      'visible' => array(
+        ':input[name="fieldOfStudy"]' => array(array('value' => '1'),array('value' => '2'),array('value' => '3'),array('value' => '4'),array('value' => '5'),array('value' => '6'),array('value' => '7'),array('value' => '8')),
+      ),
+    ),*/
+  );
+  
+  $form['filtersearch']['submit'] = array(
+    	'#type' => 'submit',
+    	'#value' => 'Go',
+  	);
+  $form['filtersearch']['filtersubmit'] = array(
+  		'#type' => 'submit',
+  		'#value' => 'Go',
+  );
+  	return $form;
+  
+}
+
+
+function menteesearch_ajax_callback($form, $form_state) {
+    return $form['filtersearch']['fieldOfSpecialization'];
+}
+
+function menteesearch_specialization_dropdown_options($key = '') {
+$entries = db_query("SELECT scid, name FROM {specialization_subcategory} WHERE specialization_category_id = $key");
+
+  $options = array();
+  if($key == 0) {
+  	$options[0] = '--- SELECT ------';
+  }
+  foreach($entries as $record)
+  {
+    $options[$record->scid] =$record->name;
+  }
+  return $options;
+}
+
+function menteesearch_keyword_form_submit($form, &$form_state) {
+	$form_state1['redirect'] = array(
+  		'mentee/searchResult',
+  		 array(
+    		'query' => array(
+    			'keyword' =>  $form_state['values']['keyword'],
+    		),
+    	),
+    );
+    return drupal_redirect_form($form_state1);
+}
+
+function menteesearch_form_submit($form, &$form_state) {
+	$field_study = 0;
+	$field_spec = '';
+	$area_mentoring = '';
+	$school = ($form_state['values']['school'] == "School ") ? '' : $form_state['values']['school'];
+	$city = ($form_state['values']['city']== "City ") ? '' : $form_state['values']['city'];
+	$state = ($form_state['values']['state'] == "State ") ? '' : $form_state['values']['state'];
+	$firstname = ($form_state['values']['firstname'] == "First Name ") ? '' : $form_state['values']['firstname'];
+	$lastname = ($form_state['values']['lastname'] == "Last Name ") ? '' : $form_state['values']['lastname'];	
+	
+	if($form_state['values']['fieldOfStudy'] != 0) {
+	  	$field_study = $form_state['values']['fieldOfStudy'];	
+	}
+	
+	$selected_aom = array_filter($form_state['values']['areaofmentoring']);
+	$selected_spec = array_filter($form_state['values']['fieldOfSpecialization']);
+	$selected_spec_ids = '';
+	$specialization = '';
+	$entries = '';
+	if(! empty($selected_spec)) {
+		$query = "SELECT name FROM {specialization_subcategory} WHERE scid = ";
+		$max = count($selected_spec);
+		foreach($selected_spec as $key => $value) {
+			$query .= $key;
+			if($max > 1) {
+				$query .= " or scid = ";
+				$max = $max - 1;
+			}
+		}
+		$entries = db_query($query);
+	} else {
+		$entries = db_query("SELECT name FROM {specialization_subcategory} WHERE specialization_category_id = " . $field_study);
+	}
+		
+    foreach($entries as $record) {
+		$specialization .= $record->name . ', ';
+	}
+	$specialization = substr($specialization, 0, (strlen($specialization) - 2));
+	$form_state1['redirect'] = array(
+	  'mentee/searchResult',
+	  array(
+	    'query' => array(
+	      'school' => $school,
+	      'state' => $state,
+		  'city' => $city,
+	      'field_study' => $field_study,
+	      'field_spec' => $selected_spec,
+	      'area_mentoring' => $selected_aom,
+	      'firstname' => $firstname,
+		  'lastname' => $lastname,
+	    ),
+	  ),
+	);
+	 return drupal_redirect_form($form_state1);
+}

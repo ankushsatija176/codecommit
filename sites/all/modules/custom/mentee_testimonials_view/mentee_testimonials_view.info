@@ -1,0 +1,4 @@
+name = Mentee Testimonials
+description = "Displays the mentees' testimonials"
+package = mentee_testimonials_view
+core = 7.x

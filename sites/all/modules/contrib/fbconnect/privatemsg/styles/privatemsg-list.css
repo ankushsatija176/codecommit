@@ -1,0 +1,60 @@
+.privatemsg-unread td {
+  font-weight: bold;
+}
+
+.privatemsg-unread .privatemsg-list-subject .marker {
+  font-weight: lighter;
+}
+
+.privatemsg-list-count {
+  text-align: center;
+}
+
+.privatemsg-list-subject {
+  min-width: 35%;
+}
+
+.privatemsg-list-date {
+  min-width: 20%;
+}
+
+form#privatemsg-list div.container-inline * {
+  margin: 0 2px;
+  
+}
+div.container-inline a{
+	margin: 2%;
+	color: #F90 ;
+}
+div.container-inline{
+	margin: 2%;
+}
+table.privatemsg-list th {
+	background-color: #0078e7;
+	color: white;
+}
+
+table.privatemsg-list th *{
+	color: white;
+}
+h1{
+	color: #2672AE !important;
+	border-bottom: 2px solid #00F;
+	padding: 5px 20px;
+	font-size: 25px !important;
+	font-weight: bold !important;
+}
+div[id^="edit-new"] a{
+	background-color: #0078e7;
+  color: #fff !important;
+  text-shadow: 0 -1px 0 #888 !important;
+  border: 1px solid #2F709B !important;
+    padding: 7px 12px;
+      border-radius: 4px;
+  -moz-border-radius: 4px;
+  -webkit-border-radius: 4px;
+  font-size: 11px;
+}
+div[id^="edit-new"] a:hover {
+	 box-shadow: 3px 3px 3px #2672AE;
+}

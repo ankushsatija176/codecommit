@@ -1,0 +1,336 @@
+<?php
+function menteesearchresult_menu() {
+  $items['mentee/searchResult'] = array(
+    'title' => 'Mentee',
+    'page callback' => 'menteesearchresult_page',
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+function menteesearchresult_page() {
+	$query = db_select('mentee', 'm');   
+	$query->leftjoin('user_activation', 'ua', 'ua.uid = m.mid');
+    $query->leftJoin('specialization_category', 'sc', 'sc.cid = m.fos_id');
+	$query->leftJoin('mentee_specialization', 'ms', 'ms.mentee_id = m.mid');
+    //$query->join('mentee_specialization', 'ms', 'ms.mentee_id = m.mid');
+	//$query->join('specialization_subcategory', 'ssc', 'ssc.scid = ms.spec_id');
+	//$query->join('mentee_aom', 'maom', 'maom.mentee_id = m.mid');
+	//$query->join('area_mentoring', 'aom', 'aom.aid = maom.aom_id');
+	$query->join('users', 'u', 'u.uid = m.mid');
+	if(isset($_SESSION['user']->uid)) {
+		$query->leftJoin('connections', 'c', 'c.mentee_id = m.mid AND c.mentor_id ='.$_SESSION['user']->uid);
+	}
+	
+	if(isset($_REQUEST['keyword'])) {
+		$value_keyword = $_GET['keyword'];
+		if($value_keyword == "Keyword Search")
+			$value_keyword = "";
+		$or = db_or();
+		$or->condition('m.first_name', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.last_name', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.state', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.city', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.school_name', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.college_name', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.specialization', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.area_of_mentoring', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('sc.name', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$query->condition($or);	
+							
+	} else {
+	
+		if(isset($_REQUEST['firstname'])) {
+			if(!empty($_REQUEST['firstname'])) {
+				$value_firstname = $_GET['firstname'];
+				$query->condition('m.first_name', '%' . db_like($value_firstname) . '%', 'LIKE');
+			}	
+		}
+		
+		if(isset($_REQUEST['lastname'])) {
+			if(!empty($_REQUEST['lastname'])) {
+				$value_lastname = $_GET['lastname'];
+				$query->condition('m.last_name', '%' . db_like($value_lastname) . '%', 'LIKE');
+			}	
+		}
+		
+		if(isset($_REQUEST['state'])) {
+			if(!empty($_REQUEST['state'])) {
+				$value_state = $_GET['state'];
+				$query->condition('m.state', '%' . db_like($value_state) . '%', 'LIKE');
+			}	
+		}
+		
+		if(isset($_REQUEST['city'])) {
+			if(!empty($_REQUEST['city'])) {
+				$value_city = $_GET['city'];
+				$query->condition('m.city', '%' . db_like($value_city) . '%', 'LIKE');
+			}	
+		}
+		
+		if(isset($_REQUEST['school'])) {
+			if(!empty($_REQUEST['school'])) {
+				$value_school = $_GET['school'];
+				$or1 = db_or();
+				$or1->condition('m.school_name',  '%' . db_like($value_school) . '%', 'LIKE');
+				$or1->condition('m.college_name', '%' . db_like($value_school) . '%', 'LIKE');
+				$query->condition($or1);
+			}		
+		}
+		
+		/*if(isset($_REQUEST['area_mentoring'])) {
+			if(!empty($_REQUEST['area_mentoring'])) {
+				$value_area_mentoring = $_GET['area_mentoring'];
+				$query->condition('aom.aid', $value_area_mentoring, 'IN');
+			}		
+		}
+		
+		if(isset($_REQUEST['area_mentoring'])) {
+			if(!empty($_REQUEST['area_mentoring'])) {
+				$value_area_mentoring = $_GET['area_mentoring'];
+				$max = count($value_area_mentoring);
+				$or = db_or();
+				if($max > 1) {
+					$or = db_or();
+					foreach($value_area_mentoring as $key => $value) {
+						$or->condition('maom.aom_id',  $key, '=');
+					}
+					$query->condition($or);	
+				} else {
+					$keys = array_keys($value_area_mentoring);
+					if($value_area_mentoring[$keys[0]] != 0) {
+						$query->condition('maom.aom_id',  $value_area_mentoring[$keys[0]], '=');
+					}	
+				}
+			}		
+		}*/
+		
+		if(isset($_REQUEST['area_mentoring'])) {
+			if(!empty($_REQUEST['area_mentoring'])) {
+				$value_area_mentoring = $_GET['area_mentoring'];
+				$areaofmentoring = array();
+				$query_aom = "SELECT name FROM {area_mentoring} WHERE aid = ";
+				$max = count($value_area_mentoring);
+				foreach($value_area_mentoring as $key => $value) {
+					$query_aom .= $key;
+					if($max > 1) {
+						$query_aom .= " or aid = ";
+						$max = $max - 1;  	
+					}
+				}
+				$entries = db_query($query_aom);
+				$i = 0;
+				foreach($entries as $record) {
+					$areaofmentoring[$i] = $record->name;
+					$i = $i + 1;  	
+				}
+				$max = count($areaofmentoring);
+				if($max > 1) {
+					$or = db_or();
+					for($i = 0; $i < $max; $i++) {
+						$or->condition('m.area_of_mentoring', '%' . db_like($areaofmentoring[$i]) . '%', 'LIKE');
+					}
+					$query->condition($or);		
+				} else {
+					$query->condition('m.area_of_mentoring', '%' . db_like($areaofmentoring[0]) . '%', 'LIKE');	
+				}
+				
+			}
+		}
+		
+		if(isset($_REQUEST['field_study'])) {
+			if(!empty($_REQUEST['field_study'])) {
+				$value_field_study = $_GET['field_study'];
+				//$query->condition('sc.cid', $value_field_study, '=');
+				$query->condition('m.fos_id', '%' . $value_field_study . '%', 'LIKE');	
+			}		
+		}
+		
+		if(isset($_REQUEST['field_spec'])) {
+			if(!empty($_REQUEST['field_spec'])) {
+				$value_field_spec = $_GET['field_spec'];
+				$max = count($value_field_spec);
+				$or = db_or();
+				if($max > 1) {
+					$or = db_or();
+					foreach($value_field_spec as $key => $value) {
+						$or->condition('ms.spec_id',  $key, '=');
+					}
+					$query->condition($or);	
+				} else {
+					$keys = array_keys($value_field_spec);
+					if($value_field_spec[$keys[0]] != 0) {
+						$query->condition('ms.spec_id',  $value_field_spec[$keys[0]], '=');
+					}	
+				}
+			}		
+		}
+		
+		if(isset($_REQUEST['field_of_study'])) {
+			if(!empty($_REQUEST['field_of_study']) || !empty($_GET['field_of_study'])) {
+				$value_field_study = $_GET['field_of_study'];	
+				$query->condition('specialization', '%' . $value_field_study . '%', 'LIKE');
+			}
+		}
+		/*if(isset($_REQUEST['field_spec'])) {
+			if(!empty($_REQUEST['field_spec'])) {
+				$value_field_spec = $_GET['field_spec'];				
+				$query->condition('m.specialization', '%' . $value_field_spec . '%', 'LIKE');	
+			}
+		}*/
+	}
+	
+	$query = $query->extend('PagerDefault')->limit(10); 	   
+	$query->fields('m')
+		->fields('sc', array('name'))
+		->fields('u', array('picture'));
+	if(isset($_SESSION['user']->uid)) {
+	    $query->fields('c', array('cid', 'status'));
+	}
+	$query->addField('sc', 'name', 'category_name');
+	$query->condition('ua.activated', 'Y', '=');
+	$results = $query->execute();
+	$rows = array();   
+	foreach ($results as $mentee) {
+		$connection_id = 0;
+	    $connection_status = ''; 
+	    if(isset($_SESSION['user']->uid)) {
+	    	$connection_id = $mentee->cid;
+	    	$connection_status = $mentee->status;
+	    }
+		$rows[$mentee->mid] = array(
+	    	'last_name' => ($mentee->last_name != '') ? $mentee->last_name[0].'.' : '',
+	    	'mid' => $mentee->mid,
+	    	'picture' => $mentee->picture,
+	    	'first_name' => $mentee->first_name,
+	    	'area_mentoring' => $mentee->area_of_mentoring,
+	    	'subcategory_name' => $mentee->specialization,
+	    	'state' => $mentee->state,
+	    	'city'=> $mentee->city,
+	    	'school_name' => $mentee->school_name,
+	    	'year_of_school' => $mentee->year_of_school,
+	    	'college_name' => $mentee->college_name,
+	    	'year_of_intended_transfer' => $mentee->year_of_intended_transfer,
+	    	'mentee_type' => $mentee->mentee_type,
+	    	'about_me' => $mentee->mentoring_request,
+	    	'connection_id' => $connection_id,
+	    	'connection_status' => $connection_status,
+	    );
+	}
+	$html = "";
+	if(isset($_SESSION['user']->uid)) {
+		$form = drupal_get_form('menteesearch_form');
+		$html .= drupal_render($form);
+	}
+	$html .= theme('menteesearchresult_display_list', array('rows' => $rows));
+	$html .= theme('pager',
+	            array(
+	                'tags' => array()
+	            )
+	        );
+	return ($html);	
+}
+
+function menteesearchresult_theme() {
+	return array(
+	    'menteesearchresult_display_list' => array(
+	      'variables' => array('rows' => NULL),
+	    ),
+	);
+}
+
+function theme_menteesearchresult_display_list($variables) {
+	//var_dump($_REQUEST);
+  drupal_add_css(drupal_get_path('module', 'mentoringcommon') . '/css/common.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  $output='';
+  $rows = $variables['rows'];
+  $output .= '<div class="menteesearch-results-div1">'; 
+  $temp = 0;
+  if(empty($rows)) {
+  	$output .= 'No mentees meeting the search criteria are currently available</div>';
+  	return $output;
+  }
+  foreach ($rows as $key => $element) {
+   	 $temp = $temp + 1;
+   	 $picture;
+	  if(!empty($element['picture'])) {
+	  	$picture = file_load($element['picture']);
+	  } else {
+	  	$picture = file_load(29);
+	  }
+      //$rendered = drupal_render($element);
+      $style = variable_get('user_picture_style', '');
+      $output .= '<div id="mentee-search-item' . $temp . '" onMouseOver="javascript:showButton(' . $temp . ')" onMouseOut="javascript:hideButton(' . $temp . ')" class="user-list-item menteesearch-results-div2">';
+      
+      $output .= '<div class="user-grid-pic menteesearch-results-div3">';
+      $output .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentee', 'title' => 'Mentee', 'width'=>'100%'));
+      $output .= '</div>';		
+      
+      $mentee_details = '<span><a class="mentor-name" href="/mentee/'. $element['mid'] .'/profile">' . $element['first_name'] . ' ' . $element['last_name'] . '</a></span>';
+      if($element['mentee_type'] == 'highschool'){
+		$mentee_details .= '<div class="user-list-school">'.$element['school_name']. ', class of ' .$element['year_of_school'] . '</div>';
+      }else{
+		$mentee_details .= '<div class="user-list-school">'.$element['college_name']. ', class of ' .$element['year_of_intended_transfer'] . '</div>';
+      }
+      $mentee_details .= '<div class="menteesearch-results-div4">'.$element['subcategory_name'] . '</div>';
+      /*$mentee_details .= '<div class="user-list-address">'.$element['city'] . ', '. $element['state'] . '</div>';
+      $about_me = $element['about_me'];
+      if(strlen($about_me) > 130) {
+      	$about_me = substr($about_me, 0, 125) . '...';
+      }
+      
+      if(!empty($about_me))	 {	
+      	$mentee_details .= '<div class="user-description" style="margin-left:10px; width:650px">"'.$about_me . '"</div>';
+      }*/
+      $output .= '<div class="menteesearch-results-div5 ">' . $mentee_details . '</div>';
+      if(isset($_SESSION['user']->uid)) {
+         /* if($element['connection_id'] == 0) {
+	      	$output .= '<div id="mentee-message-cover' . $temp . '" style="float:right; visibility:hidden"><a class="connect-button" href="/mentee/' . $element['mid'] . '/connect" id="editprofile" type="button">Connect</a></div>';
+		  } else {*/
+		  	if($element['connection_status'] == 'Confirmed') {
+		      $output .= '<div id="mentee-message-cover' . $temp . '" class="menteesearch-results-div6"><button class = "form-submit button small round steel_blue" onclick="location.href=\'/messages/new/' . $element['mid'] . '\'" id="editprofile" type="button">Message</button></div>';
+		    } else if ($element['connection_status'] == 'Pending' || $element['connection_status'] == 'Payment Pending') {
+		    	$output .= '<div id="mentee-message-cover' . $temp . '" class="menteesearch-results-div6 conn-req-pending" >Connection Request Pending</div>';
+		    } else {
+		    	$output .= '<div id="mentee-message-cover' . $temp . '" class="menteesearch-results-div6"><button class = "form-submit button small round steel_blue" onclick="location.href=\'/mentor/' . $element['mid'] . '/invite\'" id="editprofile" type="button">Invite</button></div>';
+		    }
+		  //}
+      }
+      $output .= '</div>';
+  }  
+
+  $output .= '</div>';
+  
+  $output .= '<script type="text/javascript">
+  				
+  				function showButton(id) {
+					document.getElementById("mentee-message-cover" + id).style.visibility = "visible";
+					document.getElementById("mentee-message-cover" + id).style.display = "inline-block";					
+  				}
+  				function hideButton(id) {
+					document.getElementById("mentee-message-cover" + id).style.visibility = "hidden";
+  				}	
+				(function ($) {
+  				$("h1").hide();
+				var itemId;
+				var mesageId;
+					for(var i=1; i<100; i++) {
+						itemId = "#mentor-search-item" + i;
+						mesageId = "#mentee-message-cover" + i;
+						$(mesageId).hide();
+						$(itemId).mouseover( function () { 
+							if($(mesageId).length)
+					        $(mesageId).show();
+							
+					    });
+					    $(itemId).mouseout( function () { 
+					        if($(mesageId).length)
+					        $(mesageId).hide();
+					    });
+					 }
+				})(jQuery);
+	
+			</script>';
+  
+  return $output;
+}

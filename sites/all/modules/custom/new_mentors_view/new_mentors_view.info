@@ -1,0 +1,4 @@
+name = New Mentors View
+description = "View for newly join mentors"
+package = new_mentors_view
+core = 7.x

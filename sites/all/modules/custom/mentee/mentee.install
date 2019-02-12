@@ -1,0 +1,173 @@
+<?php
+
+
+	/**
+	* Implements hook_schema().
+	*/
+	function mentee_schema() {
+		$schema['mentee'] = array(
+			'description' => t('Stores information about mentee'),
+			'fields' => array(
+				'mid' => array(
+					'type' => 'int',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("Primary key: A unique ID for each mentee."),
+				),
+				'first_name' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'description' => t("Each mentee has a first name."),
+				),
+				'last_name' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t("Each mentee has a last name."),
+				),
+				'birthday' => array(
+					'type' => 'int',
+					'not null' => TRUE,
+					'description' => t('The birth day of the mentee'),
+				),
+				'birthmonth' => array(
+					'type' => 'int',
+					'not null' => TRUE,
+					'description' => t('The birth month of the mentee'),
+				),
+				'birthyear' => array(
+					'type' => 'int',
+					'not null' => FALSE,
+					'description' => t('The birth year of the mentee'),
+				),
+				'gender' => array(
+					'type' => 'char',
+					'not null' => TRUE,
+					'description' => t('The gender of the mentee'),
+				),
+				'zipcode' => array(
+					'type' => 'int',
+					'not null' => TRUE,
+					'description' => t('The zipcode of the mentee'),
+				),
+				'school_name' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t('The name of the school of the mentee'),
+				),
+				'year_of_school' => array(
+					'type' => 'int',
+					'not null' => FALSE,
+					'description' => t('The year of schooling of the mentee'),
+				),
+				'mentoring_request' => array(
+					'type' => 'text',
+					'not null' => FALSE,
+					'description' => t('The mentoring request'),
+				),
+				'mentoring_request_title' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t('The title of mentoring request'),
+				),
+				'country' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t('The Country where the school is located'),
+				),
+				'state' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t('The state where the school is located'),
+				),
+				'city' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t('The city of state'),
+				),
+				'hobbies' => array(
+					'type' => 'text',
+					'size' => 'big',
+					'not null' => FALSE,
+					'description' => t('The hobbies of a mentee'),
+				),
+				'userid' => array(
+					'type' => 'int',
+					'not null' => TRUE,
+					'description' => t('The parent user id  of the mentee'),
+				),
+				'fos_id' => array(
+					'type' => 'int',
+					'not null' => TRUE,
+					'description' => t('Foriegn key to Specialization_Category'),
+				),
+				'area_of_mentoring' => array(
+					'type' => 'varchar',
+					'length' => 512,
+					'description' => t('Comma sepearted Area of mentoring values'),
+				),
+				'specialization' => array(
+					'type' => 'varchar',
+					'length' => 2048,
+					'description' => t('Comma sepearted Field of specialization values'),
+				),
+				'mobile' => array(
+					'type' => 'varchar',
+					'length' => 20,
+					'description' => t('Mobile number'),
+				),	
+				'mobile' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'description' => t('Skype Id'),
+				),				
+			),
+			'primary key' => array('mid'),
+			'foreign keys' => array(
+		         'fk_mentee_user_id' => array('table' => 'users', 'columns' => array('userid' => 'uid'))
+			),
+		);
+		
+		$schema['mentee_specialization'] = array(
+			'description' => t('Stores information about mentee specialization'),
+			'fields' => array(
+				'mentee_id' => array(
+					'type' => 'int',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("The unique ID for a mentee. Refers to mid in mentee table."),
+				),
+				'spec_id' => array(
+					'type' => 'int',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("The unique ID of specialization. Refers to scid of specialization_subcategory"),
+				),
+			),
+		);
+		
+		$schema['mentee_aom'] = array(
+			'description' => t('Stores information about mentee area of specialization'),
+			'fields' => array(
+				'mentee_id' => array(
+					'type' => 'int',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("The unique ID for a mentee. Refers to mid in mentee table."),
+				),
+				'aom_id' => array(
+					'type' => 'int',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("The unique ID of area of mentoring. Refers to aid of area_mentoring"),
+				),
+			),
+		);
+	return $schema;
+}

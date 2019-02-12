@@ -1,0 +1,228 @@
+<?php
+
+
+	/**
+	* Implements hook_schema().
+	*/
+	function mentor_schema() {
+		$schema['mentor'] = array(
+			'description' => t('Stores information about mentors'),
+			'fields' => array(
+				'mid' => array(
+					'type' => 'int',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("Primary key: A unique ID for each mentor."),
+				),
+				'first_name' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'description' => t("Each mentor has a first name."),
+				),
+				'last_name' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t("Each mentor has a last name."),
+				),
+				'birthday' => array(
+					'type' => 'int',
+					'not null' => TRUE,
+					'description' => t('The birth day of the mentor'),
+				),
+				'birthmonth' => array(
+					'type' => 'int',
+					'not null' => TRUE,
+					'description' => t('The birth month of the mentor'),
+				),
+				'birthyear' => array(
+					'type' => 'int',
+					'not null' => FALSE,
+					'description' => t('The birth year of the mentor'),
+				),
+				'gender' => array(
+					'type' => 'char',
+					'not null' => TRUE,
+					'description' => t('The gender of the mentor'),
+				),
+				'zipcode' => array(
+					'type' => 'int',
+					'not null' => TRUE,
+					'description' => t('The zipcode of the mentor'),
+				),
+				'employer' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t('The employer of the mentor if employed'),
+				),
+				'title' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t('The designation of the mentor if employed'),
+				),
+				'years_of_exp' => array(
+					'type' => 'int',
+					'not null' => FALSE,
+					'description' => t('The years of experience of the mentor if employed'),
+				),
+				'linked_in_profile' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t('The LinkedIn Profile of the mentor if employed'),
+				),
+				'last_school_attended' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t('The name of the last school attended of the mentor if employed'),
+				),
+				'school_attending' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t('The name of the school of the mentor if student'),
+				),
+				'year_of_school' => array(
+					'type' => 'int',
+					'not null' => TRUE,
+					'description' => t('The year of schooling of the mentor'),
+				),
+				'response_time' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t('The expected time that mentor takes to respond to mentee query'),
+				),
+				'mentoring_motivation' => array(
+					'type' => 'text',
+					'size' => 'big',
+					'not null' => FALSE,
+					'description' => t('The motivation to be a mentor'),
+				),
+				'hobbies' => array(
+					'type' => 'text',
+					'size' => 'big',
+					'not null' => FALSE,
+					'description' => t('The hobbies of a mentor'),
+				),
+				'userid' => array(
+					'type' => 'int',
+					'not null' => TRUE,
+					'description' => t('The parent user id  of the mentor'),
+				),
+				'currently_accept_mentee' => array(
+					'type' => 'char',
+					'not null' => TRUE,
+					'description' => t('Whether mentor is accepting mentee'),
+				),
+				'fos_id' => array(
+					'type' => 'int',
+					'not null' => TRUE,
+					'description' => t('Foriegn key to Specialization_Category'),
+				),				
+				'degree_id' => array(
+					'type' => 'int',
+					'not null' => TRUE,
+					'description' => t('Foriegn key to educational_qualification'),
+				),
+				'mentor_type' => array(
+					'type' => 'text',
+					'not null' => TRUE,
+					'description' => t('The type of mentor you are'),
+				),
+				'country' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t('The Country where the school is located'),
+				),
+				'state' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t('The state where the school is located'),
+				),
+				'city' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => FALSE,
+					'description' => t('The city of state'),
+				),
+				'mobile' => array(
+					'type' => 'varchar',
+					'length' => 20,
+					'description' => t('Mobile number'),
+				),
+				'about_me' => array(
+					'type' => 'varchar',
+					'length' => 10000,
+					'not null' => FALSE,
+					'description' => t('About the mentor'),
+				),	
+				'skype_id' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'description' => t('Skype Id'),
+				),
+				'accept_mentee' => array(
+					'type' => 'int',
+					'not null' => FALSE,
+					'description' => t('Accept Mentee'),
+				),
+				'area_of_mentoring' => array(
+					'type' => 'varchar',
+					'length' => 1024,
+					'description' => t('Area of Mentoring'),
+				),
+				'college_email' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'description' => t('College Email'),
+				),
+				'work_email' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'description' => t('Wrok Email'),
+				),
+				'engagement_model_with_mentee' => array(
+					'type' => 'varchar',
+					'length' => 1024,
+					'description' => t('Engagement model with mentee'),
+				),
+				'volunteer' => array(
+					'type' => 'varchar',
+					'length' => 50,
+					'not null' => FALSE,
+					'description' => t('Want To Be A Volunteer'),
+				),
+			),
+			'primary key' => array('mid'),
+			'foreign keys' => array(
+		         'fk_mentor_user_id' => array('table' => 'users', 'columns' => array('userid' => 'uid'))
+			),
+		);
+		
+    $schema['mentor_specialization'] = array(
+			'description' => t('Stores information about mentor specialization'),
+			'fields' => array(
+				'mentor_id' => array(
+					'type' => 'int',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("The unique ID for a mentor. Refers to mid in mentor table."),
+				),
+				'type' => array(
+					'type' => 'int',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("The unique id of specialization. Refers to scid of specialization_subcategory"),
+				),
+			),
+		);
+		
+	return $schema;
+}

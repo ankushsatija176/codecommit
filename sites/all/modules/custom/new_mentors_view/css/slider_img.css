@@ -1,0 +1,60 @@
+@CHARSET "UTF-8";
+
+.profile-pic-wrapper {
+	background: none repeat scroll 0 0 #FFFFFF;
+	//border: 1px solid #87898B;
+	border-radius: 7px;
+	float: left;
+	//height: 190px;
+	position: relative;
+	width: 126px;
+	//box-shadow: 3px 3px 3px #888888;
+}
+
+.picture-wrapper {
+	background: none repeat scroll 0 0 rgba(0, 0, 0, 0);
+	position: relative;
+}
+
+.profile-pic .picture img {
+	height: 120px;
+	min-height: 80px;
+	min-width: 120px;
+	margin-bottom: -4px;
+	width: 120px;
+	border-radius: 5px;
+}
+.profile-pic .picture img:hover {
+	height: 120px;
+	min-height: 80px;
+	min-width: 120px;
+	margin-bottom: -4px;
+	width: 120px;
+	border-radius: 5px;
+}
+
+.heading-bar header {
+    background: none repeat scroll 0 0 #3457C5;
+    border-bottom: 3pt solid #3457C5;
+    color: #ffffff;
+    font-size: 18px;
+   	margin: 0 20px .5em;
+	padding: 7px;
+}
+.profile-review { padding-left: 15% !important; }
+.profile-pic-school{
+	background: none scroll 0 0 #ffffff;
+    border-radius: 0 0 5px 5px;
+    bottom: 0;
+    color: #000000;
+    font-family: 'Droid Sans W01';
+    font-size: 12px;
+    height: auto;
+    line-height: 15px;
+    margin-top: -25px 0 3px 0;
+    opacity: 0.8;
+    position: relative;
+    text-align: center;
+    vertical-align: middle;
+    width: 100%;
+	}

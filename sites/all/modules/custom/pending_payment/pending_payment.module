@@ -1,0 +1,1033 @@
+<?php
+
+
+function pending_payment_menu() {
+  $items['pending_payment'] = array(
+    //'title' => 'Refer a friend',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('pending_payment_form', 1),
+    'access callback' => 'pending_payment_access',
+  );
+  $items['pending_payment/%/reset'] = array(
+  		'title' => 'Payment Reset',
+	    'page callback' => 'reset_payment_by_id',
+	    'page arguments' => array(1,true),
+	    'access callback' => 'payment_reset_access',
+	    'access arguments' => array(1),
+  );
+  $items['pending_payment/%/extend'] = array(
+  		'title' => 'Extending Mentoring Period',
+	    'page callback' => 'pending_payment_extend',
+	    'page arguments' => array(1,true),
+	    'access callback' => 'extend_connection_access',
+	    'access arguments' => array(1),
+  );
+  $items['pending_payment/%/sessionDidNotHappen'] = array(
+  		'title' => 'Mentoring Session Did Not Happen',
+	    'page callback' => 'pending_payment_session_did_not_happen',
+	    'page arguments' => array(1,true),
+	    'access callback' => 'extend_connection_access',
+	    'access arguments' => array(1),
+  );
+  return $items;
+}
+
+function pending_payment_access() {
+	if(isset($_SESSION['user']->uid)) {
+		$uid = $_SESSION['user']->uid;
+		if($uid == '2519')
+			return true;
+	}
+	return false;
+}
+
+function payment_reset_access($cid) {
+	if(isset($_SESSION['user'])) {
+		$query = db_select('pendingpayment', 'pay');
+		$query->condition('pay.cid', $cid,'=');
+		$query->fields('pay')
+		//->fields('mr')
+		//->fields('m')
+		;//SELECT the fields from user
+		
+		$result = $query->execute();
+		foreach($result as $record) {
+			if( $_SESSION['user']->uid == '2519'){
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
+
+function extend_connection_access($cid){
+	if(isset($_SESSION['user'])) {
+		$query = db_select('pendingpayment', 'pay');
+		$query->condition('pay.cid', $cid,'=');
+		$query->fields('pay');
+		$result = $query->execute();
+		foreach($result as $record) {
+			if( $_SESSION['user']->uid == '2519'){
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
+
+function reset_payment_by_id($cid,$isLink){
+	$query = db_select('pendingpayment', 'pay');
+	$query->condition('pay.cid', $cid,'=');
+	$query->fields('pay');
+	
+	$result = $query->execute();
+	foreach($result as $record) {
+		$status = $record->status;
+		$requestor_type = $record->requestor_type;
+		if( $_SESSION['user']->uid == '2519' || !$isLink){
+			$last_update_time = date("Y-m-d H:i:s", time());
+			$sql = "select cid,status from {pendingpayment} where cid = " . $cid;
+			$result = db_query($sql);
+			$paystatus = $result->fetchAssoc();
+			if($paystatus['status'] == 'Admin Payment Pending')
+			{
+				$pay_update = db_update('pendingpayment')
+				->fields(array('status' => 'Admin Paid' , 'paid_time' => $last_update_time))
+				->condition('cid',$cid,'=')
+				->execute(); 
+			}
+				
+			if($isLink){
+				drupal_goto('pending_payment');
+				return $pay_update;
+			}
+		}
+	}
+}
+
+//For Extending Connection Period
+function pending_payment_extend($cid, $isLink){
+	$queryExtend = db_select('pendingpayment','pp');
+	$queryExtend->condition('pp.cid',$cid,'=');
+	$queryExtend->fields('pp');
+	$resultExtend = $queryExtend->execute();
+
+	foreach ($resultExtend as $recordExtend) {
+		$status = $recordExtend->status;
+		if($_SESSION['user']->uid == '2519' || !$isLink){
+			$extended_from_time = $recordExtend->last_update_time;
+			$last_update_time = date("Y-m-d H:i:s", time());
+			if($status == "Admin Payment Pending"){
+
+				$extended = db_insert('connections')
+					->fields(array(
+						'cid' => $cid,
+						'mentor_id' => $recordExtend->mentor_id,
+						'mentee_id' => $recordExtend->mentee_id,
+						'status' => 'Confirmed',
+						'requestor_type' => $recordExtend->requestor_type,
+						'subscription_id' => $recordExtend->subscription_id,
+						'create_time' => $recordExtend->create_time,
+						'last_update_time' => $last_update_time,
+						'extended_from_time' => $extended_from_time,
+						'session_start_time' => $recordExtend->session_start_time,
+						))
+					->execute();
+
+				db_delete('pendingpayment')
+					->condition('cid', $cid)
+					->execute();
+			}
+
+			if($isLink){
+				drupal_goto('pending_payment');
+				return $extended;
+			}
+		}
+	}
+
+}
+
+//Marking that Session Did Not Happen
+function pending_payment_session_did_not_happen($cid, $isLink){
+	$queryExtend = db_select('pendingpayment','pp');
+	$queryExtend->condition('pp.cid',$cid,'=');
+	$queryExtend->fields('pp');
+	$resultExtend = $queryExtend->execute();
+	print_r("Enters here");
+
+	foreach ($resultExtend as $recordExtend) {
+		$status = $recordExtend->status;
+		if($_SESSION['user']->uid == '2519' || !$isLink){
+			$extended_from_time = $recordExtend->last_update_time;
+			$last_update_time = date("Y-m-d H:i:s", time());
+			if($status == "Admin Payment Pending"){
+
+				$result = db_query("UPDATE {pendingpayment} SET status = :status WHERE cid = :cid", array(':status' => 'Session Did Not Happen', ':cid' => $cid));
+			}
+
+			if($isLink){
+				drupal_goto('pending_payment');
+				return $result;
+			}
+		}
+	}
+
+}
+
+function pending_payment_users_activate($form, &$form_state){
+	if($_SESSION['user']->uid == '2519'){
+		$uidArrayMentor = $form_state['values']['activate_mentors'];
+		$uidArrayMentee = $form_state['values']['activate_mentees'];
+		if($uidArrayMentor){
+			foreach ($uidArrayMentor as $record) {
+				db_query("UPDATE {user_activation} SET activated = :activated WHERE uid = :uid", array(':activated' => 'Y', ':uid' => $record));
+			}
+		}
+		if($uidArrayMentee){
+			foreach ($uidArrayMentee as $record) {
+				db_query("UPDATE {user_activation} SET activated = :activated WHERE uid = :uid", array(':activated' => 'Y', ':uid' => $record));
+			}
+		}
+	}
+}
+
+
+function pending_payment_form($form, &$form_state) {
+	$query = db_select('pendingpayment', 'c');   
+	$query->join('mentor', 'mr', 'mr.mid = c.mentor_id');
+    $query->join('mentee', 'm', 'm.mid = c.mentee_id');
+	$query->join('users', 'u', 'u.uid = mr.mid');
+	
+	$query2 = db_select('connections', 'con');
+	$query2->join('mentor', 'mrc', 'mrc.mid = con.mentor_id');
+    $query2->join('mentee', 'mc', 'mc.mid = con.mentee_id');
+    //$query->join('education_qualification', 'eq', 'eq.eid = mrc.degree_id');
+    $query2->join('users', 'uc', 'uc.uid = mrc.mid');
+    //$query->condition('c.status', array('Decline'),'NOT IN');
+	//$query->condition('mr.mid', $uid,'=');
+	$or = db_or()->condition('c.status', 'Admin Payment Pending','=')->condition('c.status', 'Admin Paid','=')->condition('c.status', 'Volunteer Connection Expiry','=')->condition('c.status', 'Session Did Not Happen', '=');
+	$query->condition($or);
+	$query->fields('mr')
+		->fields('m')
+		->fields('c')
+		->fields('u', array('picture'));
+	$or1 = db_or()->condition('con.subscription_id','1','=')->condition('con.subscription_id','2','=')->condition('con.subscription_id','3','=');
+	$query2->condition($or1);
+	$query2->fields('mrc')
+		//->fields('sc', array('name'))
+		->fields('uc', array('picture'));
+		
+	//$query->addField('sc', 'name', 'category_name');
+	$query2->addField('con', 'cid', 'cid_con');
+	$query2->addField('con', 'status', 'connection_status_con');
+	$query2->addField('mrc', 'mid', 'mentor_id_con');
+	$query2->addField('mc', 'first_name', 'mentee_fn_con');
+	$query2->addField('mc', 'last_name', 'mentee_ln_con');
+	$query2->addField('mrc', 'first_name', 'mentor_fn_con');
+	$query2->addField('mrc', 'last_name', 'mentor_ln_con');
+	//$query2->addField('con', 'create_time', 'create_time_con');
+	$query2->addField('con', 'last_update_time', 'lastupdate_time_con');
+	$query2->addField('con', 'subscription_id', 'subscription_con');
+	$query2->addField('con', 'extended_from_time', 'actualend_date_con');
+	$query2->addField('con', 'session_start_time', 'session_start_date');
+	$query2->addField('uc', 'mail', 'mentor_mail');
+		
+	$query->addField('c', 'status', 'connection_status');
+	$query->addField('mr', 'mid', 'mentor_id');
+	$query->addField('m', 'first_name', 'mentee_fn');
+	$query->addField('m', 'last_name', 'mentee_ln');
+	$query->addField('mr', 'first_name', 'mentor_fn');
+	$query->addField('mr', 'last_name', 'mentor_ln');
+	$query->addField('c', 'create_time', 'start_date');
+	$query->addField('c', 'last_update_time', 'lastupdate_time');
+	$query->addField('c', 'subscription_id', 'subscription');
+	$query->addField('c', 'session_start_time', 'session_start_date');
+	$query->addField('u', 'mail', 'mentor_mail');
+	
+	$result = $query->execute();
+	$result2 = $query2->execute();
+	$notification_array = array();
+	//$notification_array1 = array();
+
+	foreach($result as $record) {
+		//drupal_set_message('<pre>'.print_r($record, true).'</pre>');
+		$mentor = array();
+		$mentor['mid'] = $record->mentor_id;
+		$mentor['picture'] = $record->picture;
+	    $mentor['mentor_name'] = $record->mentor_fn . ' ' . $record->mentor_ln;
+	    $mentor['mentee_name'] = $record->mentee_fn . ' ' . $record->mentee_ln;
+	    $mentor['cid'] = $record->cid;
+	    $mentor['connection_status'] = $record->connection_status;
+	    $mentor['state'] = $record->state;
+	    $mentor['city'] = $record->city;
+	    $mentor['mail'] = $record->mentor_mail;
+
+	    $eng_model = db_query("SELECT subscription_name FROM {subscription} WHERE sid = :sid", array(':sid' => $record->subscription_id))->fetchField();
+	    $mentor['eng_model'] = $eng_model;
+
+    	$mentor['end_date'] = date("m/d/Y", strtotime($record->lastupdate_time));
+		$mentor['start_date'] = date("m/d/Y", strtotime($record->session_start_date));
+
+    	if($record->subscription == '3') {
+    		//80% of original amount($225)
+    		$mentor['payment'] = '$180';
+    	}
+    	else if($record->subscription == '2'){
+    		//80% of original amount($50)
+    		$mentor['payment'] = '$40';
+    	}else if($record->subscription == '1'){
+    		$mentor['payment'] = '$25';
+    	}
+    	
+    	$mentor['paid_date'] = date("m/d/Y", strtotime($record->paid_time));
+		$notification_array[$record->cid] = $mentor;
+	}
+
+	foreach($result2 as $record) {
+		//drupal_set_message('<pre>'.print_r($mentor['eng_model_con'], true).'</pre>');
+		$mentor = array();
+		$mentor['mid_con'] = $record->mentor_id_con;
+		$mentor['picture_con'] = $record->picture;
+	    $mentor['mentor_name_con'] = $record->mentor_fn_con . ' ' . $record->mentor_ln_con;
+	    $mentor['mentee_name_con'] = $record->mentee_fn_con . ' ' . $record->mentee_ln_con;
+	    $mentor['cid_con'] = $record->cid_con;
+	    $mentor['connection_status_con'] = $record->connection_status_con;
+	    $mentor['state_con'] = $record->state;
+	    $mentor['city_con'] = $record->city;
+	    $mentor['eng_model_con'] = $record->subscription_con;
+	    $mentor['actualend_date_con'] = $record->actualend_date_con;
+	    $mentor['start_date_con'] = date("m/d/Y", strtotime($record->session_start_date));
+	    $mentor['mail'] = $record->mentor_mail;
+	    if($mentor['connection_status_con'] == 'Confirmed'){
+	    	$mentor['lastupdate_date_con'] = date("m/d/Y", strtotime($record->lastupdate_time_con));
+	    	//$mentor['start_date_con'] = date("m/d/Y", strtotime($record->create_time_con));
+	    	if($record->subscription_con == "1"){
+	    		$mentor['end_date_con'] = date("m/d/Y", strtotime("+3 weeks", strtotime($record->session_start_date)));
+	    		$mentor['eng_model_con'] = 1;
+	    	}else if($record->subscription_con == "2"){
+	    		$mentor['end_date_con'] = date("m/d/Y", strtotime("+3 weeks", strtotime($record->session_start_date)));
+	    		$mentor['eng_model_con'] = 2;
+	    	}else{
+	    		$mentor['end_date_con'] = date("m/d/Y", strtotime("+3 months", strtotime($record->session_start_date)));
+	    		$mentor['eng_model_con'] = 3;
+	    	}
+	    }
+	    $notification_array[$record->cid_con] = $mentor;
+	}
+
+	$form['payment_pending'] = array(
+		'#type' => 'container',
+		//'#attributes' => array('class' => array('container-inline')),
+		'#weight' => -10,
+		'#theme' => 'pending_payment_mentors',
+	);
+	//Mentor Activation
+	$query = db_select('users','u');
+	$query->join('user_activation','ua','u.uid=ua.uid');
+	$query->join('mentor','mr','u.uid=mr.mid');
+	$query->condition('ua.activated',"N",'=');
+	$query->fields(u)
+		->fields(ua)
+		->fields(mr);
+	$query->addField('mr', 'mid', 'mentor_id');
+	$query->addField('mr', 'first_name', 'mentor_fn');
+	$query->addField('mr', 'last_name', 'mentor_ln');
+	$query->addField('mr', 'work_email');
+	$query->addField('mr', 'college_email');
+	$query->addField('u', 'mail', 'mail_id');
+	$query->addField('u','created','profile_created_date');
+	$query->addField('ua', 'registration_type');
+	$entries = $query->execute();
+	$optionsMentor = array();
+	foreach($entries as $record)
+	{
+		$profileCreatedDate = date('m-d-Y',$record->profile_created_date);
+		if($record->registration_type == 'standard'){
+			$optionsMentor[$record->uid] =$record->mentor_fn." ".$record->mentor_ln." (Mail ID - ".$record->mail_id.", Registration Type - ".$record->registration_type.", Profile Creation Time - ".$profileCreatedDate.")";
+		}else{
+			if($record->mentor_type == 'professional'){
+				$optionsMentor[$record->uid] =$record->mentor_fn." ".$record->mentor_ln." (Mail ID - ".$record->work_email.", Registration Type - ".$record->registration_type.", Profile Creation Time - ".$profileCreatedDate.")";
+			}else if($record->mentor_type == 'student'){
+				$optionsMentor[$record->uid] =$record->mentor_fn." ".$record->mentor_ln." (Mail ID - ".$record->college_email.", Registration Type - ".$record->registration_type.", Profile Creation Time - ".$profileCreatedDate.")";
+			}
+		}
+	}
+	$form['payment_pending']['activate_mentors'] = array(
+		'#title' => t('Mentors to be activated'),
+		'#type' => 'checkboxes',
+		'#required' => FALSE,
+		'#options' => $optionsMentor,
+		'#prefix' => '<div style="display:none;">',
+		'#suffix' => '</div>',
+	);
+
+	//Mentee Activation
+	$query = db_select('users','u');
+	$query->join('user_activation','ua','u.uid=ua.uid');
+	$query->join('mentee','me','u.uid=me.mid');
+	$query->condition('ua.activated',"N",'=');
+	$query->fields(u)
+		->fields(ua)
+		->fields(me);
+	$query->addField('me', 'mid', 'mentee_id');
+	$query->addField('me', 'first_name', 'mentee_fn');
+	$query->addField('me', 'last_name', 'mentee_ln');
+	$query->addField('u', 'mail', 'mail_id');
+	$query->addField('u','created','profile_created_date');
+	$query->addField('ua', 'registration_type');
+	$entries = $query->execute();
+	$optionsMentee = array();
+	foreach($entries as $record)
+	{
+		$profileCreatedDate = date('m-d-Y',$record->profile_created_date);
+		$optionsMentee[$record->uid] =$record->mentee_fn." ".$record->mentee_ln." (Mail ID - ".$record->mail_id.", Registration Type - ".$record->registration_type.", Profile Creation Time - ".$profileCreatedDate.")";
+	}
+	$form['payment_pending']['activate_mentees'] = array(
+		'#title' => t('Mentees to be activated'),
+		'#type' => 'checkboxes',
+		'#required' => FALSE,
+		'#options' => $optionsMentee,
+		'#prefix' => '<div style="display:none;">',
+		'#suffix' => '</div>',
+	);
+
+	$form['payment_pending']['notification'] = array(
+		'#type' => 'item',
+		'#title' => t(''),
+		'#markup' => $notification_array,
+	);
+
+	$form['payment_pending']['submit'] = array(
+		'#type' => 'submit',
+		'#value' => t('Activate the Selected Users'),
+		'#prefix' => '<div style="display:none;">',
+		'#suffix' => '</div>',
+	);
+	$form['#submit'][] = 'pending_payment_users_activate';
+
+  return $form;
+}
+
+function theme_pending_payment_mentors($variables) {
+	$output0 = '<div class="mentor-profile-blocks-heading1">Activate Users</div>
+			<div class="mentor-profile-blocks-heading2" style="min-height: 0px;">';
+	$output = '<div class="mentor-profile-blocks-heading1">Pending Payments<a id="collapsePendingPayments"><img src="'.file_create_url('down.png').'" style="float:right; width: 3%;"></a></div>
+			<div class="mentor-profile-blocks-heading2" id="pendingPaymentsContent" style="display:block;">';
+	$output1 = '<div class="mentor-profile-blocks-heading1">Mentors Paid Recently<a id="collapseMentorsPaid"><img src="'.file_create_url('down.png').'" style="float:right; width: 3%;"></a></div>
+			<div class="mentor-profile-blocks-heading3" id="mentorsPaidContent" style="display:none;">';
+	$output2 = '<div class="mentor-profile-blocks-heading1">Ongoing Sessions : On Demand Mentoring - 30 Minutes<a id="collapse30Mins"><img src="'.file_create_url('down.png').'" style="float:right; width: 3%;"></a></div>
+			<div class="mentor-profile-blocks-heading4" id="30MinsContent" style="display:block;">';
+	$output3 = '<div class="mentor-profile-blocks-heading1">Ongoing Sessions : On Demand Mentoring - 1 Hour<a id="collapse1Hour"><img src="'.file_create_url('down.png').'" style="float:right; width: 3%;"></a></div>
+			<div class="mentor-profile-blocks-heading4" id="1HourContent" style="display:block;">';
+	$output4 = '<div class="mentor-profile-blocks-heading1">Ongoing Sessions : Three Months Mentoring<a id="collapse3Months"><img src="'.file_create_url('down.png').'" style="float:right; width: 3%;"></a></div>
+			<div class="mentor-profile-blocks-heading5" id="3MonthsContent" style="display:block;">';
+	$output5 = '<div class="mentor-profile-blocks-heading1">Number of Mentors</div>
+			<div class="mentor-profile-blocks-heading6">';
+	$output6 = '<div class="mentor-profile-blocks-heading1">Number of Mentees</div>
+			<div class="mentor-profile-blocks-heading7">';
+	//Sudden change of requirement so including here
+	$output15 = '<div class="mentor-profile-blocks-heading1">Number of Mentors - Non-Activated</div>
+			<div class="mentor-profile-blocks-heading16">'; 
+	$output14 = '<div class="mentor-profile-blocks-heading1">Number of Mentees - Non-Activated</div>
+			<div class="mentor-profile-blocks-heading17">';
+	$output7 = '<div class="mentor-profile-blocks-heading1">Number of Connections - Engagement Model</div>
+			<div class="mentor-profile-blocks-heading8">';
+	$output8 = '<div class="mentor-profile-blocks-heading1">Number of Connections</div>
+			<div class="mentor-profile-blocks-heading9">';
+	$output9 = '<div class="mentor-profile-blocks-heading1">Number of Active Three Months Connections</div>
+			<div class="mentor-profile-blocks-heading10">';
+	$output10 = '<div class="mentor-profile-blocks-heading1">Number of Active On-Demand 1 Hour Connections</div>
+			<div class="mentor-profile-blocks-heading11">';
+	$output11 = '<div class="mentor-profile-blocks-heading1">Number of Active On-Demand 30 Minutes Connections</div>
+			<div class="mentor-profile-blocks-heading12">';
+	$output12 = '<div class="mentor-profile-blocks-heading1">Number of Paid Connections - Expired</div>
+			<div class="mentor-profile-blocks-heading13">';
+	$output13 = '<div class="mentor-profile-blocks-heading1">Number of Volunteer Connections - Expired</div>
+			<div class="mentor-profile-blocks-heading14">';
+	$output14 = '<div class="mentor-profile-blocks-heading1">Total Number of Connections</div>
+			<div class="mentor-profile-blocks-heading15">';
+	//Connections in Pending State
+	$output17 = '<div class="mentor-profile-blocks-heading1">Pending Connections<a id="collapsePendingConnections"><img src="'.file_create_url('down.png').'" style="float:right; width: 3%;"></a></div>
+			<div class="mentor-profile-blocks-heading18" id="pendingConnectionsContent" style="display:none;">';
+	//Expired Volunteer Connections
+	$output18 = '<div class="mentor-profile-blocks-heading1">Expired Volunteer Connections<a id="collapseExpiredVolunteerConnections"><img src="'.file_create_url('down.png').'" style="float:right; width: 3%;"></a></div>
+			<div class="mentor-profile-blocks-heading19" id="expiredVolunteerConnectionsContent" style="display:none;">';
+	//Tracking Sessions that did not happen
+	$output19 = '<div class="mentor-profile-blocks-heading1">Session Did Not Happen<a id="collapseSessionDidNotHappen"><img src="'.file_create_url('down.png').'" style="float:right; width: 3%;"></a></div>
+			<div class="mentor-profile-blocks-heading20" id="sessionDidNotHappenContent" style="display:none;">';
+
+    drupal_add_css(drupal_get_path('module', 'mentoringcommon') . '/css/common.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+    $countConnection0 = 0;
+    $countConnection1 = 0;
+    $countConnection2 = 0;
+    $form = $variables['form'];
+    foreach ($form as $key => $element) {
+	    			// Set which elements to render in the table.
+	    			$allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden','container');
+	    			// Make sure this is an element and it's of a type listed above.	    
+	    
+	    if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+	        if($element['#type'] == 'item') {
+		      $notification_array = $element['#markup'];
+		      unset($form[$key]['#markup']);
+		      /*if(empty($notification_array)) {
+				  	$output .= 'No new notifications</div>';
+				  	return $output;
+				}*/
+
+			  foreach ($notification_array as $key=>$notification_data) {
+				if($notification_data['connection_status'] == 'Admin Payment Pending') {
+					$picture;
+					if(!empty($notification_data['picture'])) {
+						$picture = file_load($notification_data['picture']);
+					} else {
+						$picture = get_user_default_picture($notification_data['mid'], 'mentor');
+					}
+					$style = variable_get('user_picture_style', '');
+					$output .= '<div id="mentor-notification-item" class="user-list-item">';
+
+					$output .= '<div class="user-grid-pic mentor-profile-usr-pic1" >';
+					$output .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentor', 'title' => 'Mentee', 'width'=>'100%'));
+					$output .= '</div>';
+					$mentee_details = '<span><a class="mentor-name" href="/mentor/'. $notification_data['mid'] .'/profile">' . $notification_data['mentor_name'] . '</a></span>';
+					$mentee_details .= '<div>Mentor E-mail: ' . $notification_data['mail'] . '</div>';
+					$mentee_details .= '<div>Mentee Name: ' . $notification_data['mentee_name'] . '</div>';
+					$mentee_details .= '<div>Engagement model chosen: ' . $notification_data['eng_model'] . '</div>';
+					$mentee_details .= '<div>Session Start Date: ' . $notification_data['start_date'] . '</div>';
+					$mentee_details .= '<div>Session End Date: ' . $notification_data['end_date'] . '</div>';
+					$mentee_details .= '<div>Amount Due: ' . $notification_data['payment'] . '</div>';
+
+					//$mentee_details .= '<div>'.$mentee_data->city . ', '. $mentee_data->state . '</div>';
+
+					$output .= '<div class="mentor-profile-con-div2">' . $mentee_details . '</div>';
+					$output .= '<div id="mentee-message-cover' . $temp . '" class="mentee-button-div" style="margin: 1%;">
+								  <a href="/pending_payment/'.$notification_data['cid'].'/reset"  class="button small round steel_blue" >Paid</a></div>'; 
+					$output .= '<div id="mentee-message-cover' . $temp . '" class="mentee-button-div" style="margin: 1%;">
+								  <a target="_self" data-track="login" href="/messages/new/' . $notification_data['mid'] . '" class="button small round steel_blue">Message</a></div>'; //accept_button $key
+					$output .= '<div id="mentee-message-cover' . $temp . '" class="mentee-button-div" style="margin: 1%;">
+								  <a target="_self" data-track="login" href="/pending_payment/' . $notification_data['cid'] .'/extend" class="button small round steel_blue">Extend</a></div>';
+					$output .= '<div id="mentee-message-cover' . $temp . '" class="mentee-button-div" style="margin: 1%;">
+								  <a target="_self" data-track="login" href="/pending_payment/' . $notification_data['cid'] .'/sessionDidNotHappen" class="button small round steel_blue">Did Not Happen</a></div>';
+					$output .= '</div>';
+				}
+				else if($notification_data['connection_status'] == 'Admin Paid') {
+					$picture;
+					if(!empty($notification_data['picture'])) {
+						$picture = file_load($notification_data['picture']);
+					} else {
+						$picture = get_user_default_picture($notification_data['mid'], 'mentor');
+					}
+					$style = variable_get('user_picture_style', '');
+					$output1 .= '<div id="mentor-notification-item" class="user-list-item">';
+
+					$output1 .= '<div class="user-grid-pic mentor-profile-usr-pic1" >';
+					$output1 .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentor', 'title' => 'Mentee', 'width'=>'100%'));
+					$output1 .= '</div>';
+					$mentee_details = '<span><a class="mentor-name" href="/mentor/'. $notification_data['mid'] .'/profile">' . $notification_data['mentor_name'] . '</a></span>';
+					$mentee_details .= '<div>Mentor E-mail: ' . $notification_data['mail'] . '</div>';
+					$mentee_details .= '<div>Mentee Name: ' . $notification_data['mentee_name'] . '</div>';
+					$mentee_details .= '<div>Engagement model chosen: ' . $notification_data['eng_model'] . '</div>';
+					$mentee_details .= '<div>Session Date: ' . $notification_data['start_date'] . ' - ' . $notification_data['end_date'] . '</div>';
+					//$mentee_details .= '<div>Session End Date: ' . $notification_data['end_date'] . '</div>';
+					$mentee_details .= '<div>Date Paid: ' . $notification_data['paid_date'] . '</div>';				      
+					$mentee_details .= '<div>Amount Paid: ' . $notification_data['payment'] . '</div>';
+					$output1 .= '<div class="mentor-profile-con-div2">' . $mentee_details . '</div>';
+					$output1 .= '</div>';
+				}else if($notification_data['connection_status'] == 'Volunteer Connection Expiry') {
+					$picture;
+					if(!empty($notification_data['picture'])) {
+						$picture = file_load($notification_data['picture']);
+					} else {
+						$picture = get_user_default_picture($notification_data['mid'], 'mentor');
+					}
+					$style = variable_get('user_picture_style', '');
+					$output18 .= '<div id="mentor-notification-item" class="user-list-item">';
+
+					$output18 .= '<div class="user-grid-pic mentor-profile-usr-pic1" >';
+					$output18 .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentor', 'title' => 'Mentee', 'width'=>'100%'));
+					$output18 .= '</div>';
+					$mentee_details = '<span><a class="mentor-name" href="/mentor/'. $notification_data['mid'] .'/profile">' . $notification_data['mentor_name'] . '</a></span>';
+					$mentee_details .= '<div>Mentor E-mail: ' . $notification_data['mail'] . '</div>';
+					$mentee_details .= '<div>Mentee Name: ' . $notification_data['mentee_name'] . '</div>';
+					$mentee_details .= '<div>Engagement model chosen: ' . $notification_data['eng_model'] . '</div>';
+					$mentee_details .= '<div>Session Date: ' . $notification_data['start_date'] . ' - ' . $notification_data['end_date'] . '</div>';
+					//$mentee_details .= '<div>Session End Date: ' . $notification_data['end_date'] . '</div>';
+					//$mentee_details .= '<div>Date Paid: ' . $notification_data['paid_date'] . '</div>';				      
+					//$mentee_details .= '<div>Amount Paid: ' . $notification_data['payment'] . '</div>';
+					$output18 .= '<div class="mentor-profile-con-div2">' . $mentee_details . '</div>';
+					$output18 .= '</div>';
+				}else if($notification_data['connection_status'] == 'Session Did Not Happen') {
+					$picture;
+					if(!empty($notification_data['picture'])) {
+						$picture = file_load($notification_data['picture']);
+					} else {
+						$picture = get_user_default_picture($notification_data['mid'], 'mentor');
+					}
+					$style = variable_get('user_picture_style', '');
+					$output19 .= '<div id="mentor-notification-item" class="user-list-item">';
+
+					$output19 .= '<div class="user-grid-pic mentor-profile-usr-pic1" >';
+					$output19 .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentor', 'title' => 'Mentee', 'width'=>'100%'));
+					$output19 .= '</div>';
+					$mentee_details = '<span><a class="mentor-name" href="/mentor/'. $notification_data['mid'] .'/profile">' . $notification_data['mentor_name'] . '</a></span>';
+					$mentee_details .= '<div>Mentor E-mail: ' . $notification_data['mail'] . '</div>';
+					$mentee_details .= '<div>Mentee Name: ' . $notification_data['mentee_name'] . '</div>';
+					$mentee_details .= '<div>Engagement model chosen: ' . $notification_data['eng_model'] . '</div>';
+					$mentee_details .= '<div>Session Date: ' . $notification_data['start_date'] . ' - ' . $notification_data['end_date'] . '</div>';
+					//$mentee_details .= '<div>Session End Date: ' . $notification_data['end_date'] . '</div>';
+					//$mentee_details .= '<div>Date Paid: ' . $notification_data['paid_date'] . '</div>';				      
+					//$mentee_details .= '<div>Amount Paid: ' . $notification_data['payment'] . '</div>';
+					$output19 .= '<div class="mentor-profile-con-div2">' . $mentee_details . '</div>';
+					$output19 .= '</div>';
+				}
+			  }
+			  $output .= '</div>';
+			  foreach ($notification_array as $key=>$notification_data) {
+				if(($notification_data['eng_model_con'] == 1) && ($notification_data['connection_status_con'] == 'Confirmed')){
+					$countConnection0 = $countConnection0 + 1;
+					//drupal_set_message('<pre>'.print_r($notification_data['eng_model_con'], true).'</pre>');
+					$picture;
+					if(!empty($notification_data['picture_con'])) {
+						$picture = file_load($notification_data['picture_con']);
+					} else {
+						$picture = get_user_default_picture($notification_data['mid_con'], 'mentor');
+					}
+					$style = variable_get('user_picture_style', '');
+					$output2 .= '<div id="mentor-notification-item" class="user-list-item">';
+
+					$output2 .= '<div class="user-grid-pic mentor-profile-usr-pic1" >';
+					$output2 .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentor', 'title' => 'Mentee', 'width'=>'100%'));
+					$output2 .= '</div>';
+					$mentee_details = '<span><a class="mentor-name" href="/mentor/'. $notification_data['mid_con'] .'/profile">' . $notification_data['mentor_name_con'] . '</a></span>';
+					$mentee_details .= '<div>Mentor E-mail: ' . $notification_data['mail'] . '</div>';
+					$mentee_details .= '<div>Mentee Name: ' . $notification_data['mentee_name_con'] . '</div>';
+					//$mentee_details .= '<div>Engagement model chosen: ' . $notification_data['eng_model_con'] . '</div>';
+					$mentee_details .= '<div>Session Date: ' . $notification_data['start_date_con'] . ' - ' . $notification_data['end_date_con'] . '</div>';
+					if(isset($notification_data['actualend_date_con']) && !empty($notification_data['actualend_date_con'])){
+						$mentee_details .= '<div>Actual End Date: ' . $notification_data['actualend_date_con'] . '</div>';
+					}
+					//$mentee_details .= '<div>Session End Date: ' . $notification_data['end_date'] . '</div>';
+					//$mentee_details .= '<div>Date Paid: ' . $notification_data['paid_date'] . '</div>';				      
+					//$mentee_details .= '<div>Amount Paid: ' . $notification_data['payment'] . '</div>';
+					$output2 .= '<div class="mentor-profile-con-div2">' . $mentee_details . '</div>';
+					$output2 .= '</div>';
+				}else if(($notification_data['eng_model_con'] == 2) && ($notification_data['connection_status_con'] == 'Confirmed')){
+					$countConnection1 = $countConnection1 + 1;
+					//drupal_set_message('<pre>'.print_r($notification_data['eng_model_con'], true).'</pre>');
+					$picture;
+					if(!empty($notification_data['picture_con'])) {
+						$picture = file_load($notification_data['picture_con']);
+					} else {
+						$picture = get_user_default_picture($notification_data['mid_con'], 'mentor');
+					}
+					$style = variable_get('user_picture_style', '');
+					$output3 .= '<div id="mentor-notification-item" class="user-list-item">';
+
+					$output3 .= '<div class="user-grid-pic mentor-profile-usr-pic1" >';
+					$output3 .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentor', 'title' => 'Mentee', 'width'=>'100%'));
+					$output3 .= '</div>';
+					$mentee_details = '<span><a class="mentor-name" href="/mentor/'. $notification_data['mid_con'] .'/profile">' . $notification_data['mentor_name_con'] . '</a></span>';
+					$mentee_details .= '<div>Mentor E-mail: ' . $notification_data['mail'] . '</div>';
+					$mentee_details .= '<div>Mentee Name: ' . $notification_data['mentee_name_con'] . '</div>';
+					//$mentee_details .= '<div>Engagement model chosen: ' . $notification_data['eng_model_con'] . '</div>';
+					$mentee_details .= '<div>Session Date: ' . $notification_data['start_date_con'] . ' - ' . $notification_data['end_date_con'] . '</div>';
+					if(isset($notification_data['actualend_date_con']) && !empty($notification_data['actualend_date_con'])){
+						$mentee_details .= '<div>Actual End Date: ' . $notification_data['actualend_date_con'] . '</div>';
+					}
+					//$mentee_details .= '<div>Session End Date: ' . $notification_data['end_date'] . '</div>';
+					//$mentee_details .= '<div>Date Paid: ' . $notification_data['paid_date'] . '</div>';				      
+					//$mentee_details .= '<div>Amount Paid: ' . $notification_data['payment'] . '</div>';
+					$output3 .= '<div class="mentor-profile-con-div2">' . $mentee_details . '</div>';
+					$output3 .= '</div>';
+				}
+				else if(($notification_data['eng_model_con'] == 3) && ($notification_data['connection_status_con'] == 'Confirmed')){
+					$countConnection2 = $countConnection2 + 1;
+					//drupal_set_message('<pre>'.print_r($notification_data, true).'</pre>');
+					$picture;
+					if(!empty($notification_data['picture_con'])) {
+						$picture = file_load($notification_data['picture_con']);
+					} else {
+						$picture = get_user_default_picture($notification_data['mid_con'], 'mentor');
+					}
+					$style = variable_get('user_picture_style', '');
+					$output4 .= '<div id="mentor-notification-item" class="user-list-item">';
+
+					$output4 .= '<div class="user-grid-pic mentor-profile-usr-pic1" >';
+					$output4 .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentor', 'title' => 'Mentee', 'width'=>'100%'));
+					$output4 .= '</div>';
+					$mentee_details = '<span><a class="mentor-name" href="/mentor/'. $notification_data['mid_con'] .'/profile">' . $notification_data['mentor_name_con'] . '</a></span>';
+					$mentee_details .= '<div>Mentor E-mail: ' . $notification_data['mail'] . '</div>';
+					$mentee_details .= '<div>Mentee Name: ' . $notification_data['mentee_name_con'] . '</div>';
+					//$mentee_details .= '<div>Engagement model chosen: ' . $notification_data['eng_model_con'] . '</div>';
+					$mentee_details .= '<div>Session Date: ' . $notification_data['start_date_con'] . ' - ' . $notification_data['end_date_con'] . '</div>';
+					if(isset($notification_data['actualend_date_con']) && !empty($notification_data['actualend_date_con'])){
+						$mentee_details .= '<div>Actual End Date: ' . $notification_data['actualend_date_con'] . '</div>';
+					}
+					//$mentee_details .= '<div>Session End Date: ' . $notification_data['end_date'] . '</div>';
+					//$mentee_details .= '<div>Date Paid: ' . $notification_data['paid_date'] . '</div>';				      
+					//$mentee_details .= '<div>Amount Paid: ' . $notification_data['payment'] . '</div>';
+					$output4 .= '<div class="mentor-profile-con-div2">' . $mentee_details . '</div>';
+					$output4 .= '</div>';
+				}
+			  }
+			}
+			if($element['#type'] == 'checkboxes'){
+				//$notification_array1 = $element['#markup'];
+				//print_r($element);
+				unset($form[$key]['#options']);
+				$element['#prefix'] = '<div id="colorView" style="display:block; color:#1f1919;">';
+				$output0 .= '<div class="mentor-profile-con-div2" style="color: #1f1919; width: 98%;">' . drupal_render($element) . '</div>';
+				/*$output0 .= '<div id="mentee-message-cover" class="mentee-button-div" style="margin: 1%; float: left;"><a target="_self" data-track="login" href="/pending_payment/activate_users" class="button big round steel_blue">Activate</a></div>';*/
+				//$output0 .= '</div>';
+				$output0 .= '<script type="text/javascript">
+					jQuery(document).ready(function ($) {
+						$("#colorView").css("color","#1f1919");
+						$("#activationButton").css("margin-left","36%");
+						$("#activationButton").css("margin-bottom","2%");
+						$(\'label[for^="edit-activate-mentors"]\').each(function(){
+							var id = $(\'div input[name^="edit-activate-mentors"]\').val();
+							var val = $(this).attr(\'for\').split(\'-\');
+							if(typeof val[3] != "undefined"){
+								$(this).wrap($(\'<a />\', {href: "/mentor/"+val[3]+"/profile"}));
+							}
+						});
+						$(\'label[for^="edit-activate-mentees"]\').each(function(){
+							var id = $(\'div input[name^="edit-activate-mentees"]\').val();
+							var val = $(this).attr(\'for\').split(\'-\');
+							if(typeof val[3] != "undefined"){
+								$(this).wrap($(\'<a />\', {href: "/mentee/"+val[3]+"/profile"}));
+							}
+						});
+					});
+					</script>';
+			}
+		}
+	}
+
+	//Connections in Pending State - With Mentor and Mentee Information
+		$queryPending = db_select('connections','c');
+		$queryPending->join('mentor', 'mrc', 'mrc.mid = c.mentor_id');
+    	$queryPending->join('mentee', 'mc', 'mc.mid = c.mentee_id');
+    	$queryPending->join('users','u','u.uid = mrc.mid');
+		$queryPending->fields('mrc')
+		->fields('mc')
+		->fields('c')
+		->fields('u', array('picture'));
+		$queryPending->addField('c', 'cid', 'cid_con');
+		$queryPending->addField('c', 'status', 'connection_status_con');
+		$queryPending->addField('mrc', 'mid', 'mentor_id_con');
+		$queryPending->addField('mc', 'first_name', 'mentee_fn_con');
+		$queryPending->addField('mc', 'last_name', 'mentee_ln_con');
+		$queryPending->addField('mrc', 'first_name', 'mentor_fn_con');
+		$queryPending->addField('mrc', 'last_name', 'mentor_ln_con');
+		$queryPending->addField('c', 'last_update_time', 'lastupdate_time_con');
+		$queryPending->addField('c', 'subscription_id', 'subscription_con');
+		$resultPending = $queryPending->execute();
+
+		foreach ($resultPending as $recordPending) {
+			if($recordPending->status == 'Pending' || $recordPending->status == 'Payment Pending'){
+				$picture;
+				if(!empty($recordPending->picture)) {
+					$picture = file_load($recordPending->picture);
+			  	} else {
+				  	$picture = get_user_default_picture($recordPending->mentor_id_con, 'mentor');
+			  	}
+			  	$style = variable_get('user_picture_style', '');
+	    	  	$output17 .= '<div id="mentor-notification-item" class="user-list-item">';
+			      
+		      	$output17 .= '<div class="user-grid-pic mentor-profile-usr-pic1" >';
+		      	$output17 .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentor', 'title' => 'Mentee', 'width'=>'100%'));
+		      	$output17 .= '</div>';
+		      	$mentee_details = '<span><a class="mentor-name" href="/mentor/'. $recordPending->mentor_id_con .'/profile">' . $recordPending->mentor_fn_con . ' ' . $recordPending->mentor_ln_con . '</a></span>';
+		      	$mentee_details .= '<div>Mentee Name: ' . $recordPending->mentee_fn_con . ' ' . $recordPending->mentee_ln_con . '</div>';
+		      	$mentee_details .= '<div>Session Last Updated: ' . date("m/d/Y", strtotime($recordPending->lastupdate_time_con))  . '</div>';
+		      	if($recordPending->subscription_con == 1){
+		      		$mentee_details .= '<div>Engagement Model: ' . 'On-Demand Mentoring 30 Minutes' . '</div>';
+		      	} else if($recordPending->subscription_con == 2){
+		      		$mentee_details .= '<div>Engagement Model: ' . 'On-Demand Mentoring 1 Hour' . '</div>';
+		      	} else if($recordPending->subscription_con == 3){
+		      		$mentee_details .= '<div>Engagement Model: ' . 'Three Months Mentoring' . '</div>';
+		      	}
+		      	$mentee_details .= '<div>Connection Status: ' . $recordPending->connection_status_con . '</div>';
+		      	$output17 .= '<div class="mentor-profile-con-div2">' . $mentee_details . '</div>';
+			    $output17 .= '</div>';
+			}
+		}
+
+	//Number of Mentors - Volunteer and Paid - Activated Users	      
+	    $queryMentor = db_select('mentor', 'm');
+		$queryMentor->join('users', 'u', 'u.uid = m.mid');
+		$queryMentor->join('user_activation','ua','ua.uid=m.mid');
+		$queryMentor->fields('m')
+					->fields('ua');
+		$resultMentor = $queryMentor->execute();
+		$countPaid = 0;
+		$countVolunteer = 0;
+		$countMentorNA = 0;
+		foreach($resultMentor as $recordMentor){
+			if($recordMentor->volunteer == '0' && $recordMentor->activated == 'Y' ){
+		 		$countPaid = $countPaid + 1;
+		 	}
+		 	else if($recordMentor->volunteer == '1' && $recordMentor->activated == 'Y'){
+		 		$countVolunteer = $countVolunteer + 1;
+		 	}
+		 	else if($recordMentor->activated == 'N'){
+		 		$countMentorNA = $countMentorNA + 1;
+		 	}
+		}
+		//-1 for SkoolMentor user(uid - 2519) who is Paid
+		$countPaid = $countPaid - 1;
+		$output5 .= '<div>Volunteer Mentors: ' . $countVolunteer . '</div>';
+	    $output5 .= '<div>Paid Mentors: ' . $countPaid . '</div>';
+		
+	//Number of Mentees - Activated Users
+	    $queryMentee = db_select('mentee','mm');
+	    $queryMentee->join('users','u','u.uid=mm.mid');
+	    $queryMentee->join('user_activation','ua','ua.uid=mm.mid');
+	    $queryMentee->fields('mm')
+	    			->fields('ua');
+	    $resultMentee = $queryMentee->execute();
+	    $countMentee = 0;
+	    $countMenteeNA = 0;
+	    foreach($resultMentee as $recordMentee){
+	    	if($recordMentee->activated == 'Y'){
+	    		$countMentee = $countMentee + 1;
+	    	}
+	    	else if($recordMentee->activated == 'N'){
+	    		$countMenteeNA = $countMenteeNA + 1;
+	    	}
+	    }
+	    //print_r($countMentee);
+	    $output6 .= '<div>Number of Mentees: '. $countMentee . '</div>';
+
+	//Number of Non-Activated Mentors
+	    $output15 .= '<div>Non-Activated Mentors: '. $countMentorNA . '</div>';
+
+	//Number of Non-Activated Mentees
+	    $output16 .= '<div>Non-Activated Mentees: '. $countMenteeNA . '</div>';
+
+	//Number of Current Connections - 3 Months or On-Demand 1 Hour and On-Demand 30 minutes
+	    $output7 .= '<div>On-Demand 30 Minutes Connections: '. $countConnection0 . '</div>';
+	    $output7 .= '<div>On-Demand 1 Hour Connections: '. $countConnection1 . '</div>';
+	    $output7 .= '<div>Three Months Connections: '. $countConnection2 . '</div>';
+
+	//Number of Current Connections - Volunteer or Paid
+	    $queryConnectionVP = db_select('mentor','m');
+	    $queryConnectionVP->join('users','u','u.uid=m.mid');
+	    $queryConnectionVP->join('connections','c','c.mentor_id=m.mid');
+	    $queryConnectionVP->fields('m')
+	    		->fields('c');
+	    $resultConnectionVP = $queryConnectionVP->execute();
+	
+	    $countVolunteerConnection = 0;
+	    $countPaidConnection = 0;
+	    foreach ($resultConnectionVP as $recordConnectionVP) {
+	    	if($recordConnectionVP->volunteer == '0' && $recordConnectionVP->status == 'Confirmed')
+	    		$countPaidConnection = $countPaidConnection + 1;
+	    	else if($recordConnectionVP->volunteer == '1' && $recordConnectionVP->status == 'Confirmed')
+	    		$countVolunteerConnection = $countVolunteerConnection + 1;
+	    }
+
+	    $output8 .= '<div>Volunteer Connections: '. $countVolunteerConnection . '</div>';
+	    $output8 .= '<div>Paid Connections: ' . $countPaidConnection . '</div>';
+
+	//Number of Three Months Connections - Volunteer or Paid
+
+	    $countVolunteer1 = 0;
+	    $countPaid1 = 0;
+	    $countVolunteer2 = 0;
+	    $countPaid2 = 0;
+	    $countVolunteer3 = 0;
+	    $countPaid3 = 0;
+	    $resultConnection = $queryConnectionVP->execute();
+	
+	    foreach ($resultConnection as $recordConnection) {
+    		if($recordConnection->subscription_id == '1' && $recordConnection->status == 'Confirmed'){
+	    		if($recordConnection->volunteer == '0')
+	    			$countPaid3 = $countPaid3 + 1;
+	    		else if($recordConnection->volunteer == '1')
+	    			$countVolunteer3 = $countVolunteer3 + 1;
+	    	}else if($recordConnection->subscription_id == '3' && $recordConnection->status == 'Confirmed'){
+	    		if($recordConnection->volunteer == '0')
+	    			$countPaid2 = $countPaid2 + 1;
+	    		else if($recordConnection->volunteer == '1')
+	    			$countVolunteer2 = $countVolunteer2 + 1;
+	    	} else if($recordConnection->subscription_id == '2' && $recordConnection->status == 'Confirmed'){
+	    		if($recordConnection->volunteer == '0')
+	    			$countPaid1 = $countPaid1 + 1;
+	    		else if($recordConnection->volunteer == '1')
+	    			$countVolunteer1 = $countVolunteer1 + 1;
+	    	}
+	    }
+
+	    $output9 .= '<div>Volunteer Connections: '. $countVolunteer2 . '</div>';
+	    $output9 .= '<div>Paid Connections: '. $countPaid2 . '</div>';
+
+	//Number of On-Demand 1 Hour Connections - Volunteer or Paid
+	    //Data obtained from previous DB select
+	    $output10 .= '<div>Volunteer Connections: '. $countVolunteer1 . '</div>';
+	    $output10 .= '<div>Paid Connections: '. $countPaid1 . '</div>';
+
+	//Number of On-Demand 30 Minutes Connections - Volunteer or Paid
+	    //Data obtained from previous DB select
+	    $output11 .= '<div>Volunteer Connections: '. $countVolunteer3 . '</div>';
+	    $output11 .= '<div>Paid Connections: '. $countPaid3 . '</div>';
+
+	//Number of Expired Paid Connections
+	    $queryExpiredPaid = db_select('pendingpayment','pp');
+	    $queryExpiredPaid->condition('pp.volunteer_mentor',0,'=');
+	    $queryExpiredPaid->fields('pp');
+	    $resultExpiredPaid = $queryExpiredPaid->execute();
+	    $countExpiredPaid = $resultExpiredPaid->rowCount();
+	    //$countExpiredPaid = $countExpiredPaid + $countPaidConnection;
+	    $output12 .='<div>Paid Connections - Expired: ' . $countExpiredPaid . '</div>';
+
+	//Number of Expired Volunteer Connections
+	    $queryExpiredVolunteer = db_select('pendingpayment','pp');
+	    $queryExpiredVolunteer->condition('pp.volunteer_mentor',1,'=');
+	    $queryExpiredVolunteer->fields('pp');
+	    $resultExpiredVolunteer = $queryExpiredVolunteer->execute();
+	    $countExpiredVolunteer = $resultExpiredVolunteer->rowCount();
+	    //$countTotalVolunteer = $countTotalVolunteer + $countVolunteerConnection;
+	    $output13 .='<div>Volunteer Connections - Expired: ' . $countExpiredVolunteer . '</div>';
+
+	//Total Number of Connections
+	    $countTotal = $countExpiredVolunteer + $countExpiredPaid + $countPaidConnection + $countVolunteerConnection;
+	    $output14 .= '<div>Volunteer and Paid - Active & Expired: ' . $countTotal . '</div></div>';
+
+	   $output .= '<script type="text/javascript">
+
+			jQuery(document).ready(function($){
+				//jQuery("#pendingPaymentsContent").hide();
+				jQuery("#collapsePendingPayments").click(function(e){
+					e.stopPropagation();
+					jQuery("#pendingPaymentsContent").fadeToggle(200);
+				});
+				jQuery("#pendingPaymentsContent").click(function(e){
+					e.stopPropagation();
+				});
+
+				//Mentors Paid Recently
+				jQuery("#collapseMentorsPaid").click(function(e){
+					e.stopPropagation();
+					jQuery("#mentorsPaidContent").fadeToggle(200);
+				});
+				jQuery("#mentorsPaidContent").click(function(e){
+					e.stopPropagation();
+				});
+
+				//Session Did Not Happen
+				jQuery("#collapseSessionDidNotHappen").click(function(e){
+					e.stopPropagation();
+					jQuery("#sessionDidNotHappenContent").fadeToggle(200);
+				});
+				jQuery("#sessionDidNotHappenContent").click(function(e){
+					e.stopPropagation();
+				});
+
+				//Expired Volunteer Connections 
+				jQuery("#collapseExpiredVolunteerConnections").click(function(e){
+					e.stopPropagation();
+					jQuery("#expiredVolunteerConnectionsContent").fadeToggle(200);
+				});
+				jQuery("#expiredVolunteerConnectionsContent").click(function(e){
+					e.stopPropagation();
+				});
+
+				//Ongoing - 30 Minutes 
+				jQuery("#collapse30Mins").click(function(e){
+					e.stopPropagation();
+					jQuery("#30MinsContent").fadeToggle(200);
+				});
+				jQuery("#30MinsContent").click(function(e){
+					e.stopPropagation();
+				});
+
+				jQuery("#collapse1Hour").click(function(e){
+					e.stopPropagation();
+					jQuery("#1HourContent").fadeToggle(200);
+				});
+				jQuery("#1HourContent").click(function(e){
+					e.stopPropagation();
+				});
+
+				jQuery("#collapse3Months").click(function(e){
+					e.stopPropagation();
+					jQuery("#3MonthsContent").fadeToggle(200);
+				});
+				jQuery("#3MonthsContent").click(function(e){
+					e.stopPropagation();
+				});
+
+				//Pending Connections
+				jQuery("#collapsePendingConnections").click(function(e){
+					e.stopPropagation();
+					jQuery("#pendingConnectionsContent").fadeToggle(200);
+				});
+				jQuery("#pendingConnectionsContent").click(function(e){
+					e.stopPropagation();
+				});
+
+			});
+
+	</script>';
+    /*if($n_count == 0) {
+    	$output .= 'No pending payments</div>';
+		return $output;
+    }*/
+/*    $output9 .= '</div>';
+    $output8 .= $output9.'</div>';
+    $output7 .= $output8.'</div>';
+    $output6 .= $output7.'</div>';
+    $output5 .= $output6.'</div>';
+    $output4 .= $output5.'</div>';
+    $output3 .= $output4.'</div>';
+    $output2 .= $output3. '</div>';
+    $output1 .= $output2. '</div>';
+    $output .= $output1. '</div>';
+  $output .= drupal_render_children($form);
+*/
+
+$output1 .= '</div>';
+$output19 .= '</div>';
+$output2 .= '</div>';
+$output3 .= '</div>';
+$output4 .= '</div>';
+$output17 .= '</div>';
+$output18 .= '</div>';
+//Reordering for better accessibility
+  $button = '<button id="buttonActivateUsers" class="form-submit button small round steel_blue">Activate Selected Users</button>';
+  $output0 .= $button.'</div>';
+  $output0 .= '</div>';
+  $output17 .= $output0.'</div>';
+  $output4 .= $output17.'</div>';
+  $output3 .= $output4.'</div>';
+  $output2 .= $output3.'</div>';
+  $output19 .= $output2.'</div>';
+  $output18 .= $output19.'</div>';
+  $output1 .= $output18.'</div>';
+  $output .= $output1.'</div>';
+  $output14 .= $output.'</div>';
+  $output13 .= $output14.'</div>';
+  $output12 .= $output13.'</div>';
+  $output11 .= $output12.'</div>';
+  $output10 .= $output11.'</div>';
+  $output9 .= $output10.'</div>';
+  $output8 .= $output9.'</div>';
+  $output7 .= $output8.'</div>';
+  $output16 .= $output7.'</div>';
+  $output15 .= $output16.'</div>';
+  $output6 .= $output15.'</div>';
+  $output5 .= $output6.'</div>';
+  $output5 .= drupal_render_children($form);
+  return $output5;
+}
+
+function pending_payment_theme() {
+  return array(
+    'pending_payment_mentors' => array(
+      'render element' => 'form'
+    ),
+  );
+}

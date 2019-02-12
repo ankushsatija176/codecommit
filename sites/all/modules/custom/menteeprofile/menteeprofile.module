@@ -1,0 +1,1913 @@
+<?php
+
+module_load_include('inc', 'mentoringcommon', 'mentoringcommon.module');
+
+function menteeprofile_menu() {
+  $items['menteeprofile/view'] = array(
+    'title' => '',
+    'page callback' => 'menteeprofile_view',
+    //'page arguments' => array('menteeprofile_edit'),
+    'access callback' => TRUE,
+    //'access arguments' => array(1),
+    //'type' => MENU_LOCAL_TASK,
+    //'file' => 'user.pages.inc',
+  );
+  /*
+  $items['menteeprofile/%menteeprofile'] = array(
+  		'title' => '',
+  		'page callback' => 'drupal_get_form',
+  		'page arguments' => array('mentee_profile_form', 1),
+  		'access callback' => TRUE,
+  		'file' => 'mentee.pages.inc',
+  		'file path' => drupal_get_path('module', 'mentee'),
+  );*/
+  
+  $items['menteeprofile/%menteeprofile'] = array(
+    'title' => '',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('menteeprofile_form', 1),
+    'access callback' => TRUE,
+   // 'type' => MENU_LOCAL_TASK,
+    'file' => 'mentee.pages.inc',
+  	'file path' => drupal_get_path('module', 'mentee'),
+  );
+  
+  $items['mentee/%menteeaccept/accept'] = array(
+    'title' => 'About',
+    //'page callback' => 'drupal_get_form',
+    //'page arguments' => array('menteeprofile_form', 1),
+    'access callback' => TRUE,
+    //'type' => MENU_LOCAL_TASK,
+    //'file' => 'user.pages.inc',
+  );
+  
+  $items['mentee/%menteedecline/decline'] = array(
+    'title' => 'About',
+    //'page callback' => 'drupal_get_form',
+    //'page arguments' => array('menteeprofile_form', 1),
+    'access callback' => TRUE,
+    //'type' => MENU_LOCAL_TASK,
+    //'file' => 'user.pages.inc',
+  );
+  
+  $items['menteeprofile/%menteeprofile/edit'] = array(
+    'title' => 'View/Edit Profile',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentee_profile_form', 1),
+    'access callback' => TRUE,
+  	'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'mentee.pages.inc',
+  	'file path' => drupal_get_path('module', 'mentee'),
+  );
+  
+  $items['menteeprofile/%menteeprofile/connections'] = array(
+    'title' => 'Connections',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('menteeprofile_connection_form', 1),
+    'access callback' => 'menteeprofile_view_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    //'file' => 'user.pages.inc',
+  );
+  
+  $items['menteeprofile/%menteeprofile/messages'] = array(
+    'title' => 'Messages',
+    'page callback'    => 'privatemsg_list_page',
+    'page arguments'   => array('list'),
+    'file'             => 'privatemsg.pages.inc',
+    'file path' => drupal_get_path('module', 'privatemsg'),
+    'access callback' => 'menteeprofile_view_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+  );
+  
+  $items['menteeprofile/%menteeprofile/notifications'] = array(
+    'title' => 'Notifications',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('menteeprofile_notifications_form', 1),
+    'access callback' => 'menteeprofile_view_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+  );
+  
+  $items['menteeprofile/%menteeprofile/recommendations'] = array(
+    'title' => 'Recommendations',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('menteeprofile_recommendation_form', 1),
+    'access callback' => 'menteeprofile_view_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'menteeprofile.pages.inc',
+  );
+  
+  $items['menteeprofile/%menteeprofile/searchMentor'] = array(
+  		'title' => 'Search Mentor',
+  		'page callback' => 'menteeprofile_metor_search',
+  		'access callback' => 'menteeprofile_view_access',
+  		'access arguments' => array(1),
+  		'type' => MENU_LOCAL_TASK,
+  		//'page arguments' => array('menteeprofile_recommendation_form', 1),
+  		//'access callback' => 'menteeprofile_view_access',
+  		//'access arguments' => array(1),
+  		//'type' => MENU_LOCAL_TASK,
+  		//'file' => 'menteeprofile.pages.inc',
+  );
+ 
+  $items['mentee/%menteeprofile/profile'] = array(
+    'title' => '',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('menteeprofile_form', 1),
+    'access callback' => TRUE,
+    //'access arguments' => array(1),
+    //'type' => MENU_LOCAL_TASK,
+  ); 
+  
+  $items['menteeprofile/msgs'] = array(
+    'title' => 'Messages',
+    'page callback'    => 'privatemsg_list_page',
+    'page arguments'   => array('list'),
+    'file'             => 'privatemsg.pages.inc',
+    'file path' => drupal_get_path('module', 'privatemsg'),
+    'access callback' => TRUE,
+    //'access arguments' => array(1),
+    //'access arguments' => array($_SESSION['user']->uid),
+  );
+  
+  $items['mentee/connection'] = array(
+    'title' => '',
+    'page callback' => 'mentee_payment_start_page',
+    //'page arguments' => array('menteeprofile_form', 1),
+    'access callback' => TRUE,
+    //'access arguments' => array(1),
+    //'type' => MENU_LOCAL_TASK,
+  ); 
+   
+  return $items;
+}
+
+function mentee_connection_complete($mentor_id, $mentee_id) {
+	$_SESSION['conn_mentor_id'] = $mentor_id;
+	$query = db_select('mentor', 'm'); 
+    $query->join('users', 'u', 'u.uid = m.mid');
+	
+	$query->condition('m.userid', $mentor_id,'=');	   
+	$query->fields('m')
+		->fields('u', array('mail'));
+	$result = $query->execute();
+	
+	$mentor = array();
+	if(	$record = $result->fetchAssoc()) {
+		$mentor['email'] = $record['mail'];
+		$mentor['first_name'] = $record['first_name'];
+		if($record['last_name'] != '')
+    		$mentor['last_name'] = $record['last_name'][0].'.';
+    	else
+    		$mentor['last_name'] = '';
+    	$mentor['volunteer'] = $record['volunteer'];
+	}
+
+	if(isset($mentor['volunteer'])){
+		if($mentor['volunteer']  == "1"){
+		$sql = "select cid, mentor_id from {connections} where status = 'Payment Pending' and mentee_id=" . $mentee_id . " and mentor_id=" . $_SESSION['conn_mentor_id'];
+    	$result = db_query($sql);
+    	if(	$record = $result->fetchAssoc()) {
+    		$mentor_id = $record['mentor_id'];
+    		$sql = "update {connections} set status = 'Confirmed',last_update_time = NOW(), session_start_time = NOW() WHERE cid=" . $record['cid'];
+    		$result = db_query($sql);	
+    					
+			$query = db_select('mentee', 'm'); 
+		    $query->join('users', 'u', 'u.uid = m.mid');
+			
+			$query->condition('m.userid', $mentee_id,'=');	   
+			$query->fields('m')
+				->fields('u', array('mail'));
+			$result = $query->execute();
+			$mentee = array();
+			if(	$record = $result->fetchAssoc()) {
+				$mentee['email'] = $record['mail'];
+				$mentee['first_name'] = $record['first_name'];
+				if($record['last_name'] != '')
+		    		$mentee['last_name'] = $record['last_name'][0].'.';
+		    	else
+		    		$mentee['last_name'] = '';
+			}
+			
+    		drupal_set_message('You are now connected to <a href="/mentee/'.$mentee_id.'/profile"><u>'. $mentee['first_name'] . " " . $mentee['last_name'] . '</u></a>');
+    		$values = array();
+			  //$values['sender'] = $mentee;
+			  $values['recipient'] = $mentor['first_name'] . ' ' . $mentor['last_name'];
+			  $values['sender_name'] = $mentee['first_name'] . ' ' . $mentee['last_name'];
+			  $values['sender_mail'] = $mentee['email'];
+			  $values['sender_id'] = $mentee_id;
+			  //$values['category'] = contact_load($values['cid']);
+			  if($mentor['volunteer']  == "1")
+			  	drupal_mail('menteeprofile', 'mentee_payment_completed_mail_volunteer', $mentor['email'], language_default(), $values, 'administer@skoolmentor.com');
+			  else
+			  	drupal_mail('menteeprofile', 'mentee_payment_completed_mail', $mentor['email'], language_default(), $values, 'administer@skoolmentor.com');
+			  $values['recipient'] = $mentee['first_name'] . ' ' . $mentee['last_name'];
+			  $values['sender_name'] = $mentor['first_name'] . ' ' . $mentor['last_name'];
+			  $values['sender_mail'] = $mentor['email'];
+			  $values['sender_id'] = $mentor_id;
+			  //$values['category'] = contact_load($values['cid']);
+			  drupal_mail('menteeprofile', 'mentor_payment_completed_mail', $mentee['email'], language_default(), $values, 'administer@skoolmentor.com');
+					
+				
+				drupal_goto('mentee/'. $mentee_id.'/profile');
+			}
+		}else{
+			if(isset($_REQUEST['token'])){
+				$token = $_REQUEST['token'];
+				$query = db_select('connections', 'con');
+				$query->condition('con.token', $token,'=');
+				$query->fields('con');
+				$result = $query->execute();
+				
+				$subscription_id = 3;
+				if(	$record = $result->fetchAssoc()) {
+					$subscription_id = $record['subscription_id'];
+				}
+				if($subscription_id == 1){
+					$url = uc_cart_add_item(3369, 1, NULL, NULL, NULL);
+				}else if($subscription_id == 2){
+					$url = uc_cart_add_item(12, 1, NULL, NULL, NULL);
+				}else if($subscription_id == 3){
+					$url = uc_cart_add_item(5, 1, NULL, NULL, NULL);
+				}else{
+          $url = uc_cart_add_item(5, 1, NULL, NULL, NULL);
+        }
+			}else{
+        $subscription = $_REQUEST['subscription'];
+				if($subscription == "ondemand"){
+					$url = uc_cart_add_item(12, 1, NULL, NULL, NULL);
+				}else if($subscription == "3month"){
+					$url = uc_cart_add_item(5, 1, NULL, NULL, NULL);
+				}else if($subscription == "30mins"){
+					$url = uc_cart_add_item(3369, 1, NULL, NULL, NULL);
+				}else{
+          $url = uc_cart_add_item(5, 1, NULL, NULL, NULL);
+        }
+			}
+			drupal_goto('cart/checkout');
+		}	
+	}
+}
+
+function mentee_payment_start_page() {
+	
+	/*if(isset($_SESSION['uc_cart_id'])) {
+		uc_cart_empty($_SESSION['uc_cart_id']);
+	}*/
+	uc_cart_empty(uc_cart_get_id());
+	$_SESSION['conn_mentor_id'] = '';
+	if(isset($_REQUEST['mentor_id'])) {
+		$_SESSION['conn_mentor_id'] = $_REQUEST['mentor_id'];
+		mentee_connection_complete($_REQUEST['mentor_id'], $_SESSION['user']->uid);
+	}
+	
+}
+
+function menteeprofile_msg_list() {
+	$uid = $_SESSION['user']->uid;
+	//module_load_include('inc', 'privatemsg', 'privatemsg.pages');
+	drupal_goto('menteeprofile/' . $uid . '/messages');
+}
+
+function menteeprofile_view_access($uid) {
+	if(isset($_SESSION['user']) && $_SESSION['user']->uid == $uid->uid) {
+  		return TRUE;
+  	}
+  	return FALSE;
+}
+/*
+function menteeprofile_edit_form($uid){
+	$form = drupal_get_form('menteesearch_form');
+	return drupal_render($form);
+}*/
+function menteeprofile_view() {
+	$uid = $_SESSION['user']->uid;
+	drupal_goto('menteeprofile/' . $uid);
+}
+function menteeprofile_metor_search() {
+	drupal_goto('mentor/search');
+}
+
+function menteeprofile_load($uid, $reset = FALSE) {
+  $users = mentor_load_multiple(array($uid), array(), $reset);
+  return reset($users);
+}
+
+function menteeaccept_load($uid) {
+	$connection_token = user_password();
+	$sql = "update {connections} set status = 'Payment Pending',last_update_time = NOW(), token ='" . $connection_token ."' WHERE mentor_id=" . $_SESSION['user']->uid . " AND mentee_id=" . $uid;
+    $result = db_query($sql);
+    
+    $sql = "select cid from {connections} where mentor_id=" . $_SESSION['user']->uid . " AND mentee_id=" . $uid;
+    $result = db_query($sql);
+    $cid = $result->fetchAssoc();
+    $query = db_select('mentee', 'm'); 
+    $query->join('users', 'u', 'u.uid = m.mid');
+	
+	$query->condition('m.userid', $uid,'=');	   
+	$query->fields('m')
+		->fields('u', array('mail'));
+	$result = $query->execute();
+	
+	$mentee = array();
+	if(	$record = $result->fetchAssoc()) {
+		$mentee['email'] = $record['mail'];
+		$mentee['first_name'] = $record['first_name'];
+		if($record['last_name'] != '')
+    		$mentee['last_name'] = $record['last_name'][0].'.';
+    	else
+    		$mentee['last_name'] = '';
+	}
+	
+	$query = db_select('mentor', 'm'); 
+    $query->join('users', 'u', 'u.uid = m.mid');
+	
+	$query->condition('m.userid', $_SESSION['user']->uid,'=');	   
+	$query->fields('m')
+		->fields('u', array('mail'));
+	$result = $query->execute();
+	
+	$mentor = array();
+	if(	$record = $result->fetchAssoc()) {
+		$mentor['email'] = $record['mail'];
+		$mentor['first_name'] = $record['first_name'];
+		if($record['last_name'] != '')
+    		$mentor['last_name'] = $record['last_name'][0].'.';
+    	else
+    		$mentor['last_name'] = '';
+    	$mentor['volunteer'] = $record['volunteer'];
+	}		
+    
+    $values = array();
+	  //$values['sender'] = $mentor;
+	  $values['cid'] = $cid['cid'];
+	  $values['recipient'] = $mentee['first_name'] . ' ' . $mentee['last_name'];
+	  $values['sender_name'] = $mentor['first_name'] . ' ' . $mentor['last_name'];
+	  $values['sender_mail'] = $mentor['email'];
+	  $values['sender_id'] = $_SESSION['user']->uid;
+	  $values['mentee_id'] = $uid;
+	  $values['connection_token'] = $connection_token;
+	  //$values['category'] = contact_load($values['cid']);
+	  if($mentor['volunteer'] == '0') {
+	  	  drupal_mail('menteeprofile', 'mentee_connection_confirmed_mail', $mentee['email'], language_default(), $values, 'administer@skoolmentor.com');
+    
+    	  drupal_set_message('Your connection status is pending as ' . $mentee['first_name'] . ' ' . $mentee['last_name'] . ' has to make payment for this connection.');
+      } else if($mentor['volunteer'] == '1') {
+            //$url = 'mentee/connection?mentor_id='. $_SESSION['user']->uid . '&token=' . $connection_token;
+      	    //drupal_set_message($url);
+            //drupal_goto($url);
+            mentee_connection_complete($_SESSION['user']->uid, $uid);
+          
+      }
+    drupal_goto('menteeprofile/' . $uid . '/view');
+}
+
+function menteedecline_load($uid) {
+	
+	$sql = "update {connections} set status = 'Decline',last_update_time = NOW() WHERE mentor_id=" . $_SESSION['user']->uid . " AND mentee_id=" . $uid;
+    $result = db_query($sql);
+    
+    $query = db_select('mentee', 'm'); 
+    $query->join('users', 'u', 'u.uid = m.mid');
+	
+	$query->condition('m.userid', $uid,'=');	   
+	$query->fields('m')
+		->fields('u', array('mail'));
+	$result = $query->execute();
+	
+	$mentee = array();
+	if(	$record = $result->fetchAssoc()) {
+		$mentee['email'] = $record['mail'];
+		$mentee['first_name'] = $record['first_name'];
+		if($record['last_name'] != '')
+    		$mentee['last_name'] = $record['last_name'][0].'.';
+    	else
+    		$mentee['last_name'] = '';
+	}
+	
+	$query = db_select('mentor', 'm'); 
+    $query->join('users', 'u', 'u.uid = m.mid');
+	
+	$query->condition('m.userid', $_SESSION['user']->uid,'=');	   
+	$query->fields('m')
+		->fields('u', array('mail'));
+	$result = $query->execute();
+	
+	$mentor = array();
+	if(	$record = $result->fetchAssoc()) {
+		$mentor['email'] = $record['mail'];
+		$mentor['first_name'] = $record['first_name'];
+		if($record['last_name'] != '')
+    		$mentor['last_name'] = $record['last_name'][0].'.';
+    	else
+    		$mentor['last_name'] = '';
+	}		
+    
+    $values = array();
+	  //$values['sender'] = $mentor;
+	  $values['recipient'] = $mentee['first_name'] . ' ' . $mentee['last_name'];
+	  $values['sender_name'] = $mentor['first_name'] . ' ' . $mentor['last_name'];
+	  $values['sender_mail'] = $mentor['email'];
+	  $values['sender_id'] = $_SESSION['user']->uid;
+	  //$values['category'] = contact_load($values['cid']);
+	  drupal_mail('menteeprofile', 'mentee_connection_decline_mail', $mentee['email'], language_default(), $values, 'administer@skoolmentor.com');
+    
+    drupal_set_message('Connection request declined.');
+    drupal_goto('/mentee/' . $uid . '/profile');  //$_SESSION['user']->
+}
+
+
+function menteeprofile_load_multiple($uids = array(), $conditions = array(), $reset = FALSE) {
+  $user = entity_load('user', $uids, $conditions, $reset);    
+  return $user;
+}
+
+function menteeprofile_form($form, &$form_state, $account) {
+	$uid;
+	$role;
+	if(isset($_SESSION['user'])) {  		
+  		if($_SESSION['user']->uid == $account->uid) {
+  			$role = 'full-profile';
+  			$uid = $_SESSION['user']->uid;
+  		} else {
+  			$role = 'authenticated-user';
+  			$uid = $account->uid;
+  		}
+  	} else {
+  		$uid = $account->uid;
+  		$role = 'anonymous-user';
+  	}
+     
+    $connection_condition = 'c.mentee_id = m.mid';    
+    $query = db_select('mentee', 'm');
+    $query->join('users', 'u', 'u.uid = m.mid');   
+    $query->leftJoin('specialization_category', 'sc', 'sc.cid = m.fos_id');
+	//$query->join('specialization_subcategory', 'ssc', 'ssc.scid = m.fos_sub_id');
+	//$query->join('area_mentoring', 'aom', 'aom.aid = m.aom_id');
+	if($role == 'authenticated-user') {
+		$connection_condition .= ' AND c.mentor_id ='.$_SESSION['user']->uid;
+	}
+	$query->leftJoin('connections', 'c', $connection_condition);
+	$query->condition('m.mid', $uid,'=');	   
+	$query->fields('m')
+		->fields('sc', array('name'))
+		//->fields('ssc', array('name'))
+		//->fields('aom', array('name'))
+		->fields('u', array('mail'))
+		->fields('c', array('cid', 'status'));
+	$query->addField('sc', 'name', 'category_name');
+	//$query->addField('ssc', 'name', 'subcategory_name');
+	//$query->addField('aom', 'name', 'area_mentoring');
+	$result = $query->execute();
+	$mentor = array();
+	if(	$record = $result->fetchAssoc()) {
+		$account->role = $role;
+		$account->mid = $record['mid'];
+		$account->cid = $record['cid'];
+		$account->connection_status = $record['status'];
+		$account->email = $record['mail'];
+    $account->first_name = $record['first_name'];
+    if($record['last_name'] != '')
+    	$account->last_name = $record['last_name'][0].'.';
+    else
+    	$account->last_name = '';
+    $account->birthday = $record['birthday'].'-'.$record['birthmonth'].'-'.$record['birthyear'];
+    $account->gender = $record['gender'];
+    $account->zipcode = $record['zipcode'];
+    $account->school_name = $record['school_name'];
+    $account->yearOfSchool = $record['year_of_school'];
+    $account->mentee_type = $record['mentee_type'];
+    $account->college_name = $record['college_name'];
+    $account->yearOfIntendedTransfer = $record['year_of_intended_transfer'];
+    $account->state = $record['state'];
+    $account->city = $record['city'];
+    $account->mentoring_request = $record['mentoring_request'];
+    $account->mentoring_request_title = $record['mentoring_request_title'];
+    $account->about_me = $record['mentoring_request'];
+    $account->fos = $record['category_name'];
+    $account->specialization = $record['specialization'];
+    $account->mobile = $record['mobile'];
+    $account->skype_id = $record['skype_id'];
+		//$account->fos_sub = $record['subcategory_name'];
+		//$account->area_mentoring = $record['area_mentoring'];
+		$account->mentor_id = 0;
+		if($account->role == 'authenticated-user') {
+			$account->mentor_id = $_SESSION['user']->uid;
+		}
+		if($role != 'anonymous-user' && isset($account->connection_status) && $account->connection_status == 'Confirmed') {
+	    	$account->connected = TRUE;
+	    } else {
+	    	$account->connected = FALSE;
+	    }
+	}
+	
+  $query = db_select('mentee_specialization', 'ms');
+	$query->join('specialization_subcategory', 'ssc', 'ssc.scid = ms.spec_id'); //JOIN node with users 
+	$query->condition('ms.mentee_id', $account->uid,'=');	   
+	$query->fields('ms')//SELECT the fields from user	
+	   ->fields('ssc');
+	$result = $query->execute();	
+
+  $fieldOfStudy = '';
+  foreach ($result as $fos) {
+    $fieldOfStudy .= $fos->name . ', '; 
+  }
+  $account->fos_sub = $fieldOfStudy;
+
+  $query = db_select('mentee_aom', 'ma');
+	$query->join('area_mentoring', 'am', 'am.aid = ma.aom_id'); //JOIN node with users 
+	$query->condition('ma.mentee_id', $account->uid,'=');	   
+	$query->fields('ma')//SELECT the fields from user	
+	   ->fields('am');
+	$result = $query->execute();	
+
+  $areaOfMentoring = '';
+  foreach ($result as $aom) {
+  	  $areaOfMentoring .= $aom->name . ', '; 
+  }
+  $account->area_mentoring = $areaOfMentoring;
+  
+	// Account information.
+  $form['account'] = array(
+    '#type'   => 'container',    
+    //'#attributes' => array('class' => array('container-inline')),
+    '#weight' => -10,
+    '#theme' => 'menteeprofile_basic_form',
+  );
+  
+  $form['account']['role'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $account->role,
+  );
+  
+  $form['account']['user'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $account,
+  );
+    
+  $form['#attached']['css'] = array(
+    drupal_get_path('module', 'menteeprofile') . '/menteeprofile.css',
+  );   
+  
+  if($role == 'authenticated-user' && $account->status = 'Pending') {
+    
+    /*if($account->cid != 0) {
+	  	$form['account']['submit'] = array(
+		    '#type' => 'submit',
+		    '#value' => t('Accept Connection Request')
+		  );
+	}*/
+		  
+	$form['account']['mentor_id'] = array(
+	    '#type' => 'hidden',
+	    '#default_value' => $_SESSION['user']->uid,
+	  );
+	$form['account']['mentee_id'] = array(
+	  '#type' => 'hidden',
+	  '#default_value' => $account->mid,
+	);
+	
+	$form['account']['mentee_email'] = array(
+	    '#type' => 'hidden',
+	    '#default_value' => $account->mail,
+    );
+  }
+  
+  $form['account']['basic_info'] = array(
+    '#type' => 'item',
+    '#title' => t('Personal Details'),
+    //'#collapsible' => TRUE,
+  );
+ 
+   $form['account']['basic_info']['first_name'] = array(
+    '#type' => 'item',
+    '#title' => t('Name:'),
+    '#maxlength' => 255,
+    '#markup' => $account->first_name . ' ' .$account->last_name,
+    //'#attributes' => array('class' => array('username')),
+    '#access' => TRUE,
+    //'#weight' => -10,
+  );
+  
+  $form['account']['basic_info']['bday'] = array(
+    '#type' => 'item',
+    '#title' => t('Date of birth:'),
+    '#markup' => date('F d, Y', strtotime($account->birthday)),
+    '#access' => $role != 'anonymous-user',
+  );
+    
+  $form['account']['basic_info']['gender'] = array(
+    '#title' => t('Gender:'),
+    '#type' => 'item',
+    '#markup' => ($account->gender == '0' ? 'Male': 'Female'),
+    '#access' => $role != 'anonymous-user',
+  );
+  
+  $form['account']['basic_info']['zipcode'] = array(
+    '#type' => 'item',
+    '#title' => t('Zip code:'),    
+    '#markup' => $account->zipcode,
+    '#access' => $role != 'anonymous-user',
+  );
+  
+  $form['account']['basic_info']['mobile'] = array(
+    '#type' => 'item',
+    '#title' => t('Mobile:'),    
+    '#markup' => $account->mobile,
+    '#access' => $account->connected || $role == 'full-profile',
+  );
+  
+  $form['account']['basic_info']['skype_id'] = array(
+    '#type' => 'item',
+    '#title' => t('Skype Id:'),    
+    '#markup' => $account->skype_id,
+    '#access' => $account->connected || $role == 'full-profile',
+  );
+  
+  $form['account']['educationalInformation'] = array(
+    '#type' => 'item',
+    '#title' => t('Education Information'),
+    //'#collapsible' => TRUE,
+    '#access' => TRUE,
+  );
+  
+  $form['account']['educationalInformation']['school_name'] = array(
+    '#type' => 'item',
+    '#title' => t('School Name:'),
+    '#markup' => $account->school_name,
+    '#access' => TRUE,
+  );
+  
+  $form['account']['educationalInformation']['city'] = array(
+    '#type' => 'item',
+    '#title' => t('City:'),
+    '#markup' => $account->city,
+    '#access' => $role != 'anonymous-user',
+  );
+  
+  $form['account']['educationalInformation']['state'] = array(
+    '#type' => 'item',
+    '#title' => t('State:'),
+    '#markup' => $account->state,
+    '#access' => $role != 'anonymous-user',
+  );
+  
+  $form['account']['educationalInformation']['yearOfSchool'] = array(
+    '#type' => 'item',
+    '#title' => t('Year of High School Graduation:'),
+    '#markup' => $account->yearOfSchool,
+    '#access' => TRUE,
+  );
+
+  $form['account']['educationalInformation']['college_name'] = array(
+    '#type' => 'item',
+    '#title' => t('Current College Name:'),
+    '#markup' => $account->college_name,
+    '#access' => TRUE,
+  );
+
+  $form['account']['educationalInformation']['yearOfIntendedTransfer'] = array(
+    '#type' => 'item',
+    '#title' => t('Year of Intended Transfer:'),
+    '#markup' => $account->yearOfIntendedTransfer,
+    '#access' => TRUE,
+  );
+
+  $form['account']['mentorship_details'] = array(
+    '#type' => 'item',
+    '#title' => t('Mentorship request'),
+    //'#collapsible' => TRUE,
+    '#access' => TRUE,
+  );
+  
+  $form['account']['mentorship_details']['areaofmentoring'] = array(
+    '#type' => 'item',
+    '#title' => t('Area want mentoring in:'),
+    '#markup' => $account->area_mentoring,
+    '#access' => TRUE,
+  );
+ 
+  $form['account']['mentorship_details']['fieldOfStudy'] = array(
+    '#type' => 'item',
+    '#title' => t('Field of Study:'),
+    '#markup' => $account->fos,
+    '#access' => TRUE,
+  );
+  
+  $form['account']['mentorship_details']['fieldOfSpecialization'] = array(
+    '#type' => 'item',
+    '#title' => t('Field of Specialization:'),
+    '#markup' => $account->specialization,
+    '#access' => TRUE,
+  );
+  
+  
+  $form['account']['general_details'] = array(
+    '#type' => 'item',
+    '#title' => t('General Information:'),
+    //'#collapsible' => TRUE,
+    '#access' => TRUE,
+  );
+  
+  $form['account']['general_details']['about_me'] = array(
+    '#type' => 'item',
+    '#title' => t('About me:'),
+    '#markup' => $account->about_me,
+    '#disable' => TRUE,
+    '#access' => TRUE,
+  );
+ 
+  //$form['#submit'][] = 'menteeprofile_form_submit';
+  $form['#submit'][] = 'menteeprofile_connection_accept_form_submit';
+ return $form;
+}
+
+function menteeprofile_connection_accept_form_submit($form, &$form_state) {
+	$sql = "select cid from {connections} where mentor_id=" . $_SESSION['user']->uid . " AND mentee_id=" . $uid;
+    $result = db_query($sql);
+    $cid = $result->fetchAssoc();
+	$account = $form_state['values']['user'];
+		$connection = array();
+		$connection['mentor_id'] = $form_state['values']['mentor_id'];
+		$connection['mentee_id'] = $form_state['values']['mentee_id'];
+		$connection['status'] = 'Confirmed';
+		$connection['requestor_type'] = '1';
+		
+		$query = db_select('mentor', 'm'); 
+		$query->join('connections', 'c');
+	    $query->join('users', 'u', 'u.uid = m.mid');  
+	    $query->leftJoin('specialization_category', 'sc', 'sc.cid = m.fos_id');
+		//$query->join('specialization_subcategory', 'ssc', 'ssc.scid = m.fos_sub_id');
+		//$query->join('education_qualification', 'eq', 'eq.eid = m.degree_id'); //JOIN node with users
+		
+		$query->condition('m.userid', $form_state['values']['mentor_id'],'=');	   
+		$query->fields('m')
+			->fields('sc', array('name'))
+			//->fields('ssc', array('name'))
+			->fields('u', array('mail'));
+		$query->fields('c');
+		$query->addField('sc', 'name', 'category_name');
+		//$query->addField('ssc', 'name', 'subcategory_name');
+		$result = $query->execute();
+		
+		$mentor = array();
+		if(	$record = $result->fetchAssoc()) {
+			$mentor['email'] = $record['mail'];
+			$mentor['first_name'] = $record['first_name'];
+			if($record['last_name'] != '')
+	    		$mentor['last_name'] = $record['last_name'][0].'.';
+	    	else
+	    		$mentor['last_name'] = '';
+		}
+		
+		$values = $form_state['values'];
+	  $activation_code = user_password();
+	  //$values['sender'] = $mentor;
+	  $values['cid'] = $cid['cid'];
+	  $values['recipient'] = $form_state['values']['first_name'] . ' ' . (($form_state['values']['last_name'][0] != '') ? $form_state['values']['last_name'][0].'.' : '');
+	  $values['sender_name'] = $mentor['first_name'] . ' ' . $mentor['last_name'];
+	  $values['sender_mail'] = $mentor['email'];
+	  $values['sender_id'] = $form_state['values']['mentor_id'];
+	  $values['mentee_id'] = $form_state['values']['mentee_id'];
+	  //$values['category'] = contact_load($values['cid']);
+	  drupal_mail('menteeprofile', 'mentee_connection_confirmed_mail', $values['mentee_email'], language_default(), $values, 'administer@skoolmentor.com');
+		$success = drupal_write_record('connections', $connection);
+		drupal_goto('/mentor/' . $form_state['values']['mentor_id'] . '/profile');
+	
+}
+
+function menteeprofile_mail($key, &$message, $params)
+{
+  // The key allows for a module to define multiple mails. This
+  // key needs to be the same as the first parameter in drupal_mail() above
+  //if($key == 'user_activation_mail')
+  switch ($key) {  
+  	case 'mentee_connection_accept_mail':
+	    $message['subject'] = 'Connection accepted by ' . $params['sender_name'];
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi,';
+	    $message['body'][] = 'Congratulations! ' . $params['sender_name'] .' has accepted your connection request';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = 'Please click on below link to view his profile<br/>';
+	    $message['body'][] = 'https://skoolmentor.com/mentor/'. $params['sender_id'] . '/profile';
+	    $message['body'][] = 'Regards,';
+	    $message['body'][] = 'The SkoolMentor Team';
+	    break;
+	case 'mentee_connection_confirmed_mail':
+		$message['subject'] = 'Connection accepted by ' . $params['sender_name'];
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi ' . $params['recipient'] . ',';
+	    $message['body'][] = 'Congratulations! ' . $params['sender_name'] .' has accepted your connection request';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    $message['body'][] = 'Please pay the connection fee to start communicating with this mentor. Please click on the link below to make the payment';
+	    $message['body'][] = 'https://skoolmentor.com/menteeprofile/' . $params['mentee_id'] . '/connections';
+	    $message['body'][] = 'If you don\'t want to connect with this mentor, please click the below link to reset the connection';
+	    $message['body'][] = 'https://skoolmentor.com/connection/'.$params['cid'].'/resetconnection';
+	    $message['body'][] = 'Regards,';
+	    $message['body'][] = 'The SkoolMentor Team';
+	    break;  
+	case 'mentee_connection_decline_mail': 
+		$message['subject'] = 'Connection declined by ' . $params['sender_name'];
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi ' . $params['recipient'] . ',';
+	    $message['body'][] = 'Unfortunately, ' . $params['sender_name'] .' has declined your connection request';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    $message['body'][] = 'However, you can try connecting to other mentors.';
+	    $message['body'][] = 'Regards,';
+	    $message['body'][] = 'The SkoolMentor Team';
+	    break;	    
+	case 'mentee_payment_completed_mail':  
+		$message['subject'] = 'You are now connected to ' . $params['sender_name'];
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi ' . $params['recipient'] . ',';
+	    $message['body'][] = $params['sender_name'] .' has completed the payment and connected to you. You can now start sending messages to ' . $params['sender_name'] . '';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = 'However, you can try connecting to other mentors.';
+	    $message['body'][] = 'Regards,';
+	    $message['body'][] = 'The SkoolMentor Team';
+	    break;  
+	case 'mentee_payment_completed_mail_volunteer':  
+		$message['subject'] = 'You are now connected to ' . $params['sender_name'];
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi ' . $params['recipient'] . ',';
+	    $message['body'][] = $params['sender_name'] .' has connected to you. You can now start sending messages to ' . $params['sender_name'] . '';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = 'However, you can try connecting to other mentors.';
+	    $message['body'][] = 'Regards,';
+	    $message['body'][] = 'The SkoolMentor Team';
+	    break;
+	case 'mentor_payment_completed_mail':  
+		$message['subject'] = 'You are now connected to ' . $params['sender_name'];
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi ' . $params['recipient'] . ',';
+	    $message['body'][] = $params['sender_name'] .' has accepted your connection request and connected to you. You can now start sending messages to ' . $params['sender_name'] . '';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = 'However, you can try connecting to other mentors.';
+	    $message['body'][] = 'Regards,';
+	    $message['body'][] = 'The SkoolMentor Team';
+	    break; 
+	case 'mentee_connection_complete_reminder_mail_for_30mins':
+        $message['subject'] = 'Reminder for scheduling mentoring session';
+        // Each element of the body array becomes a new line in the email.
+        $message['body'][] = 'Hi '.$params['mentee_name'].',';
+        $message['body'][] = 'Thank you for your request for  “On-demand” mentoring. If you have not already then please work with your mentor ' . $params['mentor_name'] .' and schedule your 30 minutes mentoring session by '.$params['connection_exp_date'].'. If your meeting is already scheduled, then please ignore this message.
+        Remember to :
+          1) check out resources for mentees by clicking the “Resources” button. The resources provided should help you make the most of your mentoring sessions.
+          2) share your questions or at least a general overview of what you want to discuss with your mentor at least a day prior to the meeting so that your mentor has some time to prepare for the meeting.
+After the above mentioned date, this mentoring request will be assumed fulfilled and discarded. You could issue a new connection request if you would like to reconnect with the same mentor again.
+If you are done with your mentoring session before '.$params['connection_exp_date'].' , please click here to stop these emails: '.$params['connection_cancellation_link'].'
+       
+Thank you for using SkoolMentor. Could you please rate your mentor and provide some feedback before your mentoring period is over?
+Click on this link to provide your feedback: '.$params['feedbacklink'].'
+   
+Thank you for being a SkoolMentee!
+       
+Regards,
+The SkoolMentor Team';
+        // Adding an empty string to the body array adds an extra line in the email
+        //$message['body'][] = 'However, you can try connecting to other mentors.';
+        break;
+  case 'mentor_connection_complete_reminder_mail_for_30mins':
+      $message['subject'] = 'Reminder for scheduling mentoring session';
+      // Each element of the body array becomes a new line in the email.
+      $message['body'][] = 'Hi '.$params['mentor_name'].',';
+      $message['body'][] = 'Thank you for accepting the “On-demand” mentoring request from ' . $params['mentee_name'] .' . We understand you are busy. However if you have not already, then please work with your mentee and schedule a 30 minutes mentoring session by '.$params['connection_exp_date'].'. If your meeting is already scheduled, then please ignore this message.
+      Remember to :
+        1) check out resources for mentors by clicking the “Resources” button. The resources provided should help you prepare for your mentoring sessions.
+        2) confirm the meeting with your mentee a day prior to the scheduled date. Also please request your mentee to send you their questions or at least a general overview of what they would like to talk about in the meeting prior to the actual meeting so that you have some time to prepare.
+After the date mentioned above, this mentoring request will be assumed fulfilled and discarded.
+Your mentee would need to issue a new connection request to you if he/she would like to connect with you again.
+Thank you for being a SkoolMentor!
+      
+Regards,
+The SkoolMentor Team';
+      // Adding an empty string to the body array adds an extra line in the email
+      //$message['body'][] = 'However, you can try connecting to other mentors.';
+      break;
+  case 'mentee_connection_complete_reminder_mail_for_ondemand':
+      $message['subject'] = 'Reminder for scheduling mentoring session';
+      // Each element of the body array becomes a new line in the email.
+      $message['body'][] = 'Hi '.$params['mentee_name'].',';
+      $message['body'][] = 'Thank you for your request for  “On-demand" mentoring. If you have not already then please work with your mentor ' . $params['mentor_name'] .' and schedule your 1 hour mentoring session by '.$params['connection_exp_date'].'. If your meeting is already scheduled, then please ignore this message.
+        Remember to :
+          1) check out resources for mentees by clicking the “Resources” button. The resources provided should help you make the most of your mentoring sessions.
+          2) share your questions or at least a general overview of what you want to discuss with your mentor at least a day prior to the meeting so that your mentor has some time to prepare for the meeting.
+After the above mentioned date, this mentoring request will be assumed fulfilled and discarded. You could issue a new connection request if you would like to reconnect with the same mentor again.
+If you are done with your mentoring session before '.$params['connection_exp_date'].' , please click here to stop these emails: '.$params['connection_cancellation_link'].'
+       
+Thank you for using SkoolMentor. Could you please rate your mentor and provide some feedback before your mentoring period is over?
+Click on this link to provide your feedback: '.$params['feedbacklink'].'
+   
+Thank you for being a SkoolMentee!
+       
+Regards,
+The SkoolMentor Team';
+        // Adding an empty string to the body array adds an extra line in the email
+        //$message['body'][] = 'However, you can try connecting to other mentors.';
+        break;
+	case 'mentor_connection_complete_reminder_mail_for_ondemand':
+	    $message['subject'] = 'Reminder for scheduling mentoring session';
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi '.$params['mentor_name'].',';
+	    $message['body'][] = 'Thank you for accepting the “On-demand” mentoring request from ' . $params['mentee_name'] .' . We understand you are busy. However if you have not already, then please work with your mentee and schedule your 1 hour mentoring session by '.$params['connection_exp_date'].'. If your meeting is already scheduled, then please ignore this message.
+      Remember to :
+        1) check out resources for mentors by clicking the “Resources” button. The resources provided should help you prepare for your mentoring sessions.
+        2) confirm the meeting with your mentee a day prior to the scheduled date. Also please request your mentee to send you their questions or at least a general overview of what they would like to talk about in the meeting prior to the actual meeting so that you have some time to prepare.
+After the date mentioned above, this mentoring request will be assumed fulfilled and discarded.
+Your mentee would need to issue a new connection request to you if he/she would like to connect with you again.
+Thank you for being a SkoolMentor!
+	    
+Regards,
+The SkoolMentor Team';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = 'However, you can try connecting to other mentors.';
+	    break;
+	case 'mentee_connection_complete_reminder_mail_for_3month':
+        $message['subject'] = 'Reminder for scheduling mentoring session';
+        // Each element of the body array becomes a new line in the email.
+        $message['body'][] = 'Hi '.$params['mentee_name'].',';
+        $message['body'][] = 'Thank you for your request for “3 month” mentoring. If you have not already then please work with your mentor '.$params['mentor_name']. ' and schedule your mentoring sessions per you and your mentor’s mutually agreed timings and frequency.
+Your mentoring period ends  by '.$params['connection_exp_date'].'. If your meeting is already scheduled, then please ignore this message.
+Remember to :
+  1) check out resources for mentees by clicking the “Resources” button. The resources provided should help you make the most of your mentoring sessions.
+  2) share your questions or at least a general overview of what you want to discuss with your mentor at least a day prior to the meeting so that your mentor has some time to prepare for the meeting.
+After the above mentioned date, this mentoring request will be assumed fulfilled and discarded. You could issue a new connection request if you would like to reconnect with the same mentor again.
+     
+Thank you for using SkoolMentor. Could you please rate your mentor and provide some feedback before your mentoring period is over?
+Click on this link to provide your feedback: '.$params['feedbacklink'].'
+   
+Thank you for being a SkoolMentee!
+     
+Regards,
+The SkoolMentor Team';
+        // Adding an empty string to the body array adds an extra line in the email
+        //$message['body'][] = 'However, you can try connecting to other mentors.';
+        break;
+	case 'mentor_connection_complete_reminder_mail_for_3month':
+	    $message['subject'] = 'Reminder for scheduling mentoring session';
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi '.$params['mentor_name'].',';
+	    
+	    $message['body'][] = 'Thank you for accepting the  “3 month” mentoring request from ' . $params['mentee_name'] .'.  We understand you are busy. However if you have not already, then please work with your mentee in scheduling the mentoring sessions per you and your mentee’s  mutually agreed timings and frequency .
+Your mentoring period ends by '.$params['connection_exp_date'].' . If your meeting is already scheduled, then please ignore this message.
+Remember to :
+  1) check out resources for mentors by clicking the “Resources” button. The resources provided should help you prepare for your mentoring sessions.
+  2) confirm the meeting with your mentee a day prior to the scheduled date. Also please request your mentee to send you their questions or at least a general overview of what they would like to talk about in the meeting prior to the actual meeting so that you have some time to prepare.
+After the date mentioned above, this mentoring request will be assumed fulfilled and discarded.
+Your mentee would need to issue a new connection request to you if he/she would like to connect with you again.
+	
+Thank you for being a SkoolMentor!
+	  
+Regards,
+The SkoolMentor Team';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = 'However, you can try connecting to other mentors.';
+	    break;
+	case 'connection_reset_notification_mail_to_mentor_for_30mins';
+      $message['subject'] = 'Connection between you and '.$params['mentee_name'].' has been terminated.';
+      // Each element of the body array becomes a new line in the email.
+      $message['body'][] = 'Hi '.$params['mentor_name'].',';
+       
+      $message['body'][] = 'Your mentoring session with mentee '.$params['mentee_name'].' is now complete.
+          
+Thank you for being a SkoolMentor!
+   
+Regards,
+The SkoolMentor Team';
+      // Adding an empty string to the body array adds an extra line in the email
+      //$message['body'][] = 'However, you can try connecting to other mentors.';
+      break;
+  case 'connection_reset_notification_mail_to_mentee_for_30mins';
+      $message['subject'] = 'Connection between you and '.$params['mentor_name'].' has been terminated.';
+      // Each element of the body array becomes a new line in the email.
+      $message['body'][] = 'Hi '.$params['mentee_name'].',';
+      
+      $message['body'][] = 'Your mentoring session with mentor '.$params['mentor_name'].' is now complete.
+       
+Thank you for being a SkoolMentee!
+      
+Regards,
+The SkoolMentor Team';
+      // Adding an empty string to the body array adds an extra line in the email
+      //$message['body'][] = 'However, you can try connecting to other mentors.';
+      break;
+  case 'connection_reset_notification_mail_to_mentor_for_ondemand';
+	    $message['subject'] = 'Connection between you and '.$params['mentee_name'].' has been terminated.';
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi '.$params['mentor_name'].',';
+	     
+	    $message['body'][] = 'Your mentoring session with mentee '.$params['mentee_name'].' is now complete.
+			    
+Thank you for being a SkoolMentor!
+	 
+Regards,
+The SkoolMentor Team';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = 'However, you can try connecting to other mentors.';
+	    break;
+	case 'connection_reset_notification_mail_to_mentee_for_ondemand';
+	    $message['subject'] = 'Connection between you and '.$params['mentor_name'].' has been terminated.';
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi '.$params['mentee_name'].',';
+	    
+	    $message['body'][] = 'Your mentoring session with mentor '.$params['mentor_name'].' is now complete.
+			 
+Thank you for being a SkoolMentee!
+	    
+Regards,
+The SkoolMentor Team';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = 'However, you can try connecting to other mentors.';
+	    break;
+	case 'connection_reset_notification_mail_to_mentor_for_3month';
+	    $message['subject'] = 'Connection between you and '.$params['mentee_name'].' has been terminated.';
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi '.$params['mentor_name'].',';
+	     
+	    $message['body'][] = 'Your mentoring period with mentee '.$params['mentee_name'].' is now over.
+			    
+Thank you for being a SkoolMentor!
+	 
+Regards,
+The SkoolMentor Team';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = 'However, you can try connecting to other mentors.';
+	    break;
+	 case 'connection_reset_notification_mail_to_mentee_for_3month';
+	    $message['subject'] = 'Connection between you and '.$params['mentor_name'].' has been terminated.';
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi '.$params['mentee_name'].',';
+	    
+	    $message['body'][] = 'Your mentoring period with mentor '.$params['mentor_name'].' is now over.
+			 
+Thank you for being a SkoolMentee!
+	    
+Regards,
+The SkoolMentor Team';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = 'However, you can try connecting to other mentors.';
+	    break;/*case 'feedback_mail_to_mentee';
+	    $message['subject'] = 'Please provide your Feedback';
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi '.$params['mentee_name'].',';
+	     
+	    $message['body'][] = 'Thank you for using SkoolMentor. Could you please rate your mentor and provide some feedback?
+Click on this link to provide your feedback: '.$params['feedbacklink'].' .
+	
+	 
+Regards,
+The SkoolMentor Team';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = 'However, you can try connecting to other mentors.';
+	    break;*/
+  }
+}
+
+function menteeprofile_notifications_form($form, &$form_state, $account) {
+	$uid;
+	if(isset($_SESSION['user']) && $_SESSION['user']->uid == $account->uid) {
+		$uid = $_SESSION['user']->uid;
+	} else {
+		$uid = $account->uid;
+	}
+	
+	$query = db_select('connections', 'c');   
+	$query->join('mentor', 'mr', 'mr.mid = c.mentor_id');
+    $query->join('mentee', 'm', 'm.mid = c.mentee_id');
+	$query->join('users', 'u', 'u.uid = m.mid');
+	$query->join('subscription', 'sub', 'c.subscription_id = sub.sid');
+	$query->condition('m.mid', $uid,'=');
+	$query->fields('mr')
+		->fields('c')
+		->fields('sub')
+		->fields('u', array('picture'));
+	$result = $query->execute();
+	
+	$notification_array = array();
+	foreach($result as $record) {
+		/*$mentor = array();
+		$mentor['mid'] = $record->mid;
+		$mentor['picture'] = $record->picture;
+	    $mentor['mentor_name'] = $record->first_name . ' ' . $record->last_name;
+	    $mentor['cid'] = $record->cid;
+	    $mentor['connection_status'] = $record->status;
+	    $mentor['state'] = $record->state;
+	    $mentor['city'] = $record->city;
+		
+		$notification_array[$record->mid] = $mentor;*/
+		$notification_array[$record->mid] = array(
+				'mid' => $record->mid,
+				'picture' => $record->picture,
+				'mentor_name' => $record->first_name . ' ' . (($record->last_name[0] != '') ? $record->last_name[0].'.' : ''),
+				'cid' => $record->cid,
+				'connection_status' => $record->status,
+				'state' => $record->state,
+				'city' => $record->city,
+				'engagement_model_with_mentee' => $record->alias,
+				'volunteer' => $record->volunteer,
+		);
+	}
+
+	  
+	$form['notifications'] = array(
+	    '#type'   => 'container',    
+	    //'#attributes' => array('class' => array('container-inline')),
+	    '#weight' => -10,
+	    '#theme' => 'menteeprofile_notifications_form',	    
+  	);
+  	
+  	$form['notifications']['notification'] = array(
+    '#type' => 'item',
+    '#title' => t(''),
+    '#markup' => $notification_array,
+  );
+  return $form;
+}
+
+function menteeprofile_connection_form($form, &$form_state, $account) {
+	$uid;
+	if(isset($_SESSION['user']) && $_SESSION['user']->uid == $account->uid) {
+		$uid = $_SESSION['user']->uid;
+	} else {
+		$uid = $account->uid;
+	}
+	
+	$query = db_select('connections', 'c');   
+	$query->join('mentor', 'mr', 'mr.mid = c.mentor_id');
+  $query->join('mentee', 'm', 'm.mid = c.mentee_id');
+  $query->leftJoin('specialization_category', 'sc', 'sc.cid = mr.fos_id');
+  //$query->join('specialization_subcategory', 'ssc', 'ssc.scid = mr.fos_sub_id');
+	$query->join('education_qualification', 'eq', 'eq.eid = mr.degree_id');
+	$query->join('users', 'u', 'u.uid = mr.mid');
+	$query->join('subscription', 'sub', 'c.subscription_id = sub.sid');
+  $query->condition('m.mid', $uid,'=');	
+	$query->condition('c.status', array('Decline'),'NOT IN');
+	$query->fields('mr')
+		->fields('sc', array('name'))
+		//->fields('ssc', array('name'))
+		->fields('u', array('picture'))
+		->fields('sub')
+		->fields('eq', array('name'));
+	$query->addField('sc', 'name', 'category_name');
+	//$query->addField('ssc', 'name', 'subcategory_name');
+	$query->addField('eq', 'name', 'degree');
+	$query->addField('c', 'status', 'conn_status');
+	$query->addField('c', 'last_update_time', 'lastupdate_time');
+	$query->addField('c', 'subscription_id', 'subscription');
+	$query->addField('c', 'cid', 'c_id');
+	$result = $query->execute();
+	
+	$mentor_array = array();
+	foreach($result as $record) {
+		$mentor = array();
+		$mentor['mid'] = $record->mid;
+		$mentor['picture'] = $record->picture;
+    $mentor['first_name'] = $record->first_name;
+    $mentor['last_name'] = ($record->last_name != '') ? $record->last_name[0].'.' : '';
+    $mentor['birthday'] = $record->birthday.'-'.$record->birthmonth.'-'.$record->birthyear;
+    $mentor['gender'] = $record->gender;
+    $mentor['zipcode'] = $record->zipcode;
+    $mentor['mentor_type'] = $record->mentor_type;
+    $mentor['title'] = $record->title;
+    $mentor['cid'] = $record->c_id;
+    $mentor['state'] = $record->state;
+    $mentor['city'] = $record->city;
+    $mentor['employer'] = $record->employer;
+    $mentor['years_of_exp'] = $record->years_of_exp;
+    $mentor['linkedInProfile'] = $record->linked_in_profile;
+    $mentor['last_school_attended'] = $record->last_school_attended;
+    //$mentor['hobbies'] = $record->hobbies;
+    $mentor['mentoring_motivation'] = $record->mentoring_motivation;
+    $mentor['fos'] = $record->category_name;
+		//$account->fos_sub = $record->subcategory_name;
+		$mentor['degree'] = $record->degree;
+    $mentor['school_attending'] = $record->school_attending;
+    $mentor['year_of_school'] = $record->year_of_school;
+    $mentor['about_me'] = $record->about_me;
+    $mentor['connection_status'] = $record->conn_status;
+    
+    if($mentor['connection_status'] == 'Confirmed'){
+    	$mentor['lastupdate_date'] = date("m/d/Y", strtotime($record->lastupdate_time));
+    	if($record->subscription == "1")
+    		$mentor['end_date'] = date("m/d/Y", strtotime("+3 weeks", strtotime($record->lastupdate_time)));
+    	else if($record->subscription == "2")
+        $mentor['end_date'] = date("m/d/Y", strtotime("+3 weeks", strtotime($record->lastupdate_time)));
+      else if($record->subscription == '3')
+        $mentor['end_date'] = date("m/d/Y", strtotime("+3 months", strtotime($record->lastupdate_time)));
+    }
+
+    $mentor['engagement_model_with_mentee'] = $record->alias;
+    $mentor['volunteer'] = $record->volunteer;
+    $query1 = db_select('mentor_specialization', 'ms');
+  	$query1->join('specialization_subcategory', 'ssc', 'ssc.scid = ms.type'); //JOIN node with users 
+		$query1->condition('ms.mentor_id', $mentor['mid'],'=');	   
+		$query1->fields('ms')//SELECT the fields from user	
+		   ->fields('ssc');
+		$result1 = $query1->execute();
+		
+		$fieldOfStudy = '';
+	  foreach ($result1 as $fos) {
+  	  $fieldOfStudy .= $fos->name . ', '; 
+	  }
+	  $mentor['fos_sub'] = $fieldOfStudy;
+		
+		$mentor_array[$record->mid] = $mentor;
+	}
+	
+	
+	
+	$form['connection'] = array(
+    '#type'   => 'container',    
+    //'#attributes' => array('class' => array('container-inline')),
+    '#weight' => -10,
+    '#theme' => 'menteeprofile_connection_form',	    
+	);
+
+	$form['connection']['mentee'] = array(
+    '#type' => 'item',
+    '#title' => t(''),
+    '#markup' => $mentor_array,
+  );
+  return $form;
+}
+
+function menteeprofile_form_submit($form, &$form_state) {
+	
+	$connection = array();
+	$connection['mentor_id'] = $form_state['values']['mentor_id'];
+	$connection['mentee_id'] = $form_state['values']['mentee_id'];
+	$connection['status'] = 'Pending';
+	$connection['requestor_type'] = '2';
+	$success = drupal_write_record('connections', $connection);
+	drupal_goto('mentorprofile/profile');
+}
+
+/**
+ * Implements hook_theme().
+ */
+function menteeprofile_theme() {
+
+  return array(
+    'menteeprofile_connection_form' => array(
+      'render element' => 'form'
+    ),
+    'menteeprofile_notifications_form' => array(
+      'render element' => 'form'
+    ), 
+    'menteeprofile_basic_form' => array(
+      'render element' => 'form'
+    ),
+    'mentee_recommendation_list' => array(
+      'render element' => 'form'
+    ),
+    'menteeprofile__page' =>  array(
+      'template' => 'theme/menteeprofile--page',
+      'render element' => 'page'
+    ),
+    /*'node--menteeprofile' => array(
+      //'arguments' => array('form' => NULL),
+	  'render element' => 'node',
+	  'template' => 'templates/node--menteeprofile',
+    ),*/
+  );
+}
+
+function menteeprofile_preprocess_page(&$variables, $hook) {
+  //if ( my_condition() ) {
+  
+  $path=drupal_get_path_alias();
+
+  if(0 === strpos($path, 'menteeprofile')) {
+    $path_array = explode("/", $path);
+    $variables['theme_hook_suggestions'][] = 'menteeprofile__page';
+    $user_picture = get_user_picture($path_array[1]);
+    $variables['user_picture'] = 'sites/default/files/pictures/'.$user_picture->filename;
+  }
+  //}
+}
+
+function theme_menteeprofile_basic_form($variables) {
+	//var_dump($variables["form"]["user"]["#default_value"]["uid"]);
+	$role; 
+	$account;
+	$submit_rendered = '';
+  $output = '';
+ 
+  $basic_info = '';
+  $educational_details = '';
+  $mentorship_details = '';
+  $general_details = '';
+  drupal_add_css(drupal_get_path('module', 'mentoringcommon') . '/css/common.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  
+  $form = $variables['form'];
+  foreach ($form as $key => $element) {
+    // Set which elements to render in the table.
+    $allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+    // Make sure this is an element and it's of a type listed above.
+      
+    if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+    
+        //if($element['#type'] == 'fieldset') {
+      	if($element['#type'] == 'submit') {
+      		$submit_rendered = drupal_render($element);
+      	}
+      	if ($key == 'user'){
+      		$account = $element['#default_value'];
+      	} else if($key == 'basic_info') {
+      		$label = $element['#title'];
+	        unset($form[$key]['#title']);
+	        $basic_info .= '<div><br/><div class="mentee-profile-block-div1 mentee-profile-block-div3">&nbsp;&nbsp;&nbsp;</div>';
+	        foreach($form[$key] as $field => $field_element) {
+	        	if (is_array($form[$key][$field]) && $field_element['#access'] && isset($field_element['#type']) && in_array($field_element['#type'], $allowed_elements)) {
+	        		
+	        		$label = $field_element['#title'];
+	        		$basic_info .= '<div class="mentee-profile-block-div2"><div class="mentee-profile-block-div1" ><b>' . $label . '</b></div>
+	        						<div class="wordwrap mentee-profile-block-div1"  >&nbsp;' . $field_element['#markup'] . '</div></div>';
+	        	}
+	        }
+	        $basic_info = '<div>' . $basic_info . '</div></div>';
+	        //$rendered = drupal_render($form[$key]);	
+	        //$basic_info .= '<table><tr><font size="4">Basic Information</font></tr><tr>'. $rendered .'</tr></table>';
+      	} else if($key == 'educationalInformation') {
+      		$label = $element['#title'];
+	        unset($form[$key]['#title']);
+	        $educational_details .= '<div><br/><div class="mentee-profile-block-div1 mentee-profile-block-div3">&nbsp;&nbsp;&nbsp;</div>';
+	        if($account->role == 'full-profile') {
+	        	//$educational_details .= '<div style="margin-left: 20%;">'.'<button onclick="location.href=\'/mentorprofile/editabout\'" id="editprofile" type="button">Edit</button>'.'</div>';
+	        }
+	        $educational_details .= '<div class="mentee-profile-block-div4">';
+	        foreach($form[$key] as $field => $field_element) {
+	        	if (is_array($form[$key][$field]) && $field_element['#access'] && isset($field_element['#type']) && in_array($field_element['#type'], $allowed_elements)) {
+	        		if($account->mentee_type == 'highschool'){
+                $label = $field_element['#title'];
+                if($label != 'Current College Name:' && $label != 'Year of Intended Transfer:'){
+                  $educational_details .= '<div class="mentee-profile-block-div2"><div class="mentee-profile-block-div1" ><b>' . $label . '</b></div>
+                    <div class="wordwrap mentee-profile-block-div1">&nbsp;' . $field_element['#markup'] . '</div></div>';
+                }
+              }else if($account->mentee_type == 'transfer'){
+                $label = $field_element['#title'];
+                if($label != 'School Name:' && $label != 'Year of High School Graduation:'){
+                  $educational_details .= '<div class="mentee-profile-block-div2"><div class="mentee-profile-block-div1" ><b>' . $label . '</b></div>
+                    <div class="wordwrap mentee-profile-block-div1">&nbsp;' . $field_element['#markup'] . '</div></div>';
+                }
+              }
+	        	}
+	        }
+	        $educational_details = '<div>' . $educational_details . '</div></div></div>';
+	        //$professional .= '<table><tr><font size="4">Professional</font></tr><tr>'. $rendered .'</tr></table>';
+      	} else if($key == 'mentorship_details') {
+      		$label = $element['#title'];
+	        unset($form[$key]['#title']);
+	        $mentorship_details .= '<div><br/><div class="mentee-profile-block-div1 mentee-profile-block-div3">&nbsp;&nbsp;&nbsp;</div>';
+	        if($account->role == 'full-profile') {
+	        	//$mentorship_details .= '<div style="margin-left: 20%;">'.'<button onclick="location.href=\'/mentorprofile/editabout\'" id="editprofile" type="button">Edit</button>'.'</div>';
+	        }
+	        $mentorship_details .= '<div class="mentee-profile-block-div4">';
+	        foreach($form[$key] as $field => $field_element) {
+	        	if (is_array($form[$key][$field]) && $field_element['#access'] && isset($field_element['#type']) && in_array($field_element['#type'], $allowed_elements)) {
+	        		
+	        		$label = $field_element['#title'];
+	        		$mentorship_details .= '<div class="mentee-profile-block-div2"><div class="mentee-profile-block-div1" ><b>' . $label . '</b></div>
+	        						<div class="wordwrap mentee-profile-block-div1">&nbsp;' . $field_element['#markup'] . '</div></div>';
+	        	}
+	        }
+	        $mentorship_details = '<div>' . $mentorship_details . '</div></div></div>';
+	        //$rendered = drupal_render($form[$key]);	
+	        //$academic_details .= '<table><tr><font size="4">Skill Set</font></tr><tr>'. $rendered .'</tr></table>';
+      	} else if($key == 'general_details') {
+      		$label = $element['#title'];
+	        unset($form[$key]['#title']);
+	        $general_details .= '<div><br/><div class="mentee-profile-block-div1 mentee-profile-block-div3">&nbsp;&nbsp;&nbsp;</div>';
+	        if($account->role == 'full-profile') {
+	        	//$general_details .= '<div style="margin-left: 20%;">'.'<button onclick="location.href=\'/mentorprofile/editabout\'" id="editprofile" type="button">Edit</button>'.'</div>';
+	        }
+	        $general_details .= '<div class="mentee-profile-block-div4">';
+	        foreach($form[$key] as $field => $field_element) {
+	        	if (is_array($form[$key][$field]) && $field_element['#access'] && isset($field_element['#type']) && in_array($field_element['#type'], $allowed_elements)) {
+	        		
+	        		$label = $field_element['#title'];
+	        		$general_details .= '<div class="mentee-profile-block-div2"><div class="mentee-profile-block-div1" ><b>' . $label . '</b></div>
+	        						<div class="wordwrap mentee-profile-block-div1">&nbsp;' . $field_element['#markup'] . '</div></div>';
+	        	}
+	        }
+	        $general_details = '<div>' . $general_details . '</div></div></div>';
+	        //$rendered = drupal_render($form[$key]);	
+	        //$general_details .= '<table><tr><font size="4">General</font></tr><tr>'. $rendered .'</tr></table>';
+      	}
+    }    
+  }
+  $output .= '<div>
+  				<div class="mentee-profile-usr-pic2" > ';
+  $output .='<div class="mentee-profile-usr-pic3" >';
+  $user = user_load($account->uid);
+  //var_dump($user);
+  if($user->picture){
+  	$output .= theme_image_style(
+  			array(
+  					'style_name' => 'thumbnail',
+  					'path' => $user->picture->uri,
+  					'attributes' => array(
+  							'class' => 'avatar',
+  							'style'=> 'object-fit:fill; height: 150px;'
+  					)
+  			)
+  	);
+  }else{
+  	$output .='<img src="/sites/default/files/styles/thumbnail/public/pictures/picture-571-1395975666.png" />';
+  }
+  
+  $output .='</div>';
+  $output .= '<div class="mentee-profile-block2">' . $account->first_name . ' ' . $account->last_name ;
+  if($account->mentee_type == 'highschool'){
+    $output .= '<div class = "wordwrap mentee-profile-block3" >' .$account->school_name.' , Class of '.$account->yearOfSchool.'</div>';
+  }else if($account->mentee_type == 'transfer'){
+    $output .= '<div class = "wordwrap mentee-profile-block3" >' .$account->college_name.' , Class of '.$account->yearOfIntendedTransfer.'</div>';
+  }
+  if(!empty($account->specialization)){
+    $output .= '<div class = "wordwrap mentee-profile-block3"> Specialization: '.$account->specialization.'</div>';
+  }
+  $output .=  '</div>';
+  //var_dump($account->mentor_id );
+  $userId = $_SESSION['user']->uid;
+  $user = user_load($userId);
+  // from line 1324 to 1330
+  $role = '';
+  foreach ($user->roles as $value) {
+	if(strpos($value,'mentee') !== false){
+		$role = 'mentee';
+		break;
+	}
+  }	
+  if(isset($_SESSION['user']->uid)) {
+  
+				 if($submit_rendered){
+				 	$output .= '<div class="mentee-profile-submit1" >' . $submit_rendered . '</div>';
+				 }else if($account->mentor_id != 0 && $account->role == 'authenticated-user') {
+  				 	if($account->connection_status == 'Pending') {
+  				 		$output .= '<div class="mentee-profile-submit1" ><a class="accept_button" target="_self" data-track="login" href="/mentee/' . $account->mid . '/accept" id="editprofile" type="button">Accept Connection</a>
+  				 				<a class="decline_button" target="_self" data-track="login" href="/mentee/' . $account->mid . '/decline" id="editprofile" type="button">Decline Connection</a></div>';
+  				 	} else if($account->connection_status == 'Payment Pending') { 
+  				 		$output .= '<div class="mentee-profile-submit1" ><span class="connect-button" target="_self" data-track="login" href="#">Payment Pending</span></div>';
+  				 	} else if($account->connection_status == 'Confirmed'){
+  				 		$output .= '<div class="mentee-profile-submit1" ><a class="accept_button" target="_self" data-track="login" href="/messages/new/' . $account->mid . '">Message</a></div>';
+  				    }else if($role !== 'mentee'){ //add a condition $role !== 'mentee'
+  				    	$output .= '<div class="mentee-profile-submit1"><button class = "form-submit button small round steel_blue" onclick="location.href=\'/mentor/' . $account->mid . '/invite\'" id="editprofile" type="button">Invite</button></div>';
+  				    }
+  				 }
+  				 	
+  }				 	
+  				   				
+  $output .= '</div><div class="mentee-profile-details-tab2 mentee-profile-block1">';
+  $output .= '<div id="profile_nav_menu"><ul>
+  <li class="active" name="basicinfoPan" >Basic</li>
+  <li class="inactive" name="educationalPan" >Education</li>
+  <li class="inactive" name="mentorshipdetailsPan">Mentorship</li>
+  <li class="inactive" name="generaldetailsPan" >General</li>
+  </ul></div>';
+	 $output .= '	<div class="mentee-profile-details-tab1" >
+	  					<div id= "educationalPan" style= "display: none;" class="mentee-profile-details-tab2" >' . $educational_details . '</div>
+	  					<div id= "basicinfoPan"  class="mentee-profile-details-tab2" >' . $basic_info . '</div>  					
+	  					<div id= "mentorshipdetailsPan" style= "display: none;" class="mentee-profile-details-tab2" >' . $mentorship_details . '</div>
+	  					<div id= "generaldetailsPan" style= "display: none;" class="mentee-profile-details-tab2"  >' . $general_details . '</div>
+	  				 </div>
+	  			</div>
+  			</div>';
+	 $output .= '<script type="text/javascript">
+		(function ($) {
+			
+			$(".inactive").click(function(){
+  							var $currentPan = $(".active").attr("name");
+  							var $newPan = $(this).attr("name");
+  							$("#"+$currentPan+"").css("display","none");
+  							$("#"+$newPan+"").css("display","block");
+							$(".active").attr("class","inactive");
+  							$(this).attr("class","active");
+  			
+						});
+  		$("[name=basicinfoPan]").click(function(){
+  							var $currentPan = $(".active").attr("name");
+  							var $newPan = $(this).attr("name");
+  							$("#"+$currentPan+"").css("display","none");
+  							$("#"+$newPan+"").css("display","block");
+							$(".active").attr("class","inactive");
+  							$(this).attr("class","active");
+  			
+						});
+		})(jQuery);
+	 
+	</script>';
+  
+  return $output;
+}
+
+function theme_menteeprofile_connection_form($variables) {
+	
+	$role;  
+	$submit_rendered = '';
+	$temp = 0;
+  $output = '<div class="mentee-nrc-heading1">Connections</div><div class="mentee-nrc-heading2">';
+  drupal_add_css(drupal_get_path('module', 'mentoringcommon') . '/css/common.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  $form = $variables['form'];
+  //var_dump($form);
+  if(empty($form)) {
+  	$output .= 'No new connections</div>';
+  	return $output;
+  }
+ foreach ($form as $key => $element) {
+    // Set which elements to render in the table.
+    $allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden','container');
+    // Make sure this is an element and it's of a type listed above.
+      
+    if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+    	if($element['#type'] == 'container'){
+    		$form = $element;
+    	foreach ($form as $key => $element) {
+    // Set which elements to render in the table.
+    $allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden','container');
+    // Make sure this is an element and it's of a type listed above.
+    
+    $path = drupal_get_path('module', 'fivestar');
+    drupal_add_js($path . '/js/fivestar.js');
+    drupal_add_css($path . '/css/fivestar.css');
+      
+    if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+    		
+       if($element['#type'] == 'item') {       
+	      $mentor_array = $element['#markup'];
+	      unset($form[$key]['#markup']);
+	      //$output .= '<div style="width: 100%; overflow: hidden;">';
+	      foreach ($mentor_array as $key=>$mentor_data) {
+	      	$temp = $temp + 1;
+			$picture;
+			//var_dump($mentor_data);
+			  if(!empty($mentor_data['picture'])) {
+			  	$picture = file_load($mentor_data['picture']);
+			  } else {
+			  	$picture = get_user_default_picture($mentor_data['mid'], 'mentor');
+			  }
+			  $style = variable_get('user_picture_style', '');
+		      
+		      //$output .= '<div id="mentee-conn-item' . $temp . '" onMouseOver="javascript:showButton(' . $temp . ')" onMouseOut="javascript:hideButton(' . $temp . ')" class="user-list-item">';		    
+		      $output .= '<div id="mentee-conn-item' . $temp . '" class="user-list-item">';		    
+		      	
+		      $output .= '<div class="user-grid-pic mentee-nrc-usr-pic1" >';
+		      $output .= '<div>'.theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentor', 'title' => 'Mentor', 'width'=>'100%')).'</div>';
+		      $output .= '</div>';
+		      $mentor_details = '<span ><a class="mentor-name" href="/mentor/'. $key .'/profile">' . $mentor_data['first_name'] . ' ' . $mentor_data['last_name'] . '</a></span>';
+		      if($mentor_data['mentor_type'] == 'student') {
+		      	$mentor_details .= '<div>'.$mentor_data['school_attending'] . ', class of ' . $mentor_data['year_of_school'] . ' - ' . $mentor_data['degree'] . '</div>';
+		      } else {
+		      	$mentor_details .= '<div>'.$mentor_data['last_school_attended']. ', class of ' .$mentor_data['year_of_school'] . '</div>';
+		      }
+		     // if($element['subcategory_name'])
+		     // 	$mentor_details .= '<div>'.$element['subcategory_name'] . '</div>';
+		      	$mentor_details .= '<div>'.$mentor_data['fos_sub'] . '</div>';
+		      $mentor_details .= '<div>'.$mentor_data['city'] . ', '. $mentor_data['state'] . '</div>';
+		      
+		      if($mentor_data['connection_status'] == 'Confirmed'){
+		      	$mentor_details .= '<div>Session Start Date : ' . $mentor_data['lastupdate_date'] . '</div>';
+		      	$mentor_details .= '<div>Session End Date &nbsp: ' . $mentor_data['end_date'] . '</div>';
+		      }
+		      $mentor_details .= '<div style="display: inline-block;">';		      
+		     
+		      $rating = mentoringcommon_mentor_rating($mentor_data['mid']);
+		      //var_dump($rating); 
+		      $mentor_details .= '<div class="wordwrap mentee-nrc-usr-pic3"  >';
+		      $mentor_details .= '<div style="margin-top: 3px"> <a href="/user/' . $mentor_data['mid'] . '">'
+							  .theme('fivestar_static', array('rating' => $rating['average'], 'stars' => 5, 'tag' => 'vote',
+							   					'widget' => array( 'name' => 'oxygen', 'css' => drupal_get_path('module', 'fivestar') . '/widgets/oxygen/oxygen.css' ))) 
+							   . '</a></div>';
+		      //$mentor_details .=  render(drupal_get_form('fivestar_custom_widget', $rating, $settings));
+		      $mentor_details .= '</div></div>';
+		      
+		      		 
+		      $output .= '<div class="mentee-details-div1">' . $mentor_details . '</div>';
+		      $connection_status = $mentor_data['connection_status'];
+		      if($connection_status == 'Pending') {
+		      	$output .= '<div id="mentee-message-cover' . $temp . '" class="mentee-button-div"><div class="accept_button">Pending</div></div>';
+		      } else if($connection_status == 'Payment Pending') {
+		      	$output .= '<div id="mentee-message-cover' . $temp . '" class="mentee-button-div" style="margin:  1%;">
+		      				<a href="/mentee/connection/?mentor_id=' . $mentor_data['mid']  . '&subscription=' . $mentor_data['engagement_model_with_mentee'].'&volunteer=' . $mentor_data['volunteer']  .'"  class="button big round steel_blue" style="font-size: 13px !important;" >Pay Online</a></div>';
+	 	    	$output .= '<div id="mentee-message-cover' . $temp . '" class="mentee-button-div" style="margin: 1%;">
+		      				<a href="/connection/'.$mentor_data['cid'].'/reset"  class="button small round steel_blue" >Reset Connection</a>
+	 	    				</div>';
+		      } else if($connection_status == 'Confirmed') {
+		      	$output .= '<div id="mentee-message-cover' . $temp . '" class="mentee-button-div"><a class="accept_button" target="_self" href="/messages/new/' . $key . '">Message</a></div>';
+		      }
+		      //$output .= '<div id="mentee-message-cover' . $temp . '" style="float: right;"><button onclick="location.href=\'/messages/new/' . $key . '\'" id="editprofile" type="button">Message</button></div>';
+		      $output .= '</div>';
+		  }
+	      //$rendered = drupal_render($element);
+	      //$output .=  $rendered;
+     	 }
+      }
+     }
+    }
+    }
+  }
+  $output .= '</div>';
+  $output .= '<script type="text/javascript">
+  				function showButton(id) {
+					document.getElementById("mentee-message-cover" + id).style.visibility = "visible";
+					document.getElementById("mentee-message-cover" + id).style.display = "inline-block";					
+  				}
+  				function hideButton(id) {
+					document.getElementById("mentee-message-cover" + id).style.visibility = "hidden";
+  				}	
+				(function ($) {
+  				
+				var itemId;
+				var mesageId;
+					for(var i=1; i<100; i++) {
+						itemId = "#mentee-conn-item" + i;
+						mesageId = "#mentee-message-cover" + i;
+						//uncomment below to enable visibility on mouseover 
+						//$(mesageId).hide();
+						$(itemId).mouseover( function () { 
+						
+					        $(mesageId).show();
+							//$(".mentee-message-cover").visibility = "visible";
+					    });
+					    $(itemId).mouseout( function () { 
+					        $(mesageId).hide();
+					    });
+					 }
+				})(jQuery);
+	
+			</script>';
+  $output .= drupal_render_children($form);
+  return $output;
+}
+
+function theme_mentee_recommendation_list($variables) {
+	drupal_add_css(drupal_get_path('module', 'mentoringcommon') . '/css/common.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+	
+  $form = $variables['form'];
+  //var_dump($form);
+  $output = '<div class="mentee-nrc-heading1">Recommendations</div><div class="mentee-nrc-heading2">';
+  $temp = 0;
+  
+  foreach ($form as $key => $element) {
+    // Set which elements to render in the table.
+    $allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+    // Make sure this is an element and it's of a type listed above.
+    
+    if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+      if($element['#type'] == 'item' && $element['#title'] == 'Recommendation based on Area') {
+        $rows = $element['#markup'];
+        if(empty($rows)) {
+          $output .= 'No recommendation for mentors</div>';
+          //return $output;
+        }
+        unset($form[$key]['#markup']);
+        foreach ($rows as $key => $element) {
+          if($element['connection_id'] == 0) {
+            $temp = $temp + 1;
+            $picture;
+            if(!empty($element['picture'])) {
+              $picture = file_load($element['picture']);
+            } else {
+              $picture = get_user_default_picture($element['mid'], 'mentor');
+            }
+            //$rendered = drupal_render($element);
+            $style = variable_get('user_picture_style', '');
+
+            $output .= '<div class="mentee-nrc-usr-pic2">';
+            $output .= '<div class="user-grid-pic mentee-nrc-usr-pic1"><div >'.theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentor', 'title' => 'Mentor')).'</div></div>';
+
+            $mentor_details = '<div class="mentee-details-div2"><a style="color: black;" href="/mentor/'. $element['mid'] .'/profile">'.$element['first_name'].' '.$element['last_name'].'</a></div>Area of Mentoring: '.$element['area_mentoring'];
+            $mentor_details .= '<br/>Educational Qualification: '.$element['edu_qualification'];
+            if(!empty($element['subcategory_name'])){
+              $mentor_details .= '<br/>Specialization: '.$element['subcategory_name'];
+            }
+            if($element['mentor_type'] == 'student') {
+              $mentor_details .= '<br/>School Attending: '.$element['school_attending'];
+            } else {
+              $mentor_details .= '<br/>School Attended: '.$element['last_school_attended'];
+            }
+            $mentor_details .= '<br/>City, State: '.$element['city'].', '.$element['state'];
+            $output .= '<div class="mentee-details-div3 ">' . $mentor_details . '</div>';
+            if($element['accept_mentee'] != "2"){
+              $output .= '<div class="mentee-connect-div1 "><div class="form-submit button small round steel_blue" id="connectmentor'.$element['mid'] .'" mentorid=' . $element['mid']  . ' volunteer="' . $element['volunteer']  . '" subscription="' . $element['engagement_model_with_mentee']  . '"type="button">Connect</div></div>';
+            }else{
+              $output .= '<div class="mentee-connect-div1 "><div id="connectButton" class="form-submit button small round decline_button" type="button" disabled="disabled">Connect</div>
+                  <span >
+                <div class="tooltip" style="display: inline;font-weight: normal;">
+                <img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" />
+                <span style="margin-top: -0%;"> This mentor is not accepting any new mentees.<br/> Please try again after some days.
+                </br>
+              </span>
+              </div>
+              </span></div>';
+            }
+            $output .= '</div>';
+          }
+        }
+      } else if($element['#type'] == 'item' && $element['#title'] == 'Recommendation of Alumni') {       
+        $rowsAlumni = $element['#markup'];
+        //$rowsAlumni = array_diff($rowsAlumni1, $rows);
+        $output .= '<div class="mentee-nrc-heading1">Alumni Recommendations</div><div class="mentee-nrc-heading2">'; 
+        if(empty($rowsAlumni)) {
+          $output .= 'No recommendation for Alumni</div>';
+          //return $output;
+        }
+        unset($form[$key]['#markup']);
+        foreach ($rowsAlumni as $key => $element) {
+          if($element['connection_id'] == 0) {
+            $temp = $temp + 1;
+            $picture;
+            if(!empty($element['picture'])) {
+              $picture = file_load($element['picture']);
+            } else {
+              $picture = get_user_default_picture($element['mid'], 'mentor');
+            }
+            //$rendered = drupal_render($element);
+            $style = variable_get('user_picture_style', '');
+            
+            $output .= '<div class="mentee-nrc-usr-pic2">';
+            $output .= '<div class="user-grid-pic mentee-nrc-usr-pic1"><div >'.theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentor', 'title' => 'Mentor')).'</div></div>';
+            
+            $mentor_details = '<div class="mentee-details-div2"><a style="color: black;" href="/mentor/'. $element['mid'] .'/profile">'.$element['first_name'].' '.$element['last_name'].'</a></div>Area of Mentoring: '.$element['area_mentoring'];
+            $mentor_details .= '<br/>Educational Qualification: '.$element['edu_qualification'];
+            if(!empty($element['subcategory_name'])){
+              $mentor_details .= '<br/>Specialization: '.$element['subcategory_name'];
+            }
+            if($element['transfer_or_highschool'] == '2') {
+              $mentor_details .= '<br/>High School Attended : '.$element['highschool'];
+            } else {
+              $mentor_details .= '<br/>Community College Attended: '.$element['highschool'];
+            }
+            $mentor_details .= '<br/>City, State: '.$element['city_highschool'].', '.$element['state_highschool'];
+            $output .= '<div class="mentee-details-div3 ">' . $mentor_details . '</div>';
+            if($element['accept_mentee'] != "2"){           
+              $output .= '<div class="mentee-connect-div1 "><div class="form-submit button small round steel_blue" id="connectmentor'.$element['mid'] .'" mentorid=' . $element['mid']  . ' volunteer="' . $element['volunteer']  . '" subscription="' . $element['engagement_model_with_mentee']  . '"type="button">Connect</div></div>';
+            }else{
+              $output .= '<div class="mentee-connect-div1 "><div class="form-submit button small round decline_button" type="button" disabled="disabled">Connect</div>
+                  <span >
+                <div class="tooltip" style="display: inline;font-weight: normal;">
+                <img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" />
+            <span style="margin-top: -0%;"> This mentor is not accepting any new mentees.<br/> Please try again after some days.
+                </br>       
+            </span>
+                </div>
+                </span></div>';
+            }
+            $output .= '</div>';
+          }
+        }
+        $output .= '</div>';
+      }
+    }
+  }
+
+  $output .= '</div>';
+  $output .= '<script type="text/javascript">
+  				(function ($) {
+            $("[id^=connectmentor]").css("width","60%");
+            $("#connectButton").css("width","60%");
+  					$("[id^=connectmentor]").click(function(){
+  							var $mentor_id = $(this).attr("mentorid");
+  							var $subscription = $(this).attr("subscription");
+  							var $volunteer = $(this).attr("volunteer");
+  							if($volunteer == "1"){
+                    $("#subscriptionWindow").find(".views-row-first").find(".views-field-display-price").find("span").text("$0.00");
+                    $("#subscriptionWindow").find(".views-row-mid").find(".views-field-display-price").find("span").text("$0.00");
+                    $("#subscriptionWindow").find(".views-row-last").find(".views-field-display-price").find("span").text("$0.00");
+                }else{
+                    $("#subscriptionWindow").find(".views-row-first").find(".views-field-display-price").find("span").text("$25.00");
+                    $("#subscriptionWindow").find(".views-row-mid").find(".views-field-display-price").find("span").text("$50.00");
+                    $("#subscriptionWindow").find(".views-row-last").find(".views-field-display-price").find("span").text("$225.00");
+                }
+                if($subscription == "On Demand 30 minutes"){
+                    $("#subscriptionWindow").find(".views-row-mid").hide();
+                    $("#subscriptionWindow").find(".views-row-last").hide();
+                }else if($subscription == "On Demand 1 hour"){
+                    $("#subscriptionWindow").find(".views-row-first").hide();
+                    $("#subscriptionWindow").find(".views-row-last").hide();
+                }else if($subscription == "3 Month"){
+                    $("#subscriptionWindow").find(".views-row-first").hide();
+                    $("#subscriptionWindow").find(".views-row-mid").hide();
+                }else{
+                    $("#subscriptionWindow").find(".views-row-last").show();
+                    $("#subscriptionWindow").find(".views-row-first").show();
+                    $("#subscriptionWindow").find(".views-row-mid").show();
+                }
+                $("#threemonthBuyButton").attr("href","/mentee/"+$mentor_id+"/connect/3month");
+                $("#ondemandBuyButton").attr("href","/mentee/"+$mentor_id+"/connect/ondemand");
+                $("#ondemand30minsBuyButton").attr("href","/mentee/"+$mentor_id+"/connect/30mins");
+                $("#subscriptionWindow").fadeIn(1000);
+              });
+  				})(jQuery);
+  
+			</script>';
+ // $output .= drupal_render_children($form);
+  return $output;
+}
+
+function theme_menteeprofile_notifications_form($variables) {
+	drupal_add_css(drupal_get_path('module', 'mentoringcommon') . '/css/common.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+
+	$n_count = 0;
+	$output = '<div class="mentee-nrc-heading1">Notifications</div>
+			<div class="mentee-nrc-heading2">';
+	drupal_add_css(drupal_get_path('module', 'mentoringcommon') . '/css/common.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+	$form = $variables['form'];
+	//var_dump($form);
+	foreach ($form as $key => $element) {
+		// Set which elements to render in the table.
+		$allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'container', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+		// Make sure this is an element and it's of a type listed above.
+	  
+		if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+			if($element['#type'] == 'container'){
+				$form = $element;
+				foreach ($form as $key => $element) {
+					// Set which elements to render in the table.
+					$allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden','container');
+					// Make sure this is an element and it's of a type listed above.
+
+					if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+
+	    	if($element['#type'] == 'item') {
+	    		$notification_array = $element['#markup'];
+	    		unset($form[$key]['#markup']);
+	    		foreach ($notification_array as $key=>$notification_data) {
+	    		
+	    			if($notification_data['connection_status'] == 'Payment Pending'
+	    				|| $notification_data['connection_status'] == 'Decline') {
+	    				$n_count++;
+	    				$picture;
+	    				if(!empty($notification_data['picture'])) {
+	    					$picture = file_load($notification_data['picture']);
+	    				} else {
+	    					$picture = get_user_default_picture($notification_data['mid'], 'mentor');
+	    				}
+	    				$style = variable_get('user_picture_style', '');
+	    				
+	    						 
+	    				$output .= '<div class="mentee-nrc-usr-pic2">';
+	    				$output .= '<div class="user-grid-pic mentee-nrc-usr-pic1"><div >'.theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentee', 'title' => 'Mentee')).'</div></div>';
+						if($notification_data['connection_status'] == 'Payment Pending') {
+		    				$output .= '<div class="mentee-notification-div" style="color: black; font-weight: bold;">' . $notification_data['mentor_name'] . ' accepted your connection request. Please make payment to start communication.' .
+		 	    				'</div> <div id="mentee-message-cover' . $temp . '" class="mentee-button-div" style="margin: 1% 4%;">
+		 	    						<a href="/mentee/connection/?mentor_id=' . $notification_data['mid']  . '&subscription=' . $notification_data['engagement_model_with_mentee'].'&volunteer=' . $notification_data['volunteer']  .'"  class="button big round steel_blue" style="font-size: 13px !important;" >Pay Online</a>
+		      							<a href="/connection/'.$notification_data['cid'].'/reset"  class="button small round steel_blue" >Reset Connection</a>
+	 	    							</div></div>';
+		    			} else if($notification_data['connection_status'] == 'Decline') {
+		    				$output .= '<div class="mentee-notification-div" style="color: black; font-weight: bold;">' . $notification_data['mentor_name'] . ' declined your connection request.' .
+		 	    				'</div></div>';
+		    			}
+
+	    			}
+	    		}
+	    	}
+					}
+				}}}
+	}
+	$output .= '</div>';
+	
+	$output .= drupal_render_children($form);
+
+	return $output;
+}
+
+/*function menteeprofile_preprocess_node(&$variables, $hook) {
+    $variables['theme_hook_suggestions'][] = 'node--menteeprofile';
+  
+}
+
+function menteeprofile_theme_registry_alter(&$theme_registry) {
+	
+  $mod_path = drupal_get_path('module', 'menteeprofile');
+  $theme_registry_copy = $theme_registry;       // munge on a copy
+  _theme_process_registry($theme_registry_copy, 'phptemplate', 'theme_engine', 'pow', $mod_path.'/templates');
+  $theme_registry += array_diff_key($theme_registry_copy, $theme_registry);
+  $hooks = array('node');
+  foreach ($hooks as $h) {
+    _menteeprofile_insert_after_first_element($theme_registry[$h]['theme paths'], $mod_path.'/templates');
+  }
+}*/
+
+/**
+ * Helper function for re-ordering arrays (needed by theme_registry_alter)
+*/
+/*function _menteeprofile_insert_after_first_element(&$a, $element) {
+  if(is_array($a)) {
+    $first_element = array_shift($a);
+    array_unshift($a, $first_element, $element);
+  }
+}
+*/
+function menteeprofile_node_info() {
+  return array(
+    'menteeprofile' => array(
+      'name' => t('Mentee profile'),
+      'base' => 'menteeprofile',
+      'description' => t('Use for multi-user blogs. Every user gets a personal blog.'),
+    )
+  );
+}

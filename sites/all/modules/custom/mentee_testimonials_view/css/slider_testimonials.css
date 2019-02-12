@@ -1,0 +1,70 @@
+.half_testimonial {
+		margin-bottom: 10px;
+		position: relative;
+		white-space: normal;
+	}
+	.t_span6 {
+		width: 48%;
+	}
+	[class*="t_span"] {
+		float: left;
+		margin-left: 10px;
+		min-height: 1px;
+	}
+	
+	.half_testimonial_photo_div {
+		border-radius: 10px;
+		display: inline-block;
+		float: left;
+		height: 30%;
+		width: 25%;
+	}
+	
+	.half_testimonial_text {
+		float: left;
+		font-family: 'Avenir Next W01';
+		font-size: 17px;
+		font-style: normal;
+		font-weight: 300;
+		min-height: 96px;
+		text-align: left;
+		text-indent: -6px;
+		width: 100%;
+	}
+
+	.half_testimonial_meta {
+		float: left;
+		text-align: left;
+	}
+	.t_span4 {
+		width: 70%;
+	}
+	.t_span12 {
+		width: 100%;
+	}
+	.testimonial_header {
+		background: none repeat scroll 0 center rgba(0, 0, 0, 0);
+		font-size: 35px;
+		line-height: 54px;
+		margin: 28px 0 30px;
+	}
+	h1, h2 {
+		margin-bottom: 10px;
+	}
+	h1, h2, h3, h4, h5, h6 {
+		font-family: 'Avenir Next W01';
+		font-style: normal;
+		font-weight: 700;
+	}
+	
+	.row {
+		margin-left: -20px;
+	}
+	
+	.wide_testimonial {
+		margin-left: -55.5px;
+		min-height: 120px;
+		overflow: hidden;
+		white-space: nowrap;
+		width: 4900px;
+	}

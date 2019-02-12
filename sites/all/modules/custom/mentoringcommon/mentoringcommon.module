@@ -1,0 +1,3113 @@
+<?php
+
+module_load_include('inc', 'mentoringcommon', "mentoringcommon.pages");
+$USAStates = '';
+$countryValue ='1';
+$countryValue1 = '1';
+function mentoringcommon_help($path, $arg) {
+	switch ($path) {
+		case 'admin/help#mentoringcommon':
+   			$output = '';
+   			$output .= '<h3>' . t('About') . '</h3>';
+   			$output .= '<p>' . t("The common mentor, mentee module") . '<p>';
+			return $output;
+   }
+}
+   
+function mentoringcommon_menu() {
+	
+  $items['mentor/register'] = array(
+    'title' => 'Be a Mentor',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentoringcommon_register_form', 'mentor'),
+    'access callback' => TRUE,
+    //'access callback' => 'user_register_access',
+    //'type' => MENU_LOCAL_TASK,
+  );
+  
+  $items['logout'] = array(
+    //'title' => 'Be a Mentor',
+    'page callback' => 'user_signout',
+    'access callback' => TRUE,
+    //'access callback' => 'user_register_access',
+    //'type' => MENU_LOCAL_TASK,
+  );
+  
+  $items['mentee/register'] = array(
+    'title' => 'Create Profile',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentoringcommon_register_form', 'mentee'),
+    'access callback' => TRUE,
+    //'access callback' => 'user_register_access',
+    //'type' => MENU_LOCAL_TASK,
+  );
+
+  $items['mentoring/login'] = array(
+    'title' => 'Log in',
+    'page callback' => 'mentoringcommon_page',
+    'access callback' => TRUE,
+  );
+  
+  $items['termsofuse'] = array(
+    'title' => '',
+    'page callback' => 'mentoringcommon_termsofuse',
+    'access callback' => TRUE,
+  );
+  
+  $items['user/activation/%user_activation'] = array(
+    'title' => 'Activate your account',
+    'page callback' => 'mentoringcommon_user_activation',
+    'page arguments' => array(2),
+    'access callback' => TRUE,
+  );
+  
+    $items['cities/autocomplete'] = array(
+      'title' => 'Autocomplete for cities',
+      'page callback' => '_cities_autocomplete',
+      //'access arguments' => array('use autocomplete'),  //or whatever permission makes sense
+      //'type' => MENU_CALLBACK
+      'access callback' => TRUE,
+  );
+  
+  $items['states/autocomplete'] = array(
+      'title' => 'Autocomplete for states',
+      'page callback' => '_states_autocomplete',
+      //'access arguments' => array('use autocomplete'),  //or whatever permission makes sense
+      //'type' => MENU_CALLBACK
+      'access callback' => TRUE,
+  );
+  
+  $items['usr/password'] = array(
+    'title' => 'Request new password',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('user_pass'),
+    'access callback' => TRUE,
+    'file' => 'user.pages.inc',
+    'file path' => drupal_get_path('module', 'user'),
+  );
+  
+  $items['activation/resend'] = array(
+    'title' => 'Resend activation mail',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentoringcommon_activation_resend'),
+    'access callback' => TRUE,
+  );
+  
+  $items['picture/edit'] = array(
+    'title' => 'Change Profile Picture',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentoringcommon_change_picture_form'),
+    'access callback' => TRUE,
+    //'access callback' => 'user_register_access',
+    //'type' => MENU_LOCAL_TASK,
+  );
+  $items['signup'] = array(
+  		'title' => 'Sign Up',
+  		'page callback' => 'drupal_get_form',
+  		'page arguments' => array('mentoringcommon_sign_up_form'),
+  		'access callback' => TRUE,
+  		//'access callback' => 'user_register_access',
+  		//'type' => MENU_LOCAL_TASK,
+  );
+  $items['connection/%/reset'] = array(
+  		'title' => 'Connection Reset',
+	    'page callback' => 'reset_connection_by_id',
+	    'page arguments' => array(1,true),
+	    'access callback' => 'connection_reset_access',
+	    'access arguments' => array(1),
+  );
+  $items['connection/%/resetconnection'] = array(
+  		'title' => 'Connection Reset Payment',
+	    'page callback' => 'reset_connection_by_id_payment_pending',
+	    'page arguments' => array(1,true),
+	    'access callback' => 'connection_reset_access',
+	    'access arguments' => array(1),
+  );
+  
+  return $items;
+}
+
+function user_signout() {
+	drupal_goto('user/logout');
+	//user_logout();
+}
+
+
+function connection_reset_access($cid) {
+	if(isset($_SESSION['user'])) {
+		$query = db_select('connections', 'con');
+		$query->condition('con.cid', $cid,'=');
+		$query->fields('con')
+		//->fields('mr')
+		//->fields('m')
+		;//SELECT the fields from user
+		
+		$result = $query->execute();
+		foreach($result as $record) {
+			if( $_SESSION['user']->uid == $record->mentee_id){
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
+
+
+function reset_connection_by_id_payment_pending($cid,$isLink){
+	$query = db_select('connections', 'con');
+	$query->condition('con.cid', $cid,'=');
+	$query->fields('con');
+	$result = $query->execute();
+	foreach($result as $record) {
+		$status = $record->status;
+		$mentor_id = $record->mentor_id;
+		if(($_SESSION['user']->uid == $record->mentee_id || !$isLink) && $status == 'Payment Pending'){
+			$mentee_id = $record->mentee_id;
+			$subscription_id = $record->subscription_id;
+			
+			if($subscription_id == 1){
+				$method_name_mentor ='connection_reset_notification_mail_to_mentor_for_30mins';
+				$method_name_mentee ='connection_reset_notification_mail_to_mentee_for_30mins';
+			}else if($subscription_id == 2){
+				$method_name_mentor ='connection_reset_notification_mail_to_mentor_for_ondemand';
+				$method_name_mentee ='connection_reset_notification_mail_to_mentee_for_ondemand';
+			}else if($subscription_id == 3){
+				$method_name_mentor ='connection_reset_notification_mail_to_mentor_for_3month';
+				$method_name_mentee ='connection_reset_notification_mail_to_mentee_for_3month';
+			}
+			
+			$query = db_select('mentor', 'me');
+			$query->join('users', 'u', 'u.uid = me.mid');
+			$query->condition('me.userid', $mentor_id,'=');
+			$query->fields('me')
+			->fields('u', array('mail'));
+			$result = $query->execute();
+			
+			$mentor = array();
+			if(	$record = $result->fetchAssoc()) {
+				$mentor['email'] = $record['mail'];
+				$mentor['first_name'] = $record['first_name'];
+				$mentor['last_name'] = ($record['last_name'] != '') ? $record['last_name'][0].'.' : '';
+			}
+			$query = db_select('mentee', 'mt');
+			$query->join('users', 'us', 'us.uid = mt.mid');
+			$query->condition('mt.userid', $mentee_id,'=');
+			$query->fields('mt')
+			->fields('us', array('mail'));
+			$result = $query->execute();
+			
+			$mentee = array();
+			if(	$record = $result->fetchAssoc()) {
+				$mentee['email'] = $record['mail'];
+				$mentee['first_name'] = $record['first_name'];
+				$mentee['last_name'] = ($record['last_name'] != '') ? $record['last_name'][0].'.' : '';
+			}
+			$values = array();
+			//$values['sender'] = $mentee;
+			$values['mentor_name'] = $mentor['first_name'] . ' ' . $mentor['last_name'];
+			$values['mentee_name'] = $mentee['first_name'] . ' ' . $mentee['last_name'];
+			$values['mentor_profile'] = 'https://skoolmentor.com/mentor/'.$mentor_id.'/profile';
+			$con_deleted = db_delete('connections')
+			->condition('cid', $cid)
+			->execute();
+			if($isLink){
+				drupal_set_message("Connection reset completed, please reconnect to have a mentoring session with this mentor.");
+				if($status != 'Decline'){
+					drupal_mail('menteeprofile', $method_name_mentee , $mentee['email'], language_default(), $values, 'administer@skoolmentor.com');
+					drupal_mail('menteeprofile', $method_name_mentor , $mentor['email'], language_default(), $values, 'administer@skoolmentor.com');
+				}
+				drupal_goto('mentor/'.$mentor_id.'/profile');
+			}
+		}
+		else if(($_SESSION['user']->uid == $record->mentee_id || !$isLink) && $status == 'Confirmed'){
+			drupal_set_message("Your reset request cannot be completed because you are already connected with this mentor.");
+			drupal_goto('mentor/'.$mentor_id.'/profile');
+		}
+	}
+}
+
+
+
+
+function reset_connection_by_id($cid,$isLink){
+	
+	//drupal_set_message("comming in here");
+	$query = db_select('connections', 'con');
+	$query->condition('con.cid', $cid,'=');
+	$query->fields('con')
+	//->fields('mr')
+	//->fields('m')
+	;//SELECT the fields from user
+	
+	$result = $query->execute();
+	foreach($result as $record) {
+		$status = $record->status;
+		$mentee_id = $record->mentee_id;
+		$mentor_id = $record->mentor_id;
+		$subscription_id = $record->subscription_id;
+		$requestor_type = $record->requestor_type;
+		$token = $record->token;
+		$last_update_time = date("Y-m-d H:i:s", time());
+		$create_time = $record->create_time;
+		$session_start_time = $record->session_start_time;
+		//drupal_set_message('<pre>'.print_r($record,true).'</pre>');
+		if( $_SESSION['user']->uid == $record->mentee_id || !$isLink){
+			
+			if($subscription_id == 1){
+				$method_name_mentor ='connection_reset_notification_mail_to_mentor_for_30mins';
+				$method_name_mentee ='connection_reset_notification_mail_to_mentee_for_30mins';
+			}else if($subscription_id == 2){
+				$method_name_mentor ='connection_reset_notification_mail_to_mentor_for_ondemand';
+				$method_name_mentee ='connection_reset_notification_mail_to_mentee_for_ondemand';
+			}else if($subscription_id == 3){
+				$method_name_mentor ='connection_reset_notification_mail_to_mentor_for_3month';
+				$method_name_mentee ='connection_reset_notification_mail_to_mentee_for_3month';
+			}
+			$query = db_select('mentor', 'me');
+			$query->join('users', 'u', 'u.uid = me.mid');
+			$query->condition('me.userid', $mentor_id,'=');
+			$query->fields('me')
+			->fields('u', array('mail'));
+			$result = $query->execute();
+			
+			$mentor = array();
+			if(	$record = $result->fetchAssoc()) {
+				$mentor['email'] = $record['mail'];
+				$mentor['first_name'] = $record['first_name'];
+				$mentor['last_name'] = ($record['last_name'] != '') ? $record['last_name'][0].'.' : '';
+				$mentor['volunteer'] = $record['volunteer'];
+			}
+			//drupal_set_message('<pre>'.print_r($mentor,true).'</pre>');
+			
+			$query = db_select('mentee', 'mt');
+			$query->join('users', 'us', 'us.uid = mt.mid');
+			$query->condition('mt.userid', $mentee_id,'=');
+			$query->fields('mt')
+			->fields('us', array('mail'));
+			$result = $query->execute();
+			
+			$mentee = array();
+			if(	$record = $result->fetchAssoc()) {
+				$mentee['email'] = $record['mail'];
+				$mentee['first_name'] = $record['first_name'];
+				$mentee['last_name'] = ($record['last_name'] != '') ? $record['last_name'][0].'.' : '';
+			}
+			
+			//drupal_set_message('<pre>'.print_r($mentee,true).'</pre>');
+			
+				
+			$values = array();
+			$values['mentor_name'] = $mentor['first_name'] . ' ' . $mentor['last_name'];
+			$values['mentee_name'] = $mentee['first_name'] . ' ' . $mentee['last_name'];
+			$values['mentor_profile'] = 'https://skoolmentor.com/mentor/'.$mentor_id.'/profile';
+			if($status == 'Confirmed' && $mentor['volunteer'] != '1'){
+				db_insert('pendingpayment')
+					->fields(array(
+						'cid' => $cid,
+						'mentor_id' => $mentor_id,
+						'mentee_id' => $mentee_id,
+						'status' => 'Admin Payment Pending',
+						'requestor_type' => $requestor_type,
+						'subscription_id' => $subscription_id,
+						'create_time' => $create_time,
+						'last_update_time' => $last_update_time,
+						'volunteer_mentor' => 0,
+						'session_start_time' => $session_start_time,
+				))
+				->execute();
+				//drupal_set_message("pendingpayment table insertion");
+			}else if($status == 'Confirmed' && $mentor['volunteer'] == '1'){
+				db_insert('pendingpayment')
+					->fields(array(
+						'cid' => $cid,
+						'mentor_id' => $mentor_id,
+						'mentee_id' => $mentee_id,
+						'status' => 'Volunteer Connection Expiry',
+						'requestor_type' => $requestor_type,
+						'subscription_id' => $subscription_id,
+						'create_time' => $create_time,
+						'last_update_time' => $last_update_time,
+						'volunteer_mentor' => 1,
+						'session_start_time' => $session_start_time,
+						))
+					->execute();
+				//drupal_set_message("Pending Payment table insertion for Volunteer mentors");
+			}
+			$con_deleted = db_delete('connections')
+			->condition('cid', $cid)
+			->execute();
+			if($isLink){
+				drupal_set_message("Connection reset completed, please reconnect to have a mentoring session with this mentor.");
+				if($status != 'Decline'){
+					drupal_mail('menteeprofile', $method_name_mentee , $mentee['email'], language_default(), $values, 'administer@skoolmentor.com');
+					drupal_mail('menteeprofile', $method_name_mentor , $mentor['email'], language_default(), $values, 'administer@skoolmentor.com');
+				}
+				drupal_goto('mentor/'.$mentor_id.'/profile');
+			}else{
+				if($status != 'Decline'){
+					drupal_mail('menteeprofile', $method_name_mentee , $mentee['email'], language_default(), $values, 'administer@skoolmentor.com');
+					drupal_mail('menteeprofile', $method_name_mentor , $mentor['email'], language_default(), $values, 'administer@skoolmentor.com');
+				}
+				return $con_deleted;
+			}	
+		}
+	}
+}
+
+
+function mentoringcommon_form_alter(&$form, &$form_state, $form_id) {	
+	if($form_id == 'user_pass') {
+		$form['#submit'][] = 'mentoringcommon_form_alter_submit';
+		$form['name']['#attributes']['autocomplete'] = 'off';
+		$form['pass']['#attributes']['autocomplete'] = 'off';
+	}
+}
+function mentoringcommon_form_alter_submit(&$form, &$form_state) {
+	unset($_REQUEST['destination'], $_REQUEST['edit']['destination']);
+		$form_state['redirect'] = 'mentoring/login';
+}
+
+function mentoringcommon_register_page($type) {
+	if($type == 'mentor') {
+		return drupal_get_form('mentoringcommon_login');
+	} else if($type == 'mentee') {
+		return drupal_get_form('mentoringcommon_login');
+	}
+}
+
+function mentoringcommon_termsofuse() {
+	drupal_add_js('window.open("terms_of_use.html", "Terms Of Use", "height=512, width=512").focus();', 
+               array('type' => 'inline', 'scope' => 'footer', 'weight' => 5));
+}
+
+function _cities_autocomplete($string) {
+  /*$matches = array();
+  $result = db_select('city', 'c')
+    ->fields('c', array('name'))
+    ->condition('name', '%' . db_like($string) . '%', 'LIKE')
+    ->execute();
+
+  
+  foreach ($result as $row) {
+    $matches[$row->name] = check_plain($row->name);
+  }
+  drupal_json_output($matches);*/
+	
+}
+
+function _states_autocomplete($key) {
+	//$matches = get_states_for_country($countryValue.$string);
+	//drupal_json_output($matches);
+	/*$matches = array();
+	$result = db_select('state', 's')
+    ->fields('s', array('name'))
+    ->condition('name', '%' . db_like($string) . '%', 'LIKE')
+    ->execute();
+    
+  foreach ($result as $row) {
+    $matches[$row->name] = check_plain($row->name);
+  }
+  drupal_json_output($matches);*/
+  
+  $entries = db_query("SELECT * FROM {state} WHERE name like '%" . $key . "%'");
+	
+  	$states = array();
+  	foreach($entries as $record)
+  	{
+  	  $states[$record->name] = check_plain($record->name);
+  	}
+  	drupal_json_output($states);
+}
+
+function user_activation_load($uid) {
+	return $uid;
+}
+
+function mentoringcommon_user_activation($activation_code) {
+	$query = db_select('user_activation', 'ua');   
+	$query->join('users_roles', 'ur', 'ur.uid = ua.uid'); //JOIN node with users
+	$query->join('role', 'r', 'r.rid = ur.rid'); //JOIN node with users
+	$query->condition('ua.activation_code', $activation_code, '=');
+	//$query->condition('ua.activated', 'N', '=');	   
+	$query->fields('ua', array('uid', 'activated'))//SELECT the fields from user
+	   ->fields('r', array('name'));
+	$result = $query->execute();	
+	
+	$uid;
+	$role;
+	$status;
+	if(	$record = $result->fetchAssoc()) {
+		$uid = $record['uid'];
+		$role = $record['name'];
+		$query1 = db_select('users', 'u'); 
+		$query1->condition('u.uid', $uid, '=');
+		$query1->fields('u', array('status'));
+		$result1 = $query1->execute();	
+				
+		if(	$record1 = $result1->fetchAssoc()) {
+			$status = $record1['status'];
+		}
+		if($record['activated'] == 'N') {			
+			$account = array();
+			$account['uid'] = $uid;
+			$account['activated'] = 'Y';
+			$success = drupal_write_record('user_activation', $account, 'uid');
+			if($status == 1) {
+				drupal_set_message('The user has been activated successfully. Please login to access your profile');			
+				drupal_goto('mentoring/login');
+			} else {
+				drupal_set_message('The user has been verified successfully but the profile is not complete. Please complete your profile to activate your account');
+				if($role == 'mentor' || $role == 'mentor-professional' || $role == 'mentor-student') {
+	  				drupal_goto('mentor/' . $uid . '/create'); 
+	   		 	} else {
+	    			drupal_goto('mentee/' . $uid . '/create'); 
+	    		}
+			}
+		} else {
+			if($status == 0) {
+				drupal_set_message('The user has already been verified but the profile is not complete. Please complete your profile to activate your account');
+				if($role == 'mentor' || $role == 'mentor-professional' || $role == 'mentor-student') {
+	  				drupal_goto('mentor/' . $uid . '/create'); 
+	    		} else {
+	    			drupal_goto('mentee/' . $uid . '/create'); 
+	    		}
+			} else {
+				if(isset($_SESSION['user'])) {					
+					drupal_goto('node/1');
+				}	
+				drupal_set_message('The user has already been activated. Please login to access your profile');		
+				drupal_goto('mentoring/login');
+				//$form_state = array();
+				//$form_state['uid'] = $uid;
+				//mentoringcommon_login_submit(NULL, $form_state);
+			}
+		}
+	} else {
+		drupal_set_message('Access Denied. Please create an account', 'error');
+		drupal_goto('mentoring/register');
+	}	
+	
+	if($status == 0) {			
+		if($role == 'mentor' || $role == 'mentor-professional' || $role == 'mentor-student') {
+	  		drupal_goto('mentor/' . $uid . '/create'); 
+	    } else {
+	    	drupal_goto('mentee/' . $uid . '/create'); 
+	    }
+	}
+}
+
+
+/**
+ * Form builder; the mentor registration form.
+ * @ingroup forms
+ * @see mentoringcommon_form()
+ */
+function mentoringcommon_register_form($form, &$form_state, $type) {
+	
+  global $mentor;
+  $form['#user'] = drupal_anonymous_user();
+  $form['#user_category'] = 'register';
+
+  $form['#attached']['library'][] = array('system', 'jquery.cookie');
+  $form['#attributes']['class'][] = 'user-info-from-cookie';
+
+  // Start with the default user account fields.
+  
+  //$type = 'mentee';
+  mentoringcommon_form($form, $form_state, $type);
+  
+  $form['actions'] = array('#type' => 'actions'); 
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Create new account'),
+  );
+  drupal_add_js(drupal_get_path('module', 'mentoringcommon') . '/js/popup.js');	
+  $form['actions']['term_of_use'] = array(
+    '#type' => 'item',
+    '#markup' => 'By clicking on the above button you agree to the <a href="/terms-of-use"  target="_blank" class="popup">Terms of Service</a>.',
+  ); 
+	
+  // Attach field widgets, and hide the ones where the 'user_register_form'
+  // setting is not on.
+  //$langcode = entity_language('user', $form['#user']);
+  field_attach_form('user', $form['#user'], $form, $form_state, 'EN');
+  
+  $form['field_reg_type']['#access'] = FALSE;
+  
+  $form['#validate'][] = 'mentoringcommon_register_form_validate';
+  // Add the final user registration form submit handler.
+  $form['#submit'][] = 'mentoringcommon_register_form_submit';   
+
+  return $form;
+}
+
+/**
+ * Form builder; the mentee registration form.
+ * @ingroup forms
+ * @see mentoringcommon_form()
+ */
+function mentee_register_form($form, &$form_state) {
+  global $mentor;
+
+  $form['#user'] = drupal_anonymous_user();
+  $form['#user_category'] = 'register';
+
+  $form['#attached']['library'][] = array('system', 'jquery.cookie');
+  $form['#attributes']['class'][] = 'user-info-from-cookie';
+
+  // Start with the default user account fields.
+  $type = 'mentee';
+  mentoringcommon_form($form, $form_state, $type);
+
+  // Attach field widgets, and hide the ones where the 'user_register_form'
+  // setting is not on.
+  //$langcode = entity_language('user', $form['#user']);
+  field_attach_form('user', $form['#user'], $form, $form_state, 'EN'); 
+
+  return $form;
+}
+
+function theme_mentoringcommon_theme_form($variables) {
+	$output = '<div class = "register-form-heading1" ><div class = "register-form-heading2" >';
+	if($variables['form']['#var1'] == 'mentee'){
+	$output .= 'Create Mentee Profile</div></div>';
+	}else if($variables['form']['#var1'] == 'mentor'){
+	$output .= 'Create Mentor Profile</div></div>';
+	}
+	$form = $variables['form'];
+	$basic_1 = '<div class = "register-form-basic" >';
+	$basic_2 = '<div class = "register-form-basic2" >';
+	$basic_3 = '<div class = "register-form-basic" >';
+	$basic_4 = '<div class = "register-form-basic" >';
+	$basic_5 = '<div class = "register-form-basic">';
+	$basic_6 = '<div class = "register-form-basic">';
+	$educational = '<div class = "register-form-basic">';
+	$educational1 = '<div class = "register-form-basic">';
+	//Adding HighSchool Fields
+	$educational2 = '<div class = "register-form-basic">';
+	//Country and Location fields
+	$educational3 = '<div class = "register-form-basic">';
+	$areaNeedingMentoringIn1 = '<div class = "register-form-basic">';
+	$areaNeedingMentoringIn2 = '<div class = "register-form-basic">';
+	$mentoringTerms = '';
+	if($variables['form']['#var1'] == 'mentor'){
+		$lmam = '<div class = "register-form-basic">';
+	}
+	foreach ($form as $key => $element) {
+		$allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+		$basic_elements1 = array('name',  'mail', 'confirm_mail', 'parent_mail');
+		$basic_elements2 = array('pass');
+		$basic_elements3 = array('fname', 'lname', 'gender');
+		$basic_elements4 = array('bday');
+		$basic_elements5 = array('zcode', 'mobile', 'skype_id');
+		$basic_elements6 = array('pic');
+		
+		$anmi_elements1 = array('areaofmentoring', 'fieldOfStudy', 'fieldOfSpecialization','degree');
+		$anmi_elements2 = array('mentoring_request');
+		if($variables['form']['#var1'] == 'mentor'){
+			$lmam_elements = array('about_me','other_colleges_accepted_at','fb_uname','motivation','response_time','available_time','engagement_model_with_mentee','volunteer');
+		}
+		$educational_elements = array('country','country_others', 'stateOthers', 'cityOthers','stateUSA','cityUSA');
+		if($variables['form']['#var1'] == 'mentor'){
+			$educational_elements1 = array('m_type','professional','student');
+		}
+		if($variables['form']['#var1'] == 'mentee'){
+			$educational_elements2 = array('mentee_type','highschool','transfer');
+		}
+		if($variables['form']['#var1'] == 'mentor'){
+			$educational_elements3 = array('yearOfHighSchool','countrySchool','country_othersSchool','stateOthersSchool','cityOthersSchool','stateUSASchool','cityUSASchool');
+		}
+		$educational_elements4 = array('transfer_highschool','highSchoolName');
+
+		if (is_array($form[$key]) && isset($element['#type']) ) {
+			if(in_array($key, $basic_elements1)){
+				$basic_1 .= '<div class="register-form-element-div1 container-inline">';
+				$basic_1 .= '<div class="register-form-element-div1 register-form-element-div2">&nbsp;';
+				$basic_1 .= drupal_render($element);
+				$basic_1 .= '</div>';
+				$basic_1 .= '</div>';
+				
+			}
+			if(in_array($key, $basic_elements2)){
+				//$basic_2 .= '<div style="float: left; " class="container-inline">';
+				//$basic_2 .= '<div style="float: left; width: 100%;">&nbsp;';
+				$basic_2 .= drupal_render($element);
+				//$basic_2 .= '</div>';
+				//$basic_2 .= '</div>';
+			
+			}
+			if(in_array($key, $basic_elements3)){
+				$basic_3 .= '<div class="register-form-element-div1 container-inline">';
+				$basic_3 .= '<div class="register-form-element-div1 register-form-element-div2">&nbsp;';
+				$basic_3 .= drupal_render($element);
+				$basic_3 .= '</div>';
+				$basic_3 .= '</div>';
+			
+			}if(in_array($key, $basic_elements4)){
+				$basic_4 .= '<div class = "register-form-element-div6" style="color: orange;">
+						Date Of Birth</div><div class="register-form-element-div1 container-inline">';
+				$basic_4 .= '<div class="register-form-element-div1 register-form-element-div2">&nbsp;';
+				$basic_4 .= drupal_render($element);
+				$basic_4 .= '</div>';
+				$basic_4 .= '</div>';
+				
+			}if(in_array($key, $basic_elements5)){
+				$basic_5 .= '<div class="register-form-element-div1 container-inline">';
+				$basic_5 .= '<div class="register-form-element-div1 register-form-element-div2">&nbsp;';
+				$basic_5 .= drupal_render($element);
+				$basic_5 .= '</div>';
+				$basic_5 .= '</div>';
+				
+			}if(in_array($key, $basic_elements6)){
+				$basic_6 .= '<div class = "register-form-element-div6" style="color: orange;">
+						Upload an Image</div><div class="register-form-element-div1 container-inline">';
+				$basic_6 .= '<div class="register-form-element-div1 register-form-element-div2">&nbsp;';
+				$basic_6 .= drupal_render($element);
+				$basic_6 .= '</div>';
+				$basic_6 .= '</div>';
+				
+			}
+			if(in_array($key, $educational_elements)){
+				$educational3 .= '<div id="div_'.$element['#id'].'" class="register-form-element-div1 container-inline" style="margin-left: 1%;">';
+				$educational3 .= '<div class="register-form-element-div1">';
+				$educational3 .= drupal_render($element);
+				$educational3 .= '</div>';
+				$educational3 .= '</div>';
+			}
+			if($variables['form']['#var1'] == 'mentee' && in_array($key, $educational_elements2)){
+				$educational .= '<div class="register-form-element-div1 register-form-element-div2 container-inline">';
+				$educational .= '<div class="register-form-element-div1 register-form-element-div2">&nbsp;';
+				$educational .= drupal_render($element);
+				$educational .= '</div>';
+				$educational .= '</div>';
+			}
+			if($variables['form']['#var1'] == 'mentor' && in_array($key, $educational_elements1)){
+				$educational1 .= '<div class="register-form-element-div1 register-form-element-div2 container-inline">';
+				$educational1 .= '<div class="register-form-element-div1 register-form-element-div2">&nbsp;';
+				$educational1 .= drupal_render($element);
+				if($key == 'm_type'){
+					$educational1 .= '<span><div class="tooltip" style="display: inline;font-weight: normal;"><img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" />
+							<span>If you are a recent graduate but are not yet employed, please select your role as \'Student\'.</span></div></span>';
+					$educational1 .= '</div>';
+					$educational1 .= '</div>';
+				}else{
+					$educational1 .= '</div>';
+					$educational1 .= '</div>';
+				}
+			}
+			if($variables['form']['#var1'] == 'mentor' && in_array($key, $educational_elements3)){
+				if($key == 'yearOfHighSchool'){
+				$educational2 .=	'<div class="register-form-element-div1 " style="display: inline-block !important; padding-top:2%;margin-left: 1%;min-width: 90%;"><div class = "" style="color: orange;">'.$element['#title'].'</div>';
+				$educational2 .= '<div class="register-form-element-div1">';
+				}else{
+					$educational2 .= '<div id="div_'.$element['#id'].'" class="register-form-element-div1 container-inline" style="margin-left: 1%;">';
+				$educational2 .= '<div class="register-form-element-div1">';
+				}
+				$educational2 .= drupal_render($element);
+				$educational2 .= '</div>';
+				$educational2 .= '</div>';
+			}
+			if($variables['form']['#var1'] == 'mentor' && in_array($key, $educational_elements4)){
+				if($key == 'transfer_highschool'){
+					$educational2 .=	'<div class="register-form-element-div1 " style="display: inline-block !important; padding-top:2%;margin-left: 1%;margin-bottom:1%;min-width: 90%;"><div class = "" style="color: orange;">'.$element['#title'].'</div></div>';
+					$educational2 .= '<div class="register-form-element-div1 container-inline" style="width: 100%; margin-bottom: 1%;">';
+					$educational2 .= '<div class="register-form-element-div1">';
+					$educational2 .= drupal_render($element);
+					$educational2 .= '</div>';
+					$educational2 .= '</div>';
+				}else{
+					$educational2 .= '<div class="register-form-element-div1 container-inline" style="width: 100%; margin-bottom: 1%; margin-top: 1%;">';
+					$educational2 .= '<div class="register-form-element-div1">';
+					$educational2 .= drupal_render($element);
+					$educational2 .= '<span><div class="tooltip" style="display: inline;font-weight: normal;"><img style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" /><span>High School/Community College Name Format.</br></br>Please enter the FULL name of your High School/Community College. Please do not use abbreviations.<br/><br/>For Example,<br/>Saint Francis High School (Correct)<br/>St Francis High School (Incorrect - Used the abbreviation "St" instead of the full word "Saint")<br/></span></div></span>';
+					$educational2 .= '</div>';
+					$educational2 .= '</div>';
+				}
+			}
+			if(in_array($key, $anmi_elements1) && in_array($element['#type'],$allowed_elements)){
+				$areaNeedingMentoringIn1 .= '<div class="register-form-element-div5 " >';
+				$areaNeedingMentoringIn1 .= '<div class="register-form-element-div4">&nbsp;';
+				$areaNeedingMentoringIn1 .= drupal_render($element);
+				$areaNeedingMentoringIn1 .= '</div>';
+				$areaNeedingMentoringIn1 .= '</div>';
+			}if(in_array($key, $anmi_elements2) && in_array($element['#type'],$allowed_elements)){
+				$areaNeedingMentoringIn2 .= '<div class="register-form-element-div1 register-form-element-div2">';
+				$areaNeedingMentoringIn2 .= '<div class="register-form-element-div3 style="padding: 1%;font-weight: bold;color: #7f7f7f;">&nbsp;A Little More About Me';
+				$areaNeedingMentoringIn2 .= '<span><div class="tooltip" style="display: inline;font-weight: normal;">
+									<img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" />
+							<span>Describe your personality, interests, accomplishments, and concerns -- any specifics that would help potential mentors make the decision to help you as you embark on your College Admissions journey.<br>Eg: You could mention details such as you are an introvert and do not know what to ask just yet but you love music or something as specific as you are passionate about Computer Engineering so what could you do in High School to stand out in the College Applications, any challenges you face or overcame and so on.</span></div></span>';
+				$areaNeedingMentoringIn2 .= drupal_render($element);
+				$areaNeedingMentoringIn2 .= '</div>';
+				$areaNeedingMentoringIn2 .= '</div>';
+			}
+			if($variables['form']['#var1'] == 'mentor' && in_array($key, $lmam_elements)){
+				$lmam .= '<div class="register-form-element-div1 register-form-element-div2">';
+				if($key == 'about_me'){
+					$lmam .= '<div class="register-form-element-div3" style="padding: 1%;font-weight: bold;color: #7f7f7f;">&nbsp;A Little More About Me';
+					$lmam .= '<span><div class="tooltip" style="display: inline;font-weight: normal;">
+									<img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" />
+							<span>Describe your personality, passions, and accomplishments -- any specifics that would help potential mentees make the decision to work with you as they embark on their College Admissions journey.<br>Eg: The details you mention here could include your GPA, the colleges you got accepted at, financial aid received, involvement in any extra curricular activities, any challenges you overcame, what you love to do and so on.</span></div></span>';
+				}else if($key == 'other_colleges_accepted_at'){
+					$lmam .= '<div class="register-form-element-div3" style="padding: 1%;font-weight: bold;color: #7f7f7f;">&nbsp;Other Colleges Accepted At';
+					$lmam .= '<span><div class="tooltip" style="display: inline;font-weight: normal;">
+									<img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" />
+							<span>List the colleges you got accepted at, other than the one you are currently studying at.<br/>Eg: UC Berkeley, Stanford.</span></div></span>';
+				}else if($key == 'fb_uname'){
+					$lmam .= '<div class="register-form-element-div3" style="padding: 1%;font-weight: bold;color: #7f7f7f;">&nbsp;Facebook Profile Username';
+					$lmam .= '<span><div class="tooltip" style="display: inline;font-weight: normal;">
+									<img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" />
+							<span>Provide your Facebook profile username, so that Mentees can have a better understanding of you.<br/>Eg: skoolmentorUSA as in https://facebook.com/skoolmentorUSA</span></div></span>';
+				}else if($key == 'response_time'){
+					$lmam .= '<div class="register-form-element-div3" style="padding: 1%;font-weight: bold;color: #7f7f7f;">&nbsp;Expected Response Time';
+					$lmam .= '<span><div class="tooltip" style="display: inline;font-weight: normal;">
+									<img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" />
+							<span>This provides a rough guideline to your potential mentees of how often to expect a response from you.<br/>Eg: You might be available to respond to queries or setup calls with your mentees everyday or perhaps you are available just once a month.</span></div></span>';
+				}else if($key == 'available_time'){
+					$lmam .= '<div class="register-form-element-div3" style="padding: 1%;font-weight: bold;color: #7f7f7f;">&nbsp;My Typical Available Times During The Week';
+					$lmam .= '<span><div class="tooltip" style="display: inline;font-weight: normal;">
+									<img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" />
+							<span>Please mention your typical availability during the week here, so that mentees can try and schedule their meeting times with you around your availability. Feel free to update this as often as you need to.<br/>This should help both you and your mentee to agree on a meeting time quickly. Don\'t forget to mention your timezone ! Here is a sample weekly schedule:<br />
+							Monday   : 2 pm-5:30 pm, 9:30pm-whenever (PST)<br />
+							Tuesday  : 3 pm-5:30 pm, 9:30pm-whenever (PST)<br />
+							Wednesday: 11 pm-1pm, 9:30pm-whenever (PST)<br />
+							Thursday : 3 pm-5:30 pm, 9:30pm-whenever (PST)<br />
+							Friday   : 1 pm-5:30 pm, 9:30pm-whenever (PST)<br />
+							Saturday : Not available<br />
+							Sunday   : 1pm-2pm (PST)<br /></span></div></span>';
+				}else if($key == 'engagement_model_with_mentee'){
+					$lmam .= '<div class="register-form-element-div3" style="padding: 1%;font-weight: bold;color: #7f7f7f;">&nbsp;Engagement Model With Mentee';
+					$lmam .= '<span><div class="tooltip" style="display: inline;font-weight: normal;"><img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" />
+							<span>Engagement model - specifies the mentorship duration.</br></br>				
+<ul><li><b>On demand 30 minutes mentoring</b> is a mentoring session for 30 minutes only. It requires no commitment beyond the 30 minutes of mentoring by the mentor or the mentee.</li></br>
+<li><b>On demand 1 hour mentoring</b> is a mentoring session for 1 hour only. It requires no commitment beyond the 1 hour of mentoring by the mentor or the mentee.</li></br>				
+<li><b>3 months</b> - specifies a total mentoring duration of 3 months with the mentee. Within the 3 month period mentors and mentees  meet for approx 1-2 hours per month on a mutually agreed upon frequency and meeting duration to add up to approx 1-2 hours/month. Eg: mentors and mentees can choose to meet once a week for 25-30 minutes for upto 3 months.</li></ul>  </span></div></span>';
+				}else if($key == 'volunteer'){
+				$lmam .= '<div class="register-form-element-div3" style="padding: 1%;font-weight: bold;color: #7f7f7f;">&nbsp;Want To Be A Volunteer Mentor';
+					$lmam .= '<span><div class="tooltip" style="display: inline;font-weight: normal;"><img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" />
+							<span><b>Volunteer</b> - a volunteer mentor is one who is not paid for the mentoring services. Typically we expect some of our mentors who are professionals in the industry to be volunteer mentors though that is purely their choice. </span></div></span>';
+				}else{
+					$lmam .= '<div class="register-form-element-div3">&nbsp;';
+				}
+				$lmam .= drupal_render($element);
+				$lmam .= '</div>';
+				$lmam .= '</div>';
+			}
+			if($key== 'mentoring_terms'){
+				$mentoringTerms .= drupal_render($element);
+			}
+		}
+	}
+	$basic_1 .= '</div>';
+	$basic_2 .= '</div>';
+	$basic_3 .= '</div>';
+	$basic_4 .= '</div>';
+	$basic_5 .= '</div>';
+	$basic_6 .= '</div>';//<div class = "register-form-element-div7" style="color: black;">Allowed Extensions: gif jpg jpeg png</div>';
+	$educational .= '</div>';
+	$educational1 .= '</div>';
+	$educational2 .= '</div>';
+	$educational3 .= '</div>';
+	$areaNeedingMentoringIn1 .= '</div>';
+	$areaNeedingMentoringIn2 .= '</div>';
+	if($variables['form']['#var1'] == 'mentor'){
+		$lmam .= '</div>';
+	}
+	$output .= '<div class="register-form-block-heading1"><div class="register-form-block-heading2">
+			<b>Basic Information</b></div>';
+	$output .= $basic_3.$basic_4.$basic_1.$basic_2.$basic_5.$basic_6;
+	$output .= '</div>';
+	if($variables['form']['#var1'] == 'mentor'){
+		$output .= '<div class="register-form-block-heading1"><div class="register-form-block-heading2">
+				<b>Mentor Type</b></div>';
+	}else{
+		$output .= '<div class="register-form-block-heading1"><div class="register-form-block-heading2">
+				<b>Educational Information</b></div>';
+	}
+	$output .= $educational1;
+	if($variables['form']['#var1'] == 'mentor'){
+		$output .= '<div class = "register-form-edu-heading" style="">
+				<div style="color: black;">Current Location</div>'.$educational3.'</div>';
+		//Adding HighSchool Fields
+		$output .= '<div class = "register-form-edu-heading" style="">
+				<div style="color: black;">High School/Community College Education Information</div>'.$educational2.'</div>';
+		$output .= '</div>';
+		$output .= '<div class="register-form-block-heading1"><div class="register-form-block-heading2">
+				<b>Areas available to Mentor In</b></div>';
+	}else if($variables['form']['#var1'] == 'mentee'){
+		$output .= $educational;
+		//$output .= '</div>';
+		$output .= '<div class = "register-form-edu-heading" style="">
+				<div style="color: black; padding-left:15px;">Current Location</div>'.$educational3.'</div></div>';
+		$output .= '<div class="register-form-block-heading1"><div class="register-form-block-heading2">
+				<b>Area Needing Mentoring In</b></div>';
+	}
+	$output .= $areaNeedingMentoringIn1.$areaNeedingMentoringIn2;
+	$output .= '</div>';
+	
+	if($variables['form']['#var1'] == 'mentor'){
+	$output .= '<div class="register-form-block-heading1"><div class="register-form-block-heading2">
+			<b></b></div>';
+	$output .= $lmam;
+	$output .= '</div>';
+	$output .= '<div class="register-form-basic" style = "padding: 20px;"><div style = "padding-right : 10px;" class="register-form-element-div1 container-inline">'.$mentoringTerms.'</div>';
+	$output .= '<div class="register-form-element-div1 container-inline" style = "max-width: 90%; font-size: small;">As a condition of becoming a mentor on Skoolmentor.com, I agree that I will hold all mentorship meetings and interactions with my mentee remotely, for example by phone, Skype, Facetime, Google Hangout or by utilizing other virtual meeting technology; I will not meet with my mentee in person.  If I meet with my mentee for non-mentorship purposes (such as to celebrate an achievement), I agree that I will only do so if a parent or guardian accompanies him or her.</div> </div>';
+	}else if($variables['form']['#var1'] == 'mentee'){
+	$output .= '<div class="register-form-basic" style = "padding: 20px;"><div style = "padding-right : 10px;" class="register-form-element-div1 container-inline">'.$mentoringTerms.'</div>';
+	$output .= '<div class="register-form-element-div1 container-inline" style = "max-width: 90%; font-size: small;">As a condition of becoming a mentee on Skoolmentor.com, I agree that I will hold all mentorship meetings and interactions with my mentor remotely, for example by phone, Skype, Facetime, Google Hangout or by utilizing other virtual meeting technology; I will not meet with my mentor in person.  If I meet with my mentor for non-mentorship purposes (such as to celebrate an achievement), I agree that I will only do so if my parent or guardian accompanies me.</div> </div>';
+	}
+	/*$output .= drupal_render($variables['form']['captcha']);
+	$output .= drupal_render($variables['form']['actions']);
+	$output .= drupal_render($variables['form']['term_of_use']);
+	$output .= drupal_render($variables['form']['form_build_id']);
+	$output .= drupal_render($variables['form']['form_id']);
+	*/
+	$output .= '<script type="text/javascript">
+		(function ($) {
+			$("#edit-country").each(function(){
+				$valueCountry = $(this).val();
+				if($valueCountry == "USA"){
+						$("#div_edit-country-others").hide();
+						$("#div_edit-stateothers").hide();
+						$("#div_edit-cityothers").hide();
+				}else if($valueCountry == "Others"){
+						$("#div_edit-stateusa").hide();
+						$("#div_edit-cityusa").hide();
+				}else{
+						$("#div_edit-country-others").hide();
+						$("#div_edit-stateothers").hide();
+						$("#div_edit-cityothers").hide();
+						$("#div_edit-stateusa").hide();
+						$("#div_edit-cityusa").hide();
+				}
+				$(this).change(function(){
+					$valueCountry = $(this).val();
+					if($valueCountry == "USA"){
+						$("#div_edit-country-others").hide();
+						$("#div_edit-stateothers").hide();
+						$("#div_edit-cityothers").hide();
+						$("#div_edit-stateusa").show();
+						$("#div_edit-cityusa").show();
+					}else  if($valueCountry == "Others"){
+						$("#div_edit-stateusa").hide();
+						$("#div_edit-cityusa").hide();
+						$("#div_edit-country-others").show();
+						$("#div_edit-stateothers").show();
+						$("#div_edit-cityothers").show();
+					}else{
+						$("#div_edit-country-others").hide();
+						$("#div_edit-stateothers").hide();
+						$("#div_edit-cityothers").hide();
+						$("#div_edit-stateusa").hide();
+						$("#div_edit-cityusa").hide();
+				}
+				});
+				
+			});
+
+			$("#edit-countryschool").each(function(){
+				$valueCountry1 = $(this).val();
+				if($valueCountry1 == "USA"){
+						$("#div_edit-country-othersschool").hide();
+						$("#div_edit-stateothersschool").hide();
+						$("#div_edit-cityothersschool").hide();
+				}else if($valueCountry1 == "Others"){
+						$("#div_edit-stateusaschool").hide();
+						$("#div_edit-cityusaschool").hide();
+				}else{
+						$("#div_edit-country-othersschool").hide();
+						$("#div_edit-stateothersschool").hide();
+						$("#div_edit-cityothersschool").hide();
+						$("#div_edit-stateusaschool").hide();
+						$("#div_edit-cityusaschool").hide();
+				}
+				$(this).change(function(){
+					$valueCountry1 = $(this).val();
+					if($valueCountry1 == "USA"){
+						$("#div_edit-country-othersschool").hide();
+						$("#div_edit-stateothersschool").hide();
+						$("#div_edit-cityothersschool").hide();
+						$("#div_edit-stateusaschool").show();
+						$("#div_edit-cityusaschool").show();
+					}else  if($valueCountry1 == "Others"){
+						$("#div_edit-stateusaschool").hide();
+						$("#div_edit-cityusaschool").hide();
+						$("#div_edit-country-othersschool").show();
+						$("#div_edit-stateothersschool").show();
+						$("#div_edit-cityothersschool").show();
+					}else{
+						$("#div_edit-country-othersschool").hide();
+						$("#div_edit-stateothersschool").hide();
+						$("#div_edit-cityothersschool").hide();
+						$("#div_edit-stateusaschool").hide();
+						$("#div_edit-cityusaschool").hide();
+				}
+				});
+				
+			});
+			$("#edit-fieldofstudy").parent().parent().parent().hide();
+			$("#dropdown_specialization_replace_1").parent().parent().hide();
+			$("#mentee_dropdown_specialization_replace_1").parent().parent().hide();
+			$("#edit-areaofmentoring-1").each(function(){
+				if($(this).is(":checked")){
+					$("#edit-fieldofstudy").parent().parent().parent().show();
+					$("#mentee_dropdown_specialization_replace_1").parent().parent().show();
+					$("#dropdown_specialization_replace_1").parent().parent().show();
+				}
+				$(this).change(function(){
+					$("#edit-fieldofstudy").parent().parent().parent().toggle();
+					$("#dropdown_specialization_replace_1").parent().parent().toggle();
+					$("#mentee_dropdown_specialization_replace_1").parent().parent().toggle();
+				});
+			});
+			$("label").hide();
+			$("#edit-country").change(function(){
+				if($(this).val() == "USA"){
+					$countryValue = 1;
+				}else if($(this).val() == "Others"){
+					$countryValue = 2;
+				}else{
+					$countryValue = 0;
+				}
+			});
+
+			$("#edit-countryschool").change(function(){
+				if($(this).val() == "USA"){
+					$countryValue1 = 1;
+				}else if($(this).val() == "Others"){
+					$countryValue1 = 2;
+				}else{
+					$countryValue1 = 0;
+				}
+			});
+			$("label").each(function(){
+				var textLabel = $(this).text();
+				
+				if($(this).attr("for").indexOf("areaofmentoring") > -1){
+					$(this).show();
+				}else if($(this).attr("for").indexOf("fieldofspecialization") > -1){
+					$(this).show();
+				}else if($(this).attr("for").indexOf("fieldofstudy") > -1){
+					$(this).show();
+				}else if($(this).attr("for").indexOf("edit-m-type") > -1){
+						$(this).show();
+				}else if($(this).attr("for").indexOf("edit-degree") > -1){
+						$(this).show();
+				}else if($(this).attr("for").indexOf("mentoring-terms") > -1){
+					$(this).show();
+				}else if($(this).attr("for").indexOf("edit-engagement-model-with-mentee-") > -1){
+						$(this).show();
+						if($(this).text().indexOf("Engagement Model With Mentee") < 0){
+							$(this).parent().css("float","left");
+							$(this).parent().css("min-width","95%");
+							$(this).parent().css("margin","0% !important");
+						}
+				}else if($(this).attr("for").indexOf("edit-mentee-type") > -1){
+						$(this).show();
+				}
+				
+			});
+			$("#edit-professional").css("width","90%");
+			$("#edit-student").css("width","90%");
+			$("#edit-highschool").css("width","90%");
+			$("#edit-transfer").css("width","90%");
+			$("#edit-highschoolname").css("width","226px");
+			
+			$("h1").hide();
+			$(".description").hide();
+			$(".description").each(function(){
+				if($(this).text().indexOf("e.g. 89076") > -1){
+					$(this).show();
+					$(this).css("color","black");
+				}else if($(this).text().indexOf("e.g. (498)345-4566") > -1){
+					$(this).show();
+					$(this).css("color","black");
+				}
+			});
+			
+			$(".form-text").each(function(){
+								var formId = $(this).closest("form").attr("id");
+								if(formId == "mentoringcommon-register-form"){
+								var titleText = $(this).siblings("label").text();
+								if(!$(this).val()){
+									$(this).val(titleText) ;
+									$(this).css("color","#ABA6A6");
+							    }else if($(this).val() == titleText){
+									$(this).css("color","#ABA6A6");
+							    }
+								if(titleText.indexOf("assword") > -1){
+									this.type ="text";
+								}
+								$(this).focus(function(){
+									if(titleText.indexOf("assword") > -1){
+										if(this.value == titleText) {
+							            	this.value = "";
+							            	$(this).css("color","black");
+											this.type ="password";
+											}
+									}
+								});
+								$(this).keypress(function(){
+									if(titleText.indexOf("assword") == -1){
+										if(this.value == titleText) {
+							            this.value = "";
+							            $(this).css("color","black");
+										}
+									}
+							    });
+	
+							    $(this).blur(function(){
+							    	if(this.value == "") {
+							            this.value = titleText;
+							            $(this).css("color","#ABA6A6");
+									   	if(titleText.indexOf("assword") > -1){
+												this.type ="text";
+												}
+									}
+							    });
+							}
+							});
+		$(".form-textarea").each(function(){
+								var titleText = $(this).parent().siblings("label").text();
+								if(!$(this).val()){
+									$(this).val(titleText) ;
+									$(this).css("color","#ABA6A6");
+							    }else if($(this).val() == titleText){
+									$(this).css("color","#ABA6A6");
+							    }
+								$(this).keydown(function(){
+									if(this.value == titleText) {
+							            this.value = "";
+							            $(this).css("color","black");
+									}
+							    });
+	
+							    $(this).blur(function(){
+							    	if(this.value == "") {
+							            this.value = titleText;
+							            $(this).css("color","#ABA6A6");
+									}
+							    });
+							});
+		})(jQuery);
+	
+	</script>';
+	return $output;
+}
+
+/**
+ * Returns form render array.
+ */
+function mentoringcommon_form(&$form, &$form_state, $type) {
+   global $user;
+   $account = $form['#user'];
+   $register = ($form['#user']->uid > 0 ? FALSE : TRUE);
+	// Account information.
+  $form['account'] = array(
+    '#type'   => 'container',
+    '#theme' => 'mentoringcommon_theme_form',
+   	'#var1' => $type,
+  	'#weight' => -10,
+  	);
+  //$form['#validate'][] = 'user_account_form_validate';
+  // Only show name field on registration form or user can change own username.
+  
+  $form['account']['registration_type'] = array(
+    '#type' => 'hidden',
+    '#default_value' => 'standard',
+  );  
+  
+  $form['account']['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Username'),
+    '#maxlength' => USERNAME_MAX_LENGTH,
+    '#description' => t('Spaces are allowed; punctuation is not allowed except for periods, hyphens, apostrophes, and underscores.'),
+    '#required' => TRUE,
+    '#attributes' => array('class' => array('username')),
+    '#default_value' => (!$register ? $account->name : ''),
+    //'#access' => ($register || ($user->uid == $account->uid && user_access('change own username'))),
+    '#weight' => -10,
+  	'#size' => 20,
+  	//'#name' => 'Username',
+  );
+  
+  _username_check_load_resources();
+  
+  $form['account']['name']['#field_suffix'] = '<span id="username-check-informer">&nbsp;</span>';
+  $form['account']['name']['#suffix'] = '<div id="username-check-message"></div>';
+ if($type == 'mentee'){
+  $form['account']['mail'] = array(
+    '#type' => 'textfield',
+    '#title' => t('E-mail address'),
+    '#maxlength' => EMAIL_MAX_LENGTH,
+    '#description' => t('A valid e-mail address. All e-mails from the system will be sent to this address. The e-mail address is not made public and will only be used if you wish to receive a new password or wish to receive certain news or notifications by e-mail.'),
+    '#required' => TRUE,
+    '#default_value' => (!$register ? $account->mail : ''),
+  	'#size' => 20,
+  	//'#name' => 'E-mail address',
+  );
+  $form['account']['confirm_mail'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Confirm E-mail address'),
+    '#maxlength' => EMAIL_MAX_LENGTH,
+    '#description' => t('A valid e-mail address. All e-mails from the system will be sent to this address. The e-mail address is not made public and will only be used if you wish to receive a new password or wish to receive certain news or notifications by e-mail.'),
+    '#required' => TRUE,
+    //'#default_value' => (!$register ? '$account->mail' : ''),
+  	'#size' => 20,
+  	//'#name' => 'E-mail address',
+  );
+}
+  // Display password field only for existing users or when user is allowed to
+  // assign a password during registration.
+  if (!$register) {
+    $form['account']['pass'] = array(
+      '#type' => 'password_confirm',
+      '#size' => 25,
+      '#description' => t('To change the current user password, enter the new password in both fields.'),
+    );
+    // To skip the current password field, the user must have logged in via a
+    // one-time link and have the token in the URL.
+    $pass_reset = isset($_SESSION['pass_reset_' . $account->uid]) && isset($_GET['pass-reset-token']) && ($_GET['pass-reset-token'] == $_SESSION['pass_reset_' . $account->uid]);
+    $protected_values = array();
+    $current_pass_description = '';
+    // The user may only change their own password without their current
+    // password if they logged in via a one-time login link.
+    if (!$pass_reset) {
+      $protected_values['mail'] = $form['account']['mail']['#title'];
+      $protected_values['pass'] = t('Password');
+      $request_new = l(t('Request new password'), 'user/password', array('attributes' => array('title' => t('Request new password via e-mail.'))));
+      $current_pass_description = t('Enter your current password to change the %mail or %pass. !request_new.', array('%mail' => $protected_values['mail'], '%pass' => $protected_values['pass'], '!request_new' => $request_new));
+    }
+    // The user must enter their current password to change to a new one.
+    if ($user->uid == $account->uid) {
+      $form['account']['current_pass_required_values'] = array(
+        '#type' => 'value',
+        '#value' => $protected_values,
+      );
+      $form['account']['current_pass'] = array(
+        '#type' => 'password',
+        '#title' => t('Current password'),
+        '#size' => 25,
+        '#access' => !empty($protected_values),
+        '#description' => $current_pass_description,
+        '#weight' => -5,
+        '#size' => 20,
+      	'#attributes' => array('autocomplete' => 'off'),
+      );
+      $form['#validate'][] = 'user_validate_current_pass';
+    }
+  }
+  else {
+    $form['account']['pass'] = array(
+      '#type' => 'password_confirm',
+      '#size' => 25,
+      '#description' => t('Provide a password for the new account in both fields.'),
+      '#required' => TRUE,
+    	'#size' => 20,
+    );
+  }
+  
+  $form['account']['pic'] = array(
+  	'#type' => 'managed_file',
+  	'#title' => t('Profile Picture'),
+  	//'#description' => t('Allowed extensions: gif png jpg jpeg'),
+  	'#upload_validators' => array(
+    	'file_validate_extensions' => array('gif png jpg jpeg'),
+    	// Pass the maximum file size in bytes
+    	'file_validate_size' => array(5 * 1024 * 1024),
+  	),
+  	'#required' => ($type == 'mentor')? TRUE : FALSE,
+  	'#theme' => 'mentoringcommon_thumb_upload',
+  	'#upload_location' => 'public://pictures/',
+  );
+  
+  $form['account']['signup_type'] = array(
+    '#title' => t('Sign up as'),
+    '#type' => 'hidden',
+    '#description' => 'Are you a mentor or mentee?',
+    '#default_value' => ($type=='mentor'? '0' : '1'),
+    //'#required' => TRUE,
+    //'#options' => array(t('Mentor'), t('Mentee')),
+  );
+  
+  if($type == 'mentee')
+  	mentee_fields_form($form, $form_state);
+  else if($type == 'mentor')
+  	mentor_fields_form($form, $form_state);   
+  
+  
+  return $form;
+}    
+
+function mentoringcommon_register_form_validate($form, &$form_state) {
+	user_register_validate($form, $form_state);
+	$signup_type = $form_state['values']['signup_type'];
+
+	$count = db_query("SELECT COUNT(u.name) count FROM {users} u WHERE LOWER(u.name) = LOWER(:username)", array(':username' => $form_state['values']['name']))->fetchField();
+	if($form_state['values']['fname'] == 'First Name *' ||$form_state['values']['fname'] == '') {
+		form_set_error('name', t('First name is required'));
+	}
+	if($form_state['values']['name'] == 'Username *') {
+		form_set_error('fname', t('User name is required'));
+	}
+	if ($count) {
+        form_set_error('name', t('The name '. $form_state['values']['name'] . ' is already taken.'));
+    }
+	if($signup_type == 1){
+		$form_state['values']['mail'] = rtrim($form_state['values']['mail']);
+		$email = $form_state['values']['mail'];
+
+		//To check whether that mail address already exists.
+		$emailCheck = db_query("SELECT COUNT(u.mail) emailCheck FROM {users} u WHERE LOWER(u.mail) = LOWER(:mail)", array(':mail' => $form_state['values']['mail']))->fetchField();
+		if($emailCheck){
+			form_set_error('mail', t('The email address you have used is already registered.'));
+		}
+		if(!valid_email_address($email)) {
+			form_set_error('mail', t('Invalid e-mail address'));
+		}
+
+		$confirm_mail = rtrim($form_state['values']['confirm_mail']);
+		//To confirm Email Address
+		if($email != $confirm_mail){
+			form_set_error('mail', t('E-mail Address and Confirm E-mail Address does not match'));
+			form_set_error('confirm_mail');
+		}
+	}
+
+	//element_validate_number($form['account']['zcode'], $form_state);
+	
+	//$postal_code = postal_code_validation_validate($form_state['values']['zcode'], 'US');
+	/*$zip_code = $form_state['values']['zcode'];
+	if(strlen($zip_code) != 5 && !preg_match('/^[0-9]{1,5}$/', $zip_code))  {
+		form_set_error('zcode', t('Zip code should be in nnnnn format'));
+	}*/
+
+	//} else if (strlen($phone) > 0 && !preg_match('/^[0-9]{1,3}-[0-9]{3}-[0-9]{3,4}$/', $phone)) {
+	//    form_set_error('mobile', t('Mobile number must be in format xxx-xxx-nnnn.'));
+	//}
+
+	/*$country_value;
+	$country_key = $form_state['values']['country'];
+	if($country_key == "Others")
+		$country_value = $form_state['values']['country_others'];
+	else
+		$country_value = $form['account']['country']['#options'][$country_key];	*/
+
+	$zip_code = $form_state['values']['zcode'];
+	$phone = $form_state['values']['mobile'];
+
+    $country_value = $form_state['values']['country'];
+    if($country_value !== 'Country *') {
+	  $form_state['values']['country'] = $country_value;
+	  
+	  if($form_state['values']['country'] == 'Others' || $form_state['values']['country'] == 'Please specify country ') {
+	  		$country_others = $form_state['values']['country_others'];
+	  		if(!isset($country_others) || empty($country_others) || $country_others == 'Please specify country ') {
+	  			form_set_error('country_others', t('Country field is required.'));
+	  			$form_state['values']['country'] = NULL;
+	  		} else
+				$form_state['values']['country'] = $country_others;
+				
+			$state_others = $form_state['values']['stateOthers'];
+			if($state_others == NULL || $state_others == '' || $state_others == 'State ') {
+				form_set_error('state_others', t('State field is required.'));
+				$form_state['values']['state'] = NULL;
+			}			
+			$form_state['values']['state'] = $state_others;
+			
+			$city_others = $form_state['values']['cityOthers'];
+			if(!isset($city_others) || empty($city_others) || $city_others == 'City ') {
+				form_set_error('city_others', t('City field is required.'));
+				$form_state['values']['city'] = NULL;
+			}	
+			$form_state['values']['city'] = $city_others;
+			//Mobile Number Validation when Country is Others
+			/*if($phone == 'Mobile *') {
+				form_set_error('mobile', t('Mobile number is required'));
+			} else*/
+			if($phone != 'Mobile '){
+				if(!(preg_match('/^\d{10}$/',$phone))){
+					//element_validate_number($form['account']['mobile'], $form_state);
+					form_set_error('mobile',t('Mobile number must be in the format xxxxxxnnnn'));
+				}
+			}
+			//Zipcode validation when Country is Others
+			if($zip_code == 'Zip code *'){		
+				form_set_error('zcode',t('Zip code is required'));		
+			}else if(strlen($zip_code) != 6 && !preg_match('/^\d{6}$/', $zip_code))  {		
+				form_set_error('zcode', t('Zip code should be in nnnnnn format'));		
+			}
+
+		} else if($form_state['values']['country'] == 'USA'){
+			$form_state['values']['country'] = $form_state['values']['country'];
+			$key = $form_state['values']['stateUSA'];
+			$state = $form['account']['stateUSA']['#options'][$key];
+			if($state =='State *') {
+				form_set_error('stateUSA', t('State field is required.'));
+				$form_state['values']['state'] == NULL;	
+			} else	
+				$form_state['values']['state'] = $state;
+				
+			$key = $form_state['values']['cityUSA'];
+			$city = $form['account']['cityUSA']['#options'][$key];
+			if($city == 'City *') {
+				form_set_error('cityUSA', t('City field is required.'));
+				$form_state['values']['city'] = NULL;	
+			} else{	
+				$form_state['values']['city'] = $city;
+			}
+			//Mobile Number Validation when Country is USA
+			/*if($phone == 'Mobile *') {
+				form_set_error('mobile', t('Mobile number is required'));
+			} else*/
+			if($phone != 'Mobile '){
+				if(!(preg_match('/\s{0,1}\(\d{3}\)(\s{0,1})\d{3}\-\d{4}$/',$phone))){
+					//element_validate_number($form['account']['mobile'], $form_state);
+					form_set_error('mobile',t('Mobile number must be in the format (xxx)xxx-nnnn'));
+				}
+			}
+			//Zipcode validation when Country is USA
+			if($zip_code == 'Zip code *'){
+				form_set_error('zcode',t('Zip code is required'));
+			}else if(strlen($zip_code) != 5 && !preg_match('/^[0-9]{5}$/', $zip_code))  {
+				form_set_error('zcode', t('Zip code should be in nnnnn format'));
+			}
+		}else{
+			form_set_error('country', t('Country field is required.'));
+			$form_state['values']['country'] == NULL;
+			$form_state['values']['state'] == NULL;
+			$form_state['values']['city'] == NULL;
+		}
+	} else {
+		form_set_error('country', t('Country field is required.'));
+		$form_state['values']['country'] == NULL;
+		$form_state['values']['state'] == NULL;
+		$form_state['values']['city'] == NULL;
+	}	
+	//If Mentee
+	if($signup_type == 1) {
+
+		$parentmail = $form_state['values']['parent_mail'];
+		if($parentmail == 'Parent E-mail Address *' || !isset($parentmail) || empty($parentmail)){
+			form_set_error('parent_mail', t('Please provide a valid Parent E-mail ID.'));
+		} else if($parentmail == $email){
+			form_set_error('parent_mail', t('Parent Mail Address cannot be the same as Mentee Mail Address'));
+		}
+		$mentee_type = $form_state['values']['mentee_type'];
+		if($mentee_type == 'highschool'){
+			if($form_state['values']['school_name'] == 'School Name *') {
+				form_set_error('school_name', t('School name is required'));
+			}
+			if(isset($form_state['values']['yearOfSchool'])){
+				$birthDate = $form_state['values']['bday'];
+				$birthyear = $birthDate['year'];
+				$year_of_school_value = $form_state['values']['yearOfSchool'];
+				if($year_of_school_value <= $birthyear)
+					form_set_error('yearOfSchool', t('Graduation year cannot be earlier than birthdate'));
+			} else{
+				form_set_error('yearOfSchool', t('Year of HighSchool Graduation is required'));
+			}
+		} else if($mentee_type == 'transfer'){
+			if($form_state['values']['college_name'] == 'College Name *'){
+				form_set_error('college_name', t('College Name is required'));
+			}
+			if(isset($form_state['values']['yearOfIntendedTransfer'])){
+				$birthDate = $form_state['values']['bday'];
+				$birthyear = $birthDate['year'];
+				$year_of_intended_transfer_value = $form_state['values']['yearOfIntendedTransfer'];
+				if($year_of_intended_transfer_value <= $birthyear)
+					form_set_error('yearOfIntendedTransfer', t('Intended Transfer year cannot be earlier than birthdate'));
+			} else{
+				form_set_error('yearOfIntendedTransfer', t('Year of Intended Transfer is required'));
+			}
+
+		}
+	} else if($signup_type == 0) { //If Mentor
+
+		$college_email = $form_state['values']['collegeemail'];
+		$work_email = $form_state['values']['workemail'];
+
+		if($form_state['values']['m_type'] == 'student') {
+
+			if(!isset($college_email) || empty($college_email) || $college_email == 'College E-mail Address *') {
+				form_set_error('collegeemail', t('Please provide a valid College E-mail ID.'));
+			} else if(substr_compare($college_email, '.edu', -4) !== 0) {
+				form_set_error('collegeemail', t('College email id should end with edu.'));
+			}
+
+			//To check whether that mail address already exists.
+			$emailCheckCollege = db_query("SELECT COUNT(u.mail) emailCheckCollege FROM {users} u WHERE LOWER(u.mail) = LOWER(:mail)", array(':mail' => $form_state['values']['collegeemail']))->fetchField();
+			if($emailCheckCollege){
+				form_set_error('collegeemail', t('The email address you have used is already registered.'));
+			}
+
+			if($college_email != $form_state['values']['confirm_collegeemail']){
+				form_set_error('collegeemail', t('E-mail Address and Confirm E-mail Address does not match'));
+				form_set_error('confirm_collegeemail');
+			}
+	
+			if(!isset($form_state['values']['schoolAttending'])||$form_state['values']['schoolAttending'] == 'School Attending *'){
+				form_set_error('schoolAttending', t('School Attending field is required.'));
+			}
+			if(!isset($form_state['values']['expectedYearOfSchool'])||$form_state['values']['expectedYearOfSchool'] == ''){
+				form_set_error('expectedYearOfSchool', t('Year Of Graduation field is required.'));
+			}
+
+			if($work_email == 'Work E-mail Address *')
+				$work_email = '';
+			$form_state['values']['mail'] = $college_email;
+			//To unset default values in Work email
+			$form_state['values']['collegeemail'] = $college_email;
+			$form_state['values']['workemail'] = $work_email;
+		} else if($form_state['values']['m_type'] == 'professional') {
+
+			$freeMailServices = file_get_contents("https://skoolmentor.com/sites/default/files/freeMailServices.txt");
+			if(!isset($work_email) || empty($work_email) || $work_email == 'Work E-mail Address *') {
+				form_set_error('workemail', t('Please provide a valid Work E-mail ID.'));
+			} else if(preg_match('/("'.$freeMailServices.'")/i', $work_email)){
+				form_set_error('workemail', t('Please provide a valid Work E-mail ID.'));
+			}
+			/*else if(substr_compare($work_email, 'gmail.com', -9) === 0
+				|| substr_compare($work_email, 'yahoo.com', -9) === 0
+				|| substr_compare($work_email, 'hotmail.com', -11) === 0
+				|| substr_compare($work_email, 'aol.com', -7) === 0) {			
+				form_set_error('workemail', t('Please provide a valid work email id.'));
+			}*/
+
+			//To check whether that mail address already exists.
+			$emailCheckWork = db_query("SELECT COUNT(u.mail) emailCheckWork FROM {users} u WHERE LOWER(u.mail) = LOWER(:mail)", array(':mail' => $form_state['values']['workemail']))->fetchField();
+			if($emailCheckWork){
+				form_set_error('workemail', t('The email address you have used is already registered.'));
+			}
+
+			if($work_email != $form_state['values']['confirm_workemail']){
+				form_set_error('workemail', t('E-mail Address and Confirm E-mail Address does not match'));
+				form_set_error('confirm_workemail');
+			}
+
+			if(!isset($form_state['values']['employer'])||$form_state['values']['employer'] == 'Employer *'){
+				form_set_error('employer', t('Employer field is required.'));
+			}
+			if(!isset($form_state['values']['title'])||$form_state['values']['title'] == 'Job Title *'){
+				form_set_error('title', t('Job Title field is required.'));
+			}
+			if(!isset($form_state['values']['yearsOfExp'])||$form_state['values']['yearsOfExp'] == ''){
+				form_set_error('yearsOfExp', t('Years of Experience field is required.'));
+			}
+			if(!isset($form_state['values']['lastSchoolAttended'])||$form_state['values']['lastSchoolAttended'] == 'Last School Attended *'){
+				form_set_error('lastSchoolAttended', t('Last School Attended field is required.'));
+			}
+			if(!isset($form_state['values']['yearOfSchool'])||$form_state['values']['yearOfSchool'] == ''){
+				form_set_error('yearOfSchool', t('Year Of Graduation field is required.'));
+			}		
+			$form_state['values']['mail'] = $work_email;
+			//To unset default values in College email
+			$form_state['values']['collegeemail'] = $college_email;
+			$form_state['values']['workemail'] = $work_email;
+		}
+
+		//Checking Other Colleges Accepted At field value
+		$other_colleges_accepted_at = $form_state['values']['other_colleges_accepted_at'];
+		if(isset($other_colleges_accepted_at) && !empty($other_colleges_accepted_at) && $other_colleges_accepted_at != "Other Colleges Accepted At "){
+			$form_state['values']['other_colleges_accepted_at'] = check_plain($other_colleges_accepted_at);
+		}else{
+			$form_state['values']['other_colleges_accepted_at'] = NULL;
+		}
+		//Checking Facebook Profile Username field value
+		$fb_uname = $form_state['values']['fb_uname'];
+		if(isset($fb_uname) && !empty($fb_uname) && $fb_uname != "Facebook Profile Username "){
+			$form_state['values']['fb_uname'] = check_plain($fb_uname);
+		}else{
+			$form_state['values']['fb_uname'] = NULL;
+		}
+		//Checking High School Information - Name,Year, Country, State, City
+		/*$highSchoolName = $form_state['values']['highSchoolName'];
+		if(!isset($highSchoolName) || empty($highSchoolName) || $highSchoolName == 'High School Name *'){
+			form_set_error('highSchoolName', t('H'));
+		}*/
+		$country_value = $form_state['values']['countrySchool'];
+	    if($country_value !== 'Country *') {
+		  $form_state['values']['countrySchool'] = $country_value;
+		  
+		  if($form_state['values']['countrySchool'] == 'Others' || $form_state['values']['countrySchool'] == 'Please specify country ') {
+		  		$country_others = $form_state['values']['country_othersSchool'];
+		  		if(!isset($country_others) || empty($country_others) || $country_others == 'Please specify country ') {
+		  			$form_state['values']['countrySchool'] = NULL;
+		  		} else
+					$form_state['values']['countrySchool'] = $country_others;
+					
+				$state_others = $form_state['values']['stateOthersSchool'];
+				if($state_others == NULL || $state_others == '' || $state_others == 'State ') {
+					$form_state['values']['stateSchool'] = NULL;
+				}
+				$form_state['values']['stateSchool'] = $state_others;
+				
+				$city_others = $form_state['values']['cityOthersSchool'];
+				if(!isset($city_others) || empty($city_others) || $city_others == 'City ') {
+					$form_state['values']['citySchool'] = NULL;
+				}
+				$form_state['values']['citySchool'] = $city_others;
+			} else if($form_state['values']['countrySchool'] == 'USA'){
+				$key = $form_state['values']['stateUSASchool'];
+				$state = $form['account']['stateUSASchool']['#options'][$key];
+				if($state =='State') {
+					form_set_error('stateUSASchool', t('State field is required.'));
+					$form_state['values']['stateSchool'] == NULL;
+				} else
+					$form_state['values']['stateSchool'] = $state;
+					
+				$key = $form_state['values']['cityUSASchool'];
+				$city = $form['account']['cityUSASchool']['#options'][$key];
+				if($city == 'City') {
+					form_set_error('cityUSASchool', t('City field is required.'));
+					$form_state['values']['citySchool'] = NULL;
+				} else{
+					$cityValue = db_query("SELECT name FROM city WHERE cityid = :city", array('city' => $key))->fetchField();
+					if(!empty($city))
+						$form_state['values']['citySchool'] = $city;
+					else
+						$form_state['values']['citySchool'] = $cityValue;
+				}
+			}else{
+				$form_state['values']['countrySchool'] == NULL;
+				$form_state['values']['stateSchool'] == NULL;
+				$form_state['values']['citySchool'] == NULL;
+			}
+		} else {
+			$form_state['values']['countrySchool'] == NULL;
+			$form_state['values']['stateSchool'] == NULL;
+			$form_state['values']['citySchool'] == NULL;
+		}
+	}
+	
+	if(isset($form_state['values']['areaofmentoring'])) {
+		$selected_aom = array_filter($form_state['values']['areaofmentoring']);
+		if(count($selected_aom) < 1){
+			form_set_error('areaofmentoring',t('Area of Interest for Mentoring is required'));
+		}
+	}
+	if($form_state['values']['areaofmentoring'][1] == 1){
+		$areaOfSpecializationCount = array_filter($form_state['values']['fieldOfSpecialization']);
+		if($form_state['values']['fieldOfStudy'] != 9 && $form_state['values']['fieldOfStudy'] != 10){
+			if(empty($areaOfSpecializationCount)){
+				form_set_error('fieldOfSpecialization', t('Field of Specialization field is required.'));
+			}
+		}
+		if(count($areaOfSpecializationCount) > 3){
+			form_set_error('fieldOfSpecialization', t('More than three Fields of Specialization cannot be selected.'));
+		}
+	}
+}
+
+ 
+function mentoringcommon_theme($existing, $type, $theme, $path) {
+	return array(
+    'mentoringcommon_thumb_upload' => array(
+        'render element' => 'element',
+        'file'           => 'mentoringcommon.module',
+	),
+	'mentoringcommon_theme_form' => array(
+					'render element' => 'form'
+	),
+	'mentoringcommon_change_picture_form' => array(
+					'render element' => 'form'
+	),
+	'mentoringcommon_sign_up_form' => array(
+				'render element' => 'form'
+	),
+	);
+}
+
+function theme_mentoringcommon_thumb_upload($variables) {
+
+    $element = $variables['element'];
+    if (isset($element['#file']->uri)) {
+        $output = '<div id="edit-logo-ajax-wrapper"><div class="form-item form-type-managed-file form-item-logo"><span class="file">';
+        $output .= '<img style="max-width: 100px;" src="' . file_create_url($element['#file']->uri) . '" />';
+        $output .= '</span><input type="submit" id="edit-' . $element['#name'] . '-remove-button" name="' . $element['#name'] . '_remove_button" value="Remove" class="form-submit ajax-processed">';
+        $output .= '<input type="hidden" name="' . $element['#name'] . '[fid]" value="' . $element['#file']->fid . '">';
+		$output .= '</div></div>';
+        return $output;
+    }
+}
+   
+function mentoringcommon_login($form, &$form_state) {
+  global $user;
+
+  // If we are already logged on, go to the user page instead.
+  if ($user->uid) {
+    //drupal_goto('node/1');
+  }   
+  
+
+  // Display login form:
+  $form['name'] = array('#type' => 'textfield',
+    '#title' => t('Username'),
+    '#size' => 27,
+    '#maxlength' => USERNAME_MAX_LENGTH,
+    '#required' => TRUE,
+  	'#element_validate' => array('mentoringcommon_login_name_validate'),
+  );
+  
+
+  //$form['name']['#description'] = t('Enter your @s username.', array('@s' => variable_get('site_name', 'Drupal')));
+  $form['pass'] = array('#type' => 'password',
+    '#title' => t('Password'),
+    '#required' => TRUE,
+  	'#element_validate' => array('mentoringcommon_login_pass_validate'),
+  	'#size' => 27,
+  );
+  //$form['#validate'] = array('mentoringcommon_login_validate','user_login_name_validate', 'user_login_authenticate_validate', 'user_login_final_validate');
+  $form['#validate'] = user_login_default_validators();
+  $form['actions'] = array('#type' => 'actions');
+  $form['actions']['submit'] = array('#type' => 'submit', '#value' => t('Log In'));
+  $form['#submit'][] = 'mentoringcommon_login_submit';
+  //$form['#theme'][] = 'mentoringcommon_login';
+
+  return $form;
+}
+
+function mentoringcommon_login_name_validate($element, &$form_state) {
+	
+		$userName = $form_state['values']['name'];
+		if(strpos($userName,'Username') !== false) {
+			//drupal_set_message(t('Please Enter Username.'), 'error');
+			form_set_error($element, t('Please Enter Username.'));
+		}
+		
+	}
+function mentoringcommon_login_pass_validate($element, &$form_state) {
+			
+		$password = $form_state['values']['pass'];
+		if(strpos(password,'Password') !== false) {
+			//drupal_set_message(t('Please Enter Password.'), 'error');
+			$form_set_error($element, t('Please Enter Password.'));
+		}
+	}
+
+/**
+ * Submit handler for the login form. Load $user object and perform standard login
+ * tasks. The user is then redirected to the My Account page. Setting the
+ * destination in the query string overrides the redirect.
+ */
+function mentoringcommon_login_submit($form, &$form_state) {
+  global $user;
+  $user = user_load($form_state['uid']);
+  //$_SESSION['user'] = $user;
+   
+  $query = db_select('user_activation', 'ua'); 
+	$query->condition('ua.uid', $user->uid, '=');
+	$query->fields('ua', array('uid', 'activated', 'activation_code'));
+	$result = $query->execute();	
+	
+	$activated = '';
+	$activation_code = '';
+	if(	$record = $result->fetchAssoc()) {
+		$activated = $record['activated'];
+		$activation_code = $record['activation_code'];
+	} 
+	
+	if($activated != 'Y' && $user->uid != 1) { 	
+  		//drupal_goto('user/logout');
+		//$form_state['redirect'] = 'user/logout';
+		session_destroy();
+		drupal_set_message(t('Your account is not yet activated. To activate your account please click on the URL sent to your email address
+				<a href="@activation">Click here to re-send the URL to your registered email</a>', array('@activation' => url('activation/resend'))), 'error');		
+		
+		//drupal_goto('user/logout');
+	} else if($activated == 'Y') {	
+	  
+	  user_login_finalize($form_state);
+	  
+	  $_SESSION['user'] = $user;
+	  //$form_state['redirect'] = 'user/' . $user->uid;
+	  
+	  /*$query = db_select('super_user','su');
+	  $query->condition('su.uid', $user->uid, '=');
+	  $query->fields('su',array('super_user'));
+	  $result = $query->execute();
+	  $su_flag = '';
+	  if($record = $result->fetchAssoc()) {
+	  	$su_flag = $record['super_user'];
+	  }*/
+	  if($_SESSION['user']->uid == '2519')
+	  {
+	  	drupal_goto('pending_payment/');
+	  }
+	  else {
+	  
+		  $query = db_select('users_roles', 'ur');
+		  $query->join('role', 'r', 'r.rid = ur.rid'); 
+		  $query->condition('ur.uid', $user->uid, '=');   
+		  $query->fields('r', array('name'));
+		  $result = $query->execute();
+		  $role = '';
+		  if($record = $result->fetchAssoc()) {
+			 $role = $record['name'];
+		  }
+	  
+		  if($role == 'mentor' || $role == 'mentor-professional' || $role == 'mentor-student') {
+		  	drupal_goto('mentorprofile/' . $user->uid . '/edit');
+		  } else if($role == 'mentee' || $role == 'mentee-premium-3-months' || $role == 'mentee-premium-6-months'
+		  	|| $role == 'mentee-premium-9-months' ) {
+		  	drupal_goto('menteeprofile/' . $user->uid . '/edit');
+		  } else {
+		  	drupal_goto('node/1');
+		  }
+	  }
+    }
+}
+
+//Changing the image name in file_managed table
+function mentoringcommon_file_presave($file) {
+	$referer = $_SERVER['HTTP_REFERER'];
+	$pos = strpos($referer, 'messages');
+	if($pos === FALSE ){
+		$parts = pathinfo($file->filename);
+		$file->filename = 'skoolmentor_'.$file->uid .'_'. $file->timestamp . '.' . $parts['extension'];
+	}
+}
+
+//Changing the uploaded file name in the URI
+function mentoringcommon_file_insert($file) {
+	$referer = $_SERVER['HTTP_REFERER'];
+	$pos = strpos($referer, 'messages');
+	if($pos === FALSE){
+		if ($parts['extension'] == 'jpg') {
+			drupal_set_message("JPG");
+		}
+		$parts = pathinfo($file->filename);
+		$uri = 'public://pictures/'.'skoolmentor_'.$file->uid .'_'. $file->timestamp . '.' . $parts['extension'];
+		$file=file_move($file, $uri);
+	}
+}
+
+function mentoringcommon_register_form_submit($form, &$form_state) {
+  /*if (!variable_get('user_email_verification', TRUE)) {
+    $pass = $form_state['values']['pass'];
+  }
+  else {
+    $pass = user_password();
+  }
+  
+  $notify = !empty($form_state['values']['notify']);
+
+  // Remove unneeded values.
+  form_state_values_clean($form_state);
+
+  $form_state['values']['pass'] = $pass;
+  $form_state['values']['init'] = $form_state['values']['mail'];*/
+    
+  //$selected_aom = $form_state['values']['areaofmentoring'];
+  //$selected_spec = $form_state['values']['account']['details']['fieldOfSpecialization'];
+	  
+  $account = $form['#user'];
+  entity_form_submit_build_entity('user', $account, $form, $form_state);  
+  
+  // Populate $edit with the properties of $account, which have been edited on
+  // this form by taking over all values, which appear in the form values too.
+  $edit = array_intersect_key((array) $account, $form_state['values']);
+  $account->picture = $form_state['values']['pic']; 
+  if($account->picture > 0) {
+	  $file = file_load($account->picture);
+	  $file->status = FILE_STATUS_PERMANENT;
+	  file_save($file); 
+  }
+  $account->signup_type = $form_state['values']['signup_type'];
+  /*
+  $country_key = $form_state['values']['country'];
+	if($country_key == 2)
+		$country_value = $form['values']['country_others'];
+	else
+		$country_value = $form['account']['country']['#options'][$country_key];
+	
+  $account->country = $country_value;
+  */
+  if($country_value !== 'Country *') {
+	//  $form_state['values']['country'] = $country_value;
+	  
+	  if($form_state['values']['country'] == 'Others') {
+	  		if($form_state['values']['country_others'] == 'Please specify country ')
+	  			$form_state['values']['country'] = NULL;
+	  		else
+				$form_state['values']['country'] = $form_state['values']['country_others'];
+			if($form_state['values']['stateOthers'] == 'State ')
+				$form_state['values']['stateOthers'] = NULL;			
+			$form_state['values']['state'] = $form_state['values']['stateOthers'];
+			if($form_state['values']['cityOthers'] == 'City ')
+				$form_state['values']['cityOthers'] = NULL;	
+			$form_state['values']['city'] = $form_state['values']['cityOthers'];
+		} else if($form_state['values']['country'] == 'USA'){
+			$key = $form_state['values']['stateUSA'];
+			
+			$state = $form['account']['stateUSA']['#options'][$key];
+			if($state =='State *')
+				$form_state['values']['state'] == NULL;	
+			else	
+				$form_state['values']['state'] = $state;
+			if($form_state['values']['cityUSA'] == 'City '){
+				$form_state['values']['city'] = NULL;	
+			}else{	
+				$cityKey = $form_state['values']['cityUSA'];
+				$cityValue = db_query("SELECT name FROM city WHERE cityid = :city", array('city' => $cityKey))->fetchField();
+				if(!empty($form['account']['cityUSA']['#options'][$cityKey]))
+					$form_state['values']['city'] = $form['account']['cityUSA']['#options'][$cityKey];
+				else
+					$form_state['values']['city'] = $cityValue;
+			}
+		}
+	} else {
+		$form_state['values']['country'] == NULL;
+		$form_state['values']['state'] == NULL;
+		$form_state['values']['city'] == NULL;
+	}
+  
+  if($account->signup_type == '0') {
+  	$response_time_key = $form_state['values']['response_time'];
+	$response_time_value = $form['account']['response_time']['#options'][$response_time_key];
+	$form_state['values']['response_time'] = $response_time_value;
+  }
+  
+  $account->status = 0; 
+  
+  $values = $form_state['values'];   
+  
+  $activation_code = user_password();  
+  
+  $values['sender'] = $form['#user'];
+  $values['sender']->name = $values['name'];
+  $values['sender']->mail = 'administer@skoolmentor.com';
+  $values['activation_code'] = $activation_code;
+  //$values['category'] = contact_load($values['cid']);
+  drupal_mail('mentoringcommon', 'user_activation_mail', $values['mail'], language_default(), $values, $values['sender']->mail);
+
+  $account = mentoringcommon_save($account, $edit, $form_state, $activation_code);  
+  $form_state['user'] = $account;
+  //if($account->registration_type == 'standard') {
+  	//drupal_set_message(t('Thank You for creating an account. To activate your account please click on the URL sent to your email address'));
+  //}  
+  
+  drupal_goto('node/1');  
+  
+  /*if($account->registration_type == 'standard') {
+	  drupal_set_message(t('Thank You for creating an account. To activate your account please click on the URL sent to your email address'));
+	  //drupal_goto('node/1');
+	  if($account->signup_type == '0') {
+	  	//drupal_goto('mentor/' . $account->uid . '/create'); 
+	  } else {
+	  	//drupal_goto('mentee/' . $account->uid . '/create'); 
+	  	mentee_fields_form1($form_state);
+	  } 
+  }*/
+}
+
+function mentoringcommon_sn_user_save($account, $edit = array(), $form_state) {
+	$activation_code = user_password();  
+	$account = mentoringcommon_save($account, $edit, $form_state, $activation_code);
+    return $account;
+    
+    //drupal_goto('node/1');
+}
+
+function mentoringcommon_save($account, $edit = array(), $form_state, $activation_code, $category = 'account') {
+  $transaction = db_transaction();
+  $account->status = 0;
+  $parent_account = new stdClass();
+  try {
+    if (!empty($edit['pass'])) {
+      // Allow alternate password hashing schemes.
+      require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
+      $edit['pass'] = user_hash_password(trim($edit['pass']));
+      // Abort if the hashing failed and returned FALSE.
+      if (!$edit['pass']) {
+        return FALSE;
+      }
+    }
+    else {
+      // Avoid overwriting an existing password with a blank password.
+      unset($edit['pass']);
+    }
+    if (isset($edit['mail'])) {
+      $edit['mail'] = trim($edit['mail']);
+    }
+
+    // Load the stored entity, if any.
+    if (!empty($account->uid) && !isset($account->original)) {
+      $account->original = entity_load_unchanged('user', $account->uid);
+    }
+
+    if (empty($account)) {
+      $account = new stdClass();
+    }
+    if (!isset($account->is_new)) {
+      $account->is_new = empty($account->uid);
+    }
+    // Prepopulate $edit['data'] with the current value of $account->data.
+    // Modules can add to or remove from this array in hook_user_presave().
+    if (!empty($account->data)) {
+      $edit['data'] = !empty($edit['data']) ? array_merge($account->data, $edit['data']) : $account->data;
+    }
+
+    // Invoke hook_user_presave() for all modules.
+    user_module_invoke('presave', $edit, $account, $category);
+
+    // Invoke presave operations of Field Attach API and Entity API. Those APIs
+    // require a fully-fledged and updated entity object. Therefore, we need to
+    // copy any new property values of $edit into it.
+	foreach ($edit as $key => $value) {
+		$parent_account->$key = $value;
+		$account->$key = $value;
+	}
+    field_attach_presave('user', $account);
+    module_invoke_all('entity_presave', $account, 'user');
+
+    if (is_object($account) && !$account->is_new) {
+      // Process picture uploads.
+      
+
+      // Do not allow 'uid' to be changed.
+      $account->uid = $account->original->uid;
+      // Save changes to the user table.
+      $success = drupal_write_record('users', $account, 'uid');
+      if ($success === FALSE) {
+        // The query failed - better to abort the save than risk further
+        // data loss.
+        return FALSE;
+      }  
+      
+
+      // Reload user roles if provided.
+      if ($account->roles != $account->original->roles) {
+        db_delete('users_roles')
+          ->condition('uid', $account->uid)
+          ->execute();
+
+        $query = db_insert('users_roles')->fields(array('uid', 'rid'));
+        foreach (array_keys($account->roles) as $rid) {
+          if (!in_array($rid, array(DRUPAL_ANONYMOUS_RID, DRUPAL_AUTHENTICATED_RID))) {
+            $query->values(array(
+              'uid' => $account->uid,
+              'rid' => $rid,
+            ));
+          }
+        }
+        $query->execute();
+      }
+
+      // Delete a blocked user's sessions to kick them if they are online.
+      if ($account->original->status != $account->status && $account->status == 0) {
+        drupal_session_destroy_uid($account->uid);
+      }
+
+      // If the password changed, delete all open sessions and recreate
+      // the current one.
+      if ($account->pass != $account->original->pass) {
+        drupal_session_destroy_uid($account->uid);
+        if ($account->uid == $GLOBALS['user']->uid) {
+          drupal_session_regenerate();
+        }
+      }
+
+      // Save Field data.
+      field_attach_update('user', $account);
+
+      // Send emails after we have the new user object.
+      if ($account->status != $account->original->status) {
+        // The user's status is changing; conditionally send notification email.
+        $op = $account->status == 1 ? 'status_activated' : 'status_blocked';
+        _user_mail_notify($op, $account);
+      }
+
+      // Update $edit with any interim changes to $account.
+      foreach ($account as $key => $value) {
+        if (!property_exists($account->original, $key) || $value !== $account->original->$key) {
+          $edit[$key] = $value;
+        }
+      }
+      user_module_invoke('update', $edit, $account, $category);
+      module_invoke_all('entity_update', $account, 'user');
+    }
+    else {
+      // Allow 'uid' to be set by the caller. There is no danger of writing an
+      // existing user as drupal_write_record will do an INSERT.
+
+
+      if(!isset($account->created)) {
+        $parent_account->uid = db_next_id(db_query('SELECT MAX(uid) FROM {users}')->fetchField());
+        //$account->pid = $parent_account->uid;
+        $parent_account->mail = $account->parent_mail;
+        $emailCheckParent = db_query("SELECT COUNT(u.mail) emailCheckParent FROM {users} u WHERE LOWER(u.mail) = LOWER(:mail)", array(':mail' => $parent_account->mail))->fetchField();
+		if(!$emailCheckParent){
+			if(!empty($parent_account->mail) && isset($parent_account->mail)){
+				$parent_account->status = 1;
+				$parent_account->name = $account->parent_mail;
+				$parent_account->created = REQUEST_TIME;
+				drupal_write_record('users', $parent_account);
+				$query = db_insert('users_roles')->fields(array('uid'=>$parent_account->uid, 'rid'=>'11'))->execute();
+			}
+		}
+      }
+      if (empty($account->uid)) {
+        $account->uid = db_next_id(db_query('SELECT MAX(uid) FROM {users}')->fetchField());
+      }
+      // Allow 'created' to be set by the caller.
+      if (!isset($account->created)) {
+        $account->created = REQUEST_TIME;
+      }
+      $success = drupal_write_record('users', $account);
+      if ($success === FALSE) {
+        // On a failed INSERT some other existing user's uid may be returned.
+        // We must abort to avoid overwriting their account.
+        return FALSE;
+      }
+
+      // Make sure $account is properly initialized.
+      $account->roles[DRUPAL_AUTHENTICATED_RID] = 'authenticated user';
+
+      field_attach_insert('user', $account);
+      $edit = (array) $account;
+      user_module_invoke('insert', $edit, $account, $category);
+      module_invoke_all('entity_insert', $account, 'user');
+
+      // Save user roles.
+      /*if (count($account->roles) > 1) {
+        $query = db_insert('users_roles')->fields(array('uid', 'rid'));
+        foreach (array_keys($account->roles) as $rid) {
+          if (!in_array($rid, array(DRUPAL_ANONYMOUS_RID, DRUPAL_AUTHENTICATED_RID))) {
+            $query->values(array(
+              'uid' => $account->uid,
+              'rid' => $rid,
+            ));
+          }
+        }
+        $query->execute();
+      }*/
+    }
+    // Clear internal properties.
+    unset($account->is_new);
+    unset($account->original);
+    // Clear the static loading cache.
+    entity_get_controller('user')->resetCache(array($account->uid));
+           
+    $query = db_select('role', 'r');
+ 	if($account->signup_type == '0') {
+  		$query->condition('r.name', 'mentor','='); 
+  	} else {
+  		$query->condition('r.name', 'mentee','=');
+  	}
+	$query->fields('r');
+	$result = $query->execute(); 
+	 
+	$roleId;
+	foreach($result as $record)
+	{
+		$roleId =$record->rid;
+	}
+		
+	$query = db_insert('users_roles')->fields(array('uid'=>$account->uid, 'rid'=>$roleId))->execute();
+	//Activating users created using Facebook/LinkedIn and assigning firstlogin to deactivate again
+	$user_activate = array();
+    $user_activate['uid'] = $account->uid;
+    $user_activate['activation_code'] = $activation_code;
+    if($account->registration_type == 'facebook' || $account->registration_type == 'linkedin') {
+		$user_activate['activated'] = 'Y';
+		$user_activate['registration_type'] = $account->registration_type;
+		$user_activate['first_login'] = 11;
+    } else {
+		$user_activate['activated'] = 'N';
+		$user_activate['registration_type'] = 'standard';
+		$user_activate['first_login'] = 0;
+    }
+    db_insert('user_activation')
+		->fields(array(
+				'uid' , 'activation_code' , 'activated' , 'registration_type' , 'first_login'), $user_activate)
+		->execute();
+    //$success = drupal_write_record('user_activation', $user_activate);    
+	
+	//if($account->registration_type == 'standard') {
+	  //drupal_set_message(t('Thank You for creating an account. To activate your account please click on the URL sent to your email address'));
+	  //drupal_goto('node/1');
+	  if($account->signup_type == '0') {
+	  	//drupal_goto('mentor/' . $account->uid . '/create'); 
+	  	mentor_fields_form_submit($form_state, $account->uid);
+	  } else {
+	  	//drupal_goto('mentee/' . $account->uid . '/create'); 
+	  	mentee_fields_form_submit($form_state, $account->uid);
+	  } 
+  	//}
+    
+    return $account;
+  }
+  catch (Exception $e) {
+    $transaction->rollback();
+    watchdog_exception('user', $e);
+    throw $e;
+  }
+}
+
+
+
+function mentoringcommon_mail($key, &$message, $params){
+  // The key allows for a module to define multiple mails. This
+  // key needs to be the same as the first parameter in drupal_mail() above
+  //if($key == 'user_activation_mail')
+  switch ($key) {  
+  	case 'user_activation_mail':
+	    $message['subject'] = 'Confirm Account Activation';
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Please click the below link to register and activate your account';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = '';
+	    $message['body'][] = 'https://skoolmentor.com/?q=user/activation/' . $params['activation_code'];
+	    $message['body'][] = 'Regards,';
+	    $message['body'][] = 'The SkoolMentor Team';
+	    break;
+	case 'mentee_conn_reminder_mail':
+	    $message['subject'] = 'Reminder: Complete payment to connect with '. $params['sender_name'];
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi ' . $params['recipient'] .', ';
+	    $message['body'][] = 'This is a gentle reminder.';
+	    $message['body'][] = $params['sender_name']. ' has accepted your connection request. Please make payment to start communicating with this mentor. Please click on below link to make payment: ';
+	    
+	    $message['body'][] = 'https://skoolmentor.com/menteeprofile/'. $params['sender_id'] . '/connections';
+	    //Reset the connection link - Following two lines add link to reset the connection if mentee don't want to pay
+	    $message['body'][] = 'If you don\'t want to connect with this mentor, please click the below link to reset the connection';
+	    $message['body'][] = 'https://skoolmentor.com/connection/'.$params['cid'].'/resetconnection';
+	    $message['body'][] = 'Regards,';
+	    $message['body'][] = 'The SkoolMentor Team';
+	    break;
+	 case 'mentor_conn_reminder_mail':
+	    $message['subject'] = 'Reminder: '. $params['sender_name'] . ' wants to connect to you';
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi ' . $params['recipient'] .', ';
+	    $message['body'][] = 'This is a gentle reminder.';
+	    $message['body'][] = $params['sender_name']. ' had sent you a connection request. Please click on below link to accept his connection request:';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = 'Please click on below link to view his profile';
+	    $message['body'][] = 'https://skoolmentor.com/mentee/'. $params['sender_id'] . '/profile';
+	    $message['body'][] = 'Regards,';
+	    $message['body'][] = 'The SkoolMentor Team';
+	    break;   
+	 case 'profile_completion_mail':
+	    $message['subject'] = 'Profile Completion Reminder';
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Please click the link below and Login to complete your profile created at SkoolMentor.com';
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = '';
+	    $message['body'][] = 'https://skoolmentor.com/';
+	    $message['body'][] = 'Regards,';
+	    $message['body'][] = 'The SkoolMentor Team';
+	    break;
+	    
+  }
+}
+
+function get_user_picture($uid) {
+	$picture;
+	$role;
+    $query = db_select('users', 'u'); 
+    $query->join('users_roles', 'ur', 'ur.uid = u.uid');
+    $query->join('role', 'r', 'r.rid = ur.rid');
+	$query->condition('u.uid', $uid, '=');
+	$query->fields('u', array('picture'));
+	$query->fields('r', array('name'));
+	$query->addField('r', 'name', 'role_name');
+	$result = $query->execute();
+	
+	if($record = $result->fetchAssoc()) {
+		$role = $record['role_name'];
+		$picture = $record['picture'];
+	}    
+	
+	$user_picture;
+    if(isset($picture) && $picture != 0) {
+    	$user_picture = file_load($picture);
+    } else {
+    	$user_picture = get_user_default_picture($uid, $role);
+    }
+    return $user_picture;
+}
+
+function get_user_default_picture($uid, $role) {
+	$gender;
+	$user_picture;
+	if($role == 'mentor' || $role == 'mentor-professional' || $role == 'mentor-student') {
+    	$query = db_select('mentor', 'm'); 
+    } else if($role == 'mentee'||$role == 'mentee-premium-3-months') {
+    	$query = db_select('mentee', 'm');
+    }	
+	$query->condition('m.mid', $uid, '=');
+	$query->fields('m', array('gender'));
+	$result = $query->execute();
+	if($record = $result->fetchAssoc()) {
+		$gender = $record['gender'];
+	}
+	if($gender == 0) {
+		$user_picture = file_load(46);
+	} else {
+		$user_picture = file_load(44);
+	}
+	return $user_picture;
+}
+
+function get_user_role() {
+	$uid = $GLOBALS['user']->uid;
+	$query = db_select('users_roles', 'ur');
+	$query->join('role', 'r', 'r.rid = ur.rid'); //JOIN node with users
+	$query->condition('ur.uid', $uid, '=');   
+	$query->fields('r', array('name'));
+	$result = $query->execute();
+	$role = 0;
+	if(	$record = $result->fetchAssoc()) {
+		$role = $record['name'];
+	}
+	return $role;
+}
+
+/**
+ * Menu callback.
+ */
+function mentoringcommon_page() {
+  return drupal_get_form('mentoringcommon_login');
+}
+
+function mentoringcommon_anonymous_user() {
+  $user = new stdClass();	
+  $user->uid = 0;
+  $user->hostname = ip_address();
+  $user->roles = array();
+  //$user->roles[DRUPAL_ANONYMOUS_RID] = 'anonymous user';
+  $user->cache = 0;
+  return $user;
+}
+
+function mentoringcommon_connect($mentor_id, $mentee_id) {
+	$connection = array();
+	$connection['mentor_id'] = $mentor_id;
+	$connection['mentee_id'] = $mentee_id;
+	$connection['status'] = 'Pending';
+	$connection['requestor_type'] = '1';
+	$success = drupal_write_record('connections', $connection);
+	drupal_goto('menteeprofile/view');
+}
+
+function mentoringcommon_connect_mentee($mentor_id) {
+	$mentee_id = $_SESSION['user']->uid;	
+	mentoringcommon_connect($mentor_id, $mentee_id);
+	drupal_goto('mentorprofile/' . mentor_id . '/view');
+	
+}
+
+function mentoringcommon_mentor_details($mentor_id) {
+
+	$query = db_select('mentor', 'm');
+	$query->condition('m.userid', $mentor_id, '=');
+	$query->fields('m', array('first_name','last_name','last_school_attended','school_attending','year_of_school','specialization'));
+	$result = $query->execute();
+	$metor_details;
+	foreach($result as $record) {
+		$metor_details = $record;
+	}
+	
+	return $metor_details;
+
+}
+function mentoringcommon_mentee_details($mentee_id) {
+
+	$query = db_select('mentee', 'm');
+	$query->condition('m.userid', $mentee_id, '=');
+	$query->fields('m', array('first_name','last_name','year_of_school','school_name','specialization'));
+	$result = $query->execute();
+	$mentee_details;
+	foreach($result as $record) {
+		$mentee_details = $record;
+	}
+
+	return $mentee_details;
+
+}
+
+function mentoringcommon_mentor_rating($mentor_id) {
+	
+	$query = db_select('votingapi_vote', 'v');
+    $query->join('node', 'n', 'n.nid = v.entity_id');
+    $query->condition('n.uid', $mentor_id, '=');
+	$query->condition('n.type', 'user_profile_comment', '=');
+	$query->condition('v.entity_type', 'node', '=');
+	$query->fields('v', array('value'));
+	$result = $query->execute();
+	$count = 0;
+	$rating_sum = 0;
+	foreach($result as $record) {
+		$rating_sum += $record->value;
+		$count++;
+	}
+	$average;
+	if($count > 0) {
+		$average = $rating_sum/$count;
+	} else {
+		$average = 0;
+	}
+	$values = array(
+	    'average' => $average,
+	    'count' => $count,
+	  );
+	return $values;	
+	
+}
+
+function mentoringcommon_mentor_rating_by_mentee($mentor_id, $mentee_id) {
+	$query = db_select('votingapi_vote', 'v');
+    $query->join('node', 'n', 'n.nid = v.entity_id');
+    $query->condition('n.uid', $mentor_id, '=');
+    $query->condition('v.uid', $mentee_id, '=');
+	$query->condition('n.type', 'user_profile_comment', '=');
+	$query->condition('v.entity_type', 'node', '=');
+	$query->fields('v', array('value'));
+	$result = $query->execute();
+	$count = 0;
+	$rating_sum = 0;
+	foreach($result as $record) {
+		$rating_sum += $record->value;
+		$count++;
+	}
+	$average;
+	if($count > 0) {
+		$average = $rating_sum/$count;
+	} else {
+		$average = $rating_sum;
+	}
+	return $average;
+}
+
+function theme_mentoringcommon_change_picture_form($variables) {
+	$form = $variables['form'];
+	$output = '';
+	foreach ($form as $key => $element) {
+		if($key == 'actions'){
+			$output .= '<div style=" text-align: center; padding-top: 10%; ">';
+			$output .= drupal_render($element);
+			$output .= '</div>';
+		}else{
+			$output .= drupal_render($element);
+		}
+	}
+	
+	return $output;
+}
+
+function mentoringcommon_change_picture_form($form, &$form_state) {
+  $uid;
+  if(!isset($_SESSION['user'])) {
+  	 drupal_goto('node/1');
+  }
+  $uid = $_SESSION['user']->uid;  
+  $picture = 48;
+  $query = db_select('users', 'u'); 
+	$query->condition('u.uid', $uid, '=');
+	$query->fields('u', array('picture'));
+	$result = $query->execute();
+	
+	if($record = $result->fetchAssoc()) {
+		$picture = $record['picture'];
+	}   
+  
+  //$user = user_load($uid);
+  //drupal_set_message($user->picture);
+  $form['picture_edit'] = array(
+    '#type'   => 'container',
+    '#weight' => -10,
+  	//'#var1' => $type,
+  );
+  
+  $form['picture_edit']['pic'] = array(
+  	'#type' => 'managed_file',
+  	//'#title' => t('Upload an image'),
+  	//'#description' => t('Allowed extensions: gif png jpg jpeg'),
+  	'#upload_validators' => array(
+    	'file_validate_extensions' => array('gif png jpg jpeg'),
+    	// Pass the maximum file size in bytes
+    	'file_validate_size' => array(5 * 1024 * 1024),
+  	),
+  	//'#default_value' => $picture,
+  	'#theme' => 'mentoringcommon_thumb_upload',
+  	'#upload_location' => 'public://pictures/',
+  );
+  
+  $form['actions'] = array('#type' => 'actions'); 
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+  $form['actions']['cancel'] = array(
+  		'#type' => 'submit',
+  		'#value' => t('Cancel'),
+  );
+  
+  // Add the final user registration form submit handler.
+  $form['#submit'][] = 'mentoringcommon_change_picture_submit';
+    
+  return $form;
+}
+
+function mentoringcommon_change_picture_submit(&$form, &$form_state) {
+	if($form_state['values']['op'] == 'Submit'){
+		if(empty($form_state['values']['pic'])) {
+			drupal_set_message('Please select a picture');
+			return;
+		}
+		$picture = $form_state['values']['pic'];
+		if($picture > 0) {
+			$file = file_load($picture);
+			$file->status = FILE_STATUS_PERMANENT;
+			file_save($file);
+		}
+		$uid = $_SESSION['user']->uid; 
+		
+		$account = user_load($uid);
+		
+		$account->picture = $picture;
+		$success = drupal_write_record('users', $account,'uid');
+		drupal_set_message('Picture has been changed');
+		drupal_goto(current_path());
+	}
+}
+
+function mentoringcommon_activation_resend($form, &$form_state) {
+  global $user;
+
+  // If we are already logged on, go to the user page instead.
+  if ($user->uid) {
+    drupal_goto('node/1');
+  }     
+
+  // Display login form:
+  $form['resend']['name'] = array('#type' => 'textfield',
+    '#title' => t('Username'),
+    '#size' => 60,
+    '#maxlength' => USERNAME_MAX_LENGTH,
+    '#required' => TRUE,
+  );  
+
+  //$form['#validate'] = 'mentoringcommon_activation_resend_validate';
+  $form['resend']['actions'] = array('#type' => 'actions');
+  $form['resend']['actions']['submit'] = array('#type' => 'submit', '#value' => t('Re-send Activation Mail'));
+  $form['#submit'][] = 'mentoringcommon_activation_resend_submit';
+
+  return $form;
+}
+
+function mentoringcommon_activation_resend_validate($form, &$form_state) {
+	if (isset($form_state['values']['name']) && user_is_blocked($form_state['values']['name'])) {
+	    // Blocked in user administration.
+	    form_set_error('name', t('The username %name has not been activated or is blocked.', array('%name' => $form_state['values']['name'])));
+    }
+}
+
+function mentoringcommon_activation_resend_submit($form, &$form_state) {
+	$user = db_query("SELECT uid, mail FROM {users} WHERE name = :name AND status = 1", array(':name' => $form_state['values']['name']))->fetchObject();
+	
+	if($user) {		
+	    $query = db_select('user_activation', 'ua'); 
+		$query->condition('ua.uid', $user->uid, '=');
+		$query->fields('ua', array('uid', 'activated', 'activation_code'));
+		$result = $query->execute();	
+		
+		$activated = '';
+		$activation_code = '';
+		if(	$record = $result->fetchAssoc()) {
+			$activated = $record['activated'];
+			$activation_code = $record['activation_code'];
+			$values['sender'] = $form['#user'];
+			  $values['sender']->name = $form_state['values']['name'];
+			  $values['sender']->mail = 'administer@skoolmentor.com';
+			  $values['activation_code'] = $activation_code;
+			  //$values['category'] = contact_load($values['cid']);
+			  drupal_mail('mentoringcommon', 'user_activation_mail', $user->mail, language_default(), $values, $values['sender']->mail);
+			  drupal_set_message('A mail with activation url has been sent to you email ' . $user->mail);
+			  drupal_goto('node/1');
+		} 
+	} else  {
+		form_set_error('name', t('The username %name does not exist.', array('%name' => $form_state['values']['name'])));
+	}
+}
+
+function mentoringcommon_sign_up_form($form, &$form_state) {
+	
+	//$_SESSION['user_third_party_reg_type'] = 'mentee';
+	
+	$form['signup'] = array(
+    '#type'   => 'container',
+    '#weight' => -10,
+  	//'#var1' => $type,
+	// '#theme' => 'mentoringcommon_sign_up_upload',
+  	);
+  	if(!isset($form_state['values']['usertype']))
+  		$form_state['values']['usertype'] =  'mentee';
+  	$user_type = $form_state['values']['usertype'];
+	 $form['signup']['usertype'] = array(
+	 		'#type' => 'radios',
+	 		'#title' => t('I am a ..'),
+			//'#required' => TRUE,
+	 		'#options' => array(
+	 				'mentee' => t('Mentee'),
+	 				'mentor' => t('Mentor'),
+	 		),
+	 		'#ajax' => array(
+		 		'event' => 'change',
+			        'callback' => 'signup_type_ajax_callback',
+			        'progress' => array(
+				        'message' => '',
+				      ),
+			        'wrapper' => 'signup_type_dropdown_replace',
+			      ),
+			      '#states' => array(
+			      //'visible' => array(
+			      //  ':input[name="areaofmentoring"]' => array('value' => '1'),
+		      	  //),
+		    ),
+	 		//'#default_value' => isset($user_type) ? $user_type : 'mentee',
+	 		//'#description' => t('Set this to <em>Yes</em> if you would like this category to be selected by default.'),
+	 );
+	 
+	 $form['signup']['selected_type'] = array(
+	    '#type' => 'hidden',
+	    '#default_value' => 'mentor',
+	    '#prefix' => '<div id="signup_type_dropdown_replace">',
+    	'#suffix' => '</div>',
+    	'#value' => signup_type_dropdown_options($user_type),
+	  );
+
+	// Add the final user registration form submit handler.
+	$form['actions'] = array('#type' => 'actions');
+	$form['actions']['submit'] = array(
+    	'#type' => 'submit',
+    	'#id' => 'edit-submit',
+    	'#value' => t('Sign Up(Standard)'),
+	 	'#submit'=> array('mentoringcommon_sign_up_submit'),
+  		);
+
+	//Adding Facebook user registration button
+	$form['facebook'] = array('#type' => 'facebook');
+	//$form['facebook']['redirect'] = array();
+	$form['facebook']['submit'] = array(
+      '#type' => 'submit',
+      '#id' => 'edit-submit--4',
+      '#value' => t(' '),
+      '#submit' => array('facebook_submit'),
+    );
+
+	//Adding LinkedIn user registration button
+	$form['linkedin'] = array('#type' => 'linkedin');
+	//$form['linkedin']['request'] = array();
+	$form['linkedin']['submit'] = array(
+	  '#type' => 'submit',
+	  '#id' => 'edit-submit--5',
+	  '#value' => t('  '),
+	  '#submit' => array('linkedin_submit'),
+	);
+
+	//$form['#submit'][] = 'mentoringcommon_sign_up_submit';
+	 
+	return $form;
+}
+
+function signup_type_ajax_callback($form, $form_state) {
+	 return $form['signup']['selected_type'];
+}
+
+function signup_type_dropdown_options($key = '' ) {
+	/*session_start();
+	$_SESSION['user_third_party_reg_type'] = array();
+	//$user_third_party_reg_type = & $_SESSION['user_third_party_reg_type'];
+	//$user_third_party_reg_type['user_type'] = $key;
+	$_SESSION['user_third_party_reg_type']['value'] = $key;
+	drupal_set_message($_SESSION['user_third_party_reg_type']['value']);*/
+	lists_session("user_third_party_reg_type", $key);
+}
+
+function lists_session($key, $value = NULL) {
+  static $storage;
+  if ($value) {
+    $storage[$key] = $value ;
+    $_SESSION['lists'][$key] = $value ;   // I use 'lists' in case some other module uses 'type' in $_SESSION
+  }
+  else if (empty($storage[$key]) && isset($_SESSION['lists'][$key])) {
+    $storage[$key] = $_SESSION['lists'][$key];
+  }
+  return $storage[$key];
+}
+
+function unset_session($key) {
+	lists_session($key,'');
+	$storage[$key] = array() ;
+    $_SESSION['lists'][$key] = array();
+	//$_SESSION['lists'][$key] = array();
+	//unset($_SESSION['lists'][$key]);
+}
+
+function mentoringcommon_sign_up_submit($form, &$form_state) {
+	$usertype_key = $form_state['values']['usertype'];
+	$usertype_value = $form['usertype']['#options'][$usertype_key];
+	//$userType = $form_state['values']['usertype'];
+	drupal_goto($usertype_key.'/register');
+}
+
+function linkedin_submit($form, &$form_state){
+	$options = array('query' => array('type' => 'register'));
+	drupal_goto('/linkedin/login/0', $options);
+	/*$options['absolute'] = TRUE;
+	//drupal_set_message("OP Value - ".$form_state['values']['op']);
+	//drupal_set_message("form ".var_export($form_state , true));
+	$url = url('/linkedin/login/0?type=register', $options);
+	header('Location: ' . $url);
+	drupal_exit($url);*/
+}
+
+function facebook_submit($form, &$form_state){
+	$options = array('query' => array('type' => 'register'));
+	drupal_goto('fb/login',$options);
+	/*$options1['absolute'] = TRUE;
+	$url1 = url('fb/login?type=register', $options1);
+	header('Location: ' . $url1);
+	drupal_exit($url1);*/
+}
+
+function theme_mentoringcommon_sign_up_form($variables) {
+	$form = $variables['form'];
+	$output = '<h3 style="display:block;text-align:center; margin-botton: 15px; border-bottom: 1px solid #EDEEEF;">Create A New Profile</h3>
+	
+	<div style="display:block; ">
+	<div style="display:block;text-align: center;"><div style = "width:100%; float:left;   padding: 5% 0%;" >';
+	
+	$allowed_elements = array('actions','linkedin','facebook','container','textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+	foreach ($form as $key => $element) {
+		if(is_array($form[$key]) && isset($element['#type'])) {
+			if(in_array($element['#type'],$allowed_elements)) {
+				if($element['#type'] == 'container') {
+					$form1 = $element;
+					foreach ($form1 as $key => $element1) {
+						if(is_array($form1[$key]) && isset($element1['#type'])){
+						//	drupal_set_message('<pre>'.print_r($element1,true).'</pre>');
+							if(in_array($element1['#type'],$allowed_elements)){
+								if($element1['#type'] == 'submit'){
+									$signUp = drupal_render($element1);
+								}else{
+									$output .= drupal_render($element1);
+								}
+							}
+						}
+					}
+				}else if($element['#type'] == 'facebook'){
+					$output .= '</div><div id="hideTheDiv" ><div id="facebook-button" style = "width:100%; float:left; padding: 5% 0%; " >'.drupal_render($element).'</div>';
+				}else if($element['#type'] == 'linkedin'){
+					$output .= '<div class="separator" style="display:inline-block;margin-left: 0px !important; height: auto; width: 80%;margin-top: 1%;">
+							<div style="text-align:center;">OR</div>
+					</div>
+					<div style = "width:100%; float:left;   padding: 5% 0%; " >'.drupal_render($element).'</div>';
+				} else if($element['#type'] == 'actions'){
+				    //$user_profile = fbconnect_user_profile();
+				    //$op = $user_profile ? 'login' : 'register';
+				    //$op = 'register';
+				      /*$attr = array();
+				      if (variable_get('fbconnect_fast_reg', 0) && variable_get('fbconnect_reg_options', 0)) {
+				        $attr = array('request_type'=>'register', 'perms' => 'email', 'login_text'=>'Sign up with Facebook');
+				      } else {
+				      	$attr = array('request_type'=>'register', 'login_text'=>'Sign up with Facebook');
+				      }
+				 
+				      $ss__facebook_connect = fbconnect_render_button($attr);*/
+
+					$output .= '<div class="separator" style="display:inline-block;margin-left: 0px !important; height: auto; width: 80%;margin-top: 1%;">
+						<div style="text-align:center;">OR</div>
+						</div>
+					<div style = "width: 100%; float:left;   padding: 5% 0%;" >'.drupal_render($element).'</div></div>';
+				}else {
+					$output .= drupal_render($element);
+				}
+			}
+		}
+	}
+	
+
+	$output .='</div>
+	</div>';  
+	$output .= '<script type="text/javascript">
+		(function ($) {
+			$("input[id^=edit-submit]").addClass("signupbutton");
+			$("#edit-submit").css("width","75%");
+			$("input[id=edit-submit--4]").addClass("facebookbutton");
+			$("input[id=edit-submit--5]").addClass("linkedinbutton");
+			$("#hideTheDiv").hide();
+			$("input[id^=edit-usertype]").change(function(){
+				if($(this).attr("checked", true)){
+					$("#hideTheDiv").show();
+				}
+			});
+		})(jQuery);
+	</script>';  
+	
+	return $output;
+}
+
+
+function get_states_for_country($key) {
+	$states = array();
+	if(!isset($key) || empty($key)) {
+		return $states;
+	}
+  	$entries = db_query("SELECT stateid, name, name FROM {state} WHERE country_id = $key");
+	
+  	
+  	foreach($entries as $record)
+  	{
+  	  $states[$record->stateid] =$record->name;
+  	}
+  	return $states;
+}
+
+
+//$string = "This is the original data string!";
+
+/*echo $encrypted = encrypt('523631848', ENCRYPTION_KEY);
+echo "<br />";
+echo $decrypted = decrypt($encrypted, ENCRYPTION_KEY);*/
+
+/**
+ * Returns an encrypted & utf8-encoded
+ */
+function encrypt($pure_string, $encryption_key) {
+    $iv_size = mcrypt_get_iv_size(MCRYPT_BLOWFISH, MCRYPT_MODE_ECB);
+    $iv = mcrypt_create_iv($iv_size, MCRYPT_RAND);
+    $encrypted_string = mcrypt_encrypt(MCRYPT_BLOWFISH, $encryption_key, utf8_encode($pure_string), MCRYPT_MODE_ECB, $iv);
+    return $encrypted_string;
+}
+
+/**
+ * Returns decrypted original string
+ */
+function decrypt($encrypted_string, $encryption_key) {
+    $iv_size = mcrypt_get_iv_size(MCRYPT_BLOWFISH, MCRYPT_MODE_ECB);
+    $iv = mcrypt_create_iv($iv_size, MCRYPT_RAND);
+    $decrypted_string = mcrypt_decrypt(MCRYPT_BLOWFISH, $encryption_key, $encrypted_string, MCRYPT_MODE_ECB, $iv);
+    return $decrypted_string;
+}
+function get_city_for_state($key) {
+	$cities = array();
+	if(!isset($key) || empty($key)) {
+		return $cities;
+	}
+	$entries = db_query("SELECT cityid, name FROM {city} WHERE state_id = $key");
+
+	 
+	foreach($entries as $record)
+	{
+		$cities[$record->cityid] =$record->name;
+	}
+	return $cities;
+}
+
+function mentoringcommon_entity_info() {
+  return array(
+    'connections' => array(
+      'label' => t('Connections'),
+      'base table' => 'connections',
+      'entity keys' => array(
+        'id' => 'cid',
+      ),
+    ),
+    
+    'mentor' => array(
+      'label' => t('Mentor'),
+      'base table' => 'mentor',
+      'entity keys' => array(
+        'id' => 'mid',
+      ),
+    ),
+    
+    'mentee' => array(
+      'label' => t('Mentee'),
+      'base table' => 'mentee',
+      'entity keys' => array(
+        'id' => 'mid',
+      ),
+    ),
+  );
+}
+
+function sendConnectionNotification($mentee_id,$mentor_id,$connection_type,$connection_exp,$cid){
+	$method_name_mentor ='';
+	$method_name_mentee ='';
+	if($connection_type == 1){
+		$method_name_mentor ='mentor_connection_complete_reminder_mail_for_30mins';
+		$method_name_mentee ='mentee_connection_complete_reminder_mail_for_30mins';
+	}else if($connection_type == 2){
+		$method_name_mentor ='mentor_connection_complete_reminder_mail_for_ondemand';
+		$method_name_mentee ='mentee_connection_complete_reminder_mail_for_ondemand';
+	}else if($connection_type == 3){
+		$method_name_mentor ='mentor_connection_complete_reminder_mail_for_3month';
+		$method_name_mentee ='mentee_connection_complete_reminder_mail_for_3month';
+	}
+	
+	$query = db_select('mentor', 'm');
+	$query->join('users', 'u', 'u.uid = m.mid');
+	$query->condition('m.userid', $mentor_id,'=');
+	$query->fields('m')
+	->fields('u', array('mail'));
+	$result = $query->execute();
+	
+	$mentor = array();
+	if(	$record = $result->fetchAssoc()) {
+		$mentor['email'] = $record['mail'];
+		$mentor['first_name'] = $record['first_name'];
+		$mentor['last_name'] = ($record['last_name'] != '') ? $record['last_name'][0].'.' : '';
+	}
+	
+	$query = db_select('mentee', 'm');
+	$query->join('users', 'u', 'u.uid = m.mid');
+	$query->condition('m.userid', $mentee_id,'=');
+	$query->fields('m')
+	->fields('u', array('mail'));
+	$result = $query->execute();
+	
+	$mentee = array();
+	if(	$record = $result->fetchAssoc()) {
+		$mentee['email'] = $record['mail'];
+		$mentee['first_name'] = $record['first_name'];
+		$mentee['last_name'] = ($record['last_name'] != '') ? $record['last_name'][0].'.' : '';
+		$mentee['parent_mail'] = $record['parent_mail'];
+	}
+	
+	$values = array();
+	//$values['sender'] = $mentee;
+	$values['mentor_name'] = $mentor['first_name'] . ' ' . $mentor['last_name'];
+	$values['mentee_name'] = $mentee['first_name'] . ' ' . $mentee['last_name'];
+	$values['connection_exp_date'] = $connection_exp;
+	//$values['category'] = contact_load($values['cid']);
+	drupal_mail('menteeprofile', $method_name_mentor , $mentor['email'], language_default(), $values, 'administer@skoolmentor.com');
+	
+
+	$values = array();
+	//$values['sender'] = $mentee;
+	$values['mentor_name'] = $mentor['first_name'] . ' ' . $mentor['last_name'];
+	$values['mentee_name'] = $mentee['first_name'] . ' ' . $mentee['last_name'];
+	$values['feedbacklink'] = 'https://skoolmentor.com/mentor/'.$mentor_id.'/rate';
+	$values['connection_exp_date'] = $connection_exp;
+	$values['connection_cancellation_link'] = 'https://skoolmentor.com/connection/'.$cid.'/reset';
+	
+	//String to have mentee email and mentee parent email 
+	$email_mentee = $mentee['email'].','.$mentee['parent_mail'];
+	drupal_mail('menteeprofile', $method_name_mentee , $email_mentee, language_default(), $values, 'administer@skoolmentor.com');
+	
+}
+
+function mentoringcommon_cron() {
+	trigger_conn_reminder_mail();
+	$query = db_select('connections', 'con');
+	$query->fields('con')
+	//->fields('mr')
+	//->fields('m')
+	;//SELECT the fields from user
+	
+	$result = $query->execute();
+	foreach($result as $record) {
+		$lastUpdateTime = date_create($record->last_update_time);
+		$currentDate = date_create(date("Y-m-d H:i:s"));
+		$diff = date_diff($lastUpdateTime, $currentDate);
+		if( $record->status == 'Decline'){
+			if($diff->days >= 7) {
+				reset_connection_by_id($record->cid,false);
+			}
+		}
+		//drupal_set_message('<pre>'.print_r($currentDate,true).'</pre>');
+		//drupal_set_message('<pre>'.print_r($lastUpdateTime,true).'</pre>');
+		$firstMailDiff = 0;
+		if($record->subscription_id == 1){
+			date_add($lastUpdateTime,date_interval_create_from_date_string("3 weeks"));
+			$firstMailDiff = 3;
+		}else if($record->subscription_id == 2){
+			date_add($lastUpdateTime,date_interval_create_from_date_string("3 weeks"));
+			$firstMailDiff = 3;
+		}else if($record->subscription_id == 3){
+			date_add($lastUpdateTime,date_interval_create_from_date_string("3 months"));
+			$firstMailDiff = 7;
+		}
+		$diff = date_diff($lastUpdateTime, $currentDate);
+		//drupal_set_message('<pre>'.print_r($date1,true).'</pre>');
+		//drupal_set_message('<pre>'.print_r($diff,true).'</pre>');
+		//drupal_set_message('<pre>'.print_r($record,true).'</pre>');
+		if( $record->status == 'Confirmed'){
+			if($diff->invert ==1 && $diff->days >= 0){
+				$lastMailTime = $record->last_mail_time;
+				if($lastMailTime == NULL){
+					$sql = "update {connections} set last_mail_time = NOW() WHERE cid=" . $record->cid;
+					$result = db_query($sql);
+					sendConnectionNotification($record->mentee_id,$record->mentor_id,$record->subscription_id,$lastUpdateTime->format('m/d/y'),$record->cid);
+				}else if($lastMailTime != NULL){
+					$lastMailDate = date_create($lastMailTime);
+					$lastMailDiff = date_diff($lastMailDate, $currentDate);
+					if($lastMailDiff->days >= $firstMailDiff){
+						$sql = "update {connections} set last_mail_time = NOW() WHERE cid=" . $record->cid;
+						$result = db_query($sql);
+						sendConnectionNotification($record->mentee_id,$record->mentor_id,$record->subscription_id,$lastUpdateTime->format('m/d/y'),$record->cid);
+					}
+				}
+				//drupal_set_message("need to send mail");
+			}else{
+				//drupal_set_message("reseting connection ".$record->cid."");
+				$status= reset_connection_by_id($record->cid,false);
+				drupal_set_message("status for 'reseting connection ".$record->cid."' ".$status);
+			}
+			
+		}
+	}
+
+	//To reset connection if state is in Pending Payment for more than two weeks
+	$queryReset = db_select('connections', 'con');
+	$queryReset->fields('con');
+	$resultReset = $queryReset->execute();
+	foreach($resultReset as $record) {
+		$lastUpdateTime = date_create($record->last_update_time);
+		$currentDate = date_create(date("Y-m-d H:i:s"));
+		$diff = date_diff($lastUpdateTime, $currentDate);
+		if( $record->status == 'Payment Pending'){
+			if($diff->days > 14) {
+				reset_connection_by_id($record->cid,false);
+			}
+		}
+	}
+
+	//To send reminders to Parent Mail Addresses 
+	//Activation mail reminder - after 3 days 
+	$queryActivation = db_select('mentee','m');
+	$queryActivation->join('users', 'u', 'm.mid = u.uid');
+	$queryActivation->join('user_activation','ua','m.mid = ua.uid');
+	$queryActivation->condition('ua.activated', 'N', '=');
+	$queryActivation->fields('m')
+		->fields('u')
+		->fields('ua');
+	$resultActivation = $queryActivation->execute();
+	foreach ($resultActivation as $recordActivation) {
+		$activation_code = $recordActivation->activation_code;
+		$createdDate1 = date_create('@'.$recordActivation->created);
+		$currentDate1 = date_create(date("Y-m-d H:i:s"));
+		$diff = date_diff($createdDate1, $currentDate1);
+		if($diff->days >= 3) {
+			//Send mail to the parent mail address with the activation link
+			$values['sender'] = $form['#user'];
+  			$values['sender']->name = $values['name'];
+  			$values['sender']->mail = 'administer@skoolmentor.com';
+  			$values['activation_code'] = $activation_code;
+			drupal_mail('mentoringcommon', 'user_activation_mail', $recordActivation->parent_mail, language_default(), $values, $values['sender']->mail);
+			//drupal_set_message("Activation Mail Reminder Sent");
+		}
+	}		
+
+	//To send reminders to complete profile for LinkedIn/Facebook Mentors
+	$queryProfileCompletion = db_select('user_activation','ua');
+	$queryProfileCompletion->join('users', 'u', 'ua.uid = u.uid');
+	$queryProfileCompletion->condition('ua.first_login', '1', '=');
+	$queryProfileCompletion->fields('u')
+		->fields('ua');
+	$resultProfileCompletion = $queryProfileCompletion->execute();
+	foreach ($resultProfileCompletion as $recordProfileCompletion) {
+		drupal_set_message("Profile - ".$recordProfileCompletion->mail);
+		//drupal_set_message("Created Date - ".$recordProfileCompletion->created);
+		$createdDate1 = date_create('@'.$recordProfileCompletion->created);
+		$currentDate1 = date_create(date("Y-m-d H:i:s"));
+		$diff = date_diff($createdDate1, $currentDate1);
+		if($diff->days >= 3) {
+			$values['sender'] = $form['#user'];
+			$values['sender']->name = $values['name'];
+			$values['sender']->mail = 'administer@skoolmentor.com';
+			drupal_mail('mentoringcommon', 'profile_completion_mail', $recordProfileCompletion->mail, language_default(), $values, $values['sender']->mail);
+		}
+	}
+	
+	//Payment Reminder mail - in the same day when Cron runs.
+	/*$queryStatus = db_select('connections','c');
+	$queryStatus->join('mentor', 'mrc', 'mrc.mid = c.mentor_id');
+    $queryStatus->join('mentee', 'mc', 'mc.mid = c.mentee_id');
+    $queryStatus->join('users', 'uc', 'uc.uid = mrc.mid');
+	$queryStatus->condition('c.status', 'Payment Pending','=');
+	$queryStatus->fields('mrc');
+	$queryStatus->addField('c', 'cid', 'cid_con');
+	$queryStatus->addField('c', 'status', 'connection_status_con');
+	$queryStatus->addField('mrc', 'mid', 'mentor_id_con');
+	$queryStatus->addField('mc', 'mid', 'mentee_id_con');
+	$queryStatus->addField('mc', 'first_name', 'mentee_fn_con');
+	$queryStatus->addField('mc', 'last_name', 'mentee_ln_con');
+	$queryStatus->addField('mrc', 'first_name', 'mentor_fn_con');
+	$queryStatus->addField('mrc', 'last_name', 'mentor_ln_con');
+	$queryStatus->addField('mc', 'parent_mail', 'parent_mail_con');
+	$queryStatus->addField('c', 'last_update_time', 'lastupdate_time_con');
+	$queryStatus->addField('c', 'subscription_id', 'subscription_con');
+	$resultStatus = $queryStatus->execute();
+	foreach ($resultStatus as $recordStatus) {
+		$last_update_time = $recordStatus->lastupdate_time_con;
+		$currentDate = date_create(date("Y-m-d H:i:s"));
+		$diff = date_diff($last_update_time,$currentDate);
+		if($diff->days <= 1){
+			$recipient = $recordStatus->mentee_fn_con . ' ' . (($recordStatus->mentee_ln_con != '') ? $recordStatus->mentee_ln_con[0].'.' : '');
+			$sender_name = $recordStatus->mentor_fn_con . ' ' . (($recordStatus->mentor_ln_con != '') ? $recordStatus->mentor_ln_con[0].'.' : '');
+			$sender_id = $recordStatus->mentee_id_con; //$mentor->mid
+			$mail_key = 'mentee_conn_reminder_mail';
+			$values['cid'] = $recordStatus->cid_con;
+			$values['sender_name'] = $sender_name;
+			$values['recipient'] = $recipient;
+		  	$values['sender_id'] = $sender_id;
+		 	drupal_mail('mentoringcommon', $mail_key, $recordStatus->parent_mail_con, language_default(), $values, 'administer@skoolmentor.com');
+		 	//drupal_set_message("Payment Reminder Mail sent");	
+		}
+	}*/
+}
+
+function trigger_conn_reminder_mail() {
+	drupal_set_message('Executing cron job');
+	$connections = db_query("select cid,mentee_id, mentor_id, status from {connections} where status!='Confirmed'");
+	foreach($connections as $record) {
+		$cid = $record->cid;
+		$status = $record->status;
+		$mentee_id = $record->mentee_id;
+		$mentor_id = $record->mentor_id;
+		$mentee = mentee_fields_load($mentee_id);
+		$mentor = mentor_fields_load($record->mentor_id);
+		
+		$mail_key;
+		$sender_name;
+		$recipient;
+		$sender_id;
+		$user;
+		//drupal_set_message('hbbh'.$mentor->first_name);
+		//drupal_set_message('hkjh'.$mentee->first_name);
+		if($status == 'Payment Pending') {
+			$user = user_load($mentee_id);
+			$recipient = $mentee->first_name . ' ' . (($mentee->last_name != '') ? $mentee->last_name[0].'.' : '');
+			$sender_name = $mentor->first_name . ' ' . (($mentor->last_name != '') ? $mentor->last_name[0].'.' : '');
+			$sender_id = $mentee->mid; //$mentor->mid
+			$mail_key = 'mentee_conn_reminder_mail';
+		}else if($status == 'Pending') {
+			$user = user_load($mentor_id);
+			$recipient = $mentor->first_name . ' ' . (($mentor->last_name != '') ? $mentor->last_name[0].'.' : '');
+			$sender_name = $mentee->first_name . ' ' . (($mentee->last_name != '') ? $mentee->last_name[0].'.' : '');
+			$sender_id = $mentee->mid;
+			$mail_key = 'mentor_conn_reminder_mail';
+		}
+		$values['cid'] = $cid;
+		$values['sender_name'] = $sender_name;
+		$values['recipient'] = $recipient;
+		  //$values['sender_mail'] = $user->mail;
+		  $values['sender_id'] = $sender_id;
+		  //$values['category'] = contact_load($values['cid']);
+		  
+		  drupal_mail('mentoringcommon', $mail_key, $user->mail, language_default(), $values, 'administer@skoolmentor.com');			
+	}
+}
+
+//user_load_multiple(array($uid), array(), $reset);
+/*function mentee_load($mentee_id) {
+  return entity_load('mentee', array($mentee_id), array(), FALSE);
+}
+
+function mentor_load($mentor_id) {
+  return entity_load('mentor', array($mentor_id), array(), FALSE);
+}*/

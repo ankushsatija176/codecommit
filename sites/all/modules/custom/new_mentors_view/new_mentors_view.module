@@ -1,0 +1,246 @@
+<?php
+
+function new_mentors_view_block_info() {
+	// Create an array that will hold our blocks
+	$blocks = array();
+	 
+	// Create a key in our $blocks array that
+	// defines our block. Note that the key in
+	// this array can be anything. For this
+	// tutorial, we use 'tellafriend_form'.
+	$blocks['new_mentors_view_form'] = array(
+	// 'info' is what you will see when viewing the blocks admin page.
+	// Note that we use the t() (translate) function which lets drupal
+	// translate any text passed in if needed.
+	'info' => t('New Mentors'),
+	// 'cache' how this block will be cached
+	'cache' => DRUPAL_CACHE_GLOBAL,
+	);
+	 
+	// Note, if you wanted to define multiple blocks, you
+	// could simply define more blocks just like above.
+	 
+	// Finally, we return the $blocks array.
+	return $blocks;
+}
+
+function new_mentors_view_block_view($delta = '') {
+	// Create an array that will be returned as our block
+	$block = array();
+	 
+	// Since hook_block_view is called for every block,
+	// Drupal passes in $delta (the key of the blocks defined
+	// in hook_block_info. In our case, we're checking for
+	// $delta to be 'tellafriend_form'.
+	switch($delta) {
+	case 'new_mentors_view_form':
+	// Since this $delta matches our case, we'll define
+	// the subject and contents.
+	 
+	// 'subject' can be blank ('') or anything you wish to define.
+	$block['subject'] = t('');
+	 
+	// 'content' are just that, the contents of the block.
+	// In our case, we will be showing a form.
+	// We use drupal_get_form() to return a drupal-built form.
+	// Note that the parameter passed to drupal_get_form is the name
+	// of the function we will build below to define our form.
+	// This can be any function name we define below.
+	$block['content'] = drupal_get_form('new_mentors_view_form');
+	break;
+	}
+	 
+	// Finally, we return the $block array.
+	return $block;
+}
+
+function new_mentors_view_form($form, &$form_state) {
+	$query = db_select('mentor', 'm');   
+	$query->leftjoin('user_activation', 'ua', 'ua.uid = m.mid');
+	$query->join('users', 'u', 'u.uid = m.mid');
+    $query->leftJoin('specialization_category', 'sc', 'sc.cid = m.fos_id');
+	//$query->join('mentor_specialization', 'ms', 'ms.mentor_id = m.mid');
+	//$query->join('specialization_subcategory', 'ssc', 'ssc.scid = ms.type');
+	//$query->join('education_qualification', 'e', 'e.eid = m.degree_id');
+	$query->fields('m')
+		->fields('sc', array('name'))
+		//->fields('ssc', array('name'))
+		->fields('u', array('picture'));
+	//	->fields('e', array('name'));
+	$query->addField('sc', 'name', 'category_name');
+	$query->condition('ua.activated', 'Y', '=');
+	$query->condition('u.uid', '2519', '!=');
+	$query->condition('ua.first_login', 1, '!=');
+	//$query->addField('ssc', 'name', 'subcategory_name');
+	//$query->addField('e', 'name', 'degree');
+	$query->orderBy("u.created", "DESC");
+	
+	$result = $query->execute();
+	$rows = array();   
+	foreach ($result as $mentor) {
+	
+		
+		$rating = mentoringcommon_mentor_rating($mentor->mid); 
+		
+	    $rows[$mentor->mid] = array(
+	    	'last_name' => $mentor->last_name,
+	    	'mid' => $mentor->mid,
+	    	'picture' => $mentor->picture,
+	    	'first_name' => $mentor->first_name,
+	    	'gender' => $mentor->gender,
+	    	//'edu_qualification' => $mentor->degree,
+	    	'subcategory_name' => $mentor->specialization,
+	    	'state' => $mentor->state,
+	    	'city'=> $mentor->city,
+	    	'last_school_attended' => $mentor->last_school_attended,
+	    	'mentor_type' => $mentor->mentor_type,
+	    	'school_attending' => $mentor->school_attending,
+	    	'rating' => $rating,
+	    );
+	}
+	
+	$form['new_mentors'] = array(
+	    '#type'   => 'container',    
+	    //'#attributes' => array('class' => array('container-inline')),
+	    '#weight' => -10,
+	    '#theme' => 'new_mentors_slider_view',	    
+  	);
+  	
+  	$form['new_mentors']['mentors'] = array(
+	    '#type' => 'item',
+	    '#title' => t(''),
+	    '#markup' => $rows,
+	  );
+	  return $form;
+}
+
+function new_mentors_view_theme() {
+
+  return array(
+    
+    'new_mentors_slider_view' => array(
+      'render element' => 'form'
+    ),
+  );
+}
+
+function theme_new_mentors_slider_view($variables) {
+
+  drupal_add_css(drupal_get_path('module', 'new_mentors_view') . '/css/smoothDivScroll.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  drupal_add_css(drupal_get_path('module', 'new_mentors_view') . '/css/slider_img.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  drupal_add_js(drupal_get_path('module', 'new_mentors_view') . '/js/jquery-ui-1.10.3.custom.min.js');
+  drupal_add_js(drupal_get_path('module', 'new_mentors_view') . '/js/jquery.kinetic.min.js');
+  drupal_add_js(drupal_get_path('module', 'new_mentors_view') . '/js/jquery.mousewheel.min.js');
+  drupal_add_js(drupal_get_path('module', 'new_mentors_view') . '/js/jquery.smoothdivscroll-1.3-min.js');
+  $values = array('user' => 14, 'average'=>60, 'count' => 5);
+
+   $settings = array(
+    'content_type' => 'entity',
+    'content_id' => 2,
+    'entity' => 'menteeprofile',
+    'stars' => 5,
+    'field_name' => 'field_fivestar_awesomeness',
+    'autosubmit' => TRUE,
+    'allow_clear' => FALSE,
+    'langcode' => 'und',
+    'text' => 'smart', // options are none, average, smart, user, and dual
+    'tag' => 'vote',
+    'style' => 'dual', // options are average, dual, smart, user
+    'widget' => array( 'name' => 'oxygen', 'css' => drupal_get_path('module', 'fivestar') . '/widgets/oxygen/oxygen.css' )
+  );
+	
+  $form = $variables['form'];
+  $output ='<div class="heading-bar span12" style="margin-top:20px"><header style="width: 120px;">New Mentors </header></div>';
+  $output .= '<div id="mentor_touchScroller" class="touchScroller" style="border-top: 3pt solid rgb(140, 165, 243);">';
+  //$output .= '<div id="subPanel" style="width: auto;">'; 
+  $temp = 0;
+  
+  $path = drupal_get_path('module', 'fivestar');
+   drupal_add_js($path . '/js/fivestar.js');
+   drupal_add_css($path . '/css/fivestar.css');
+  
+  foreach ($form as $key => $element) {
+	// Set which elements to render in the table.
+    $allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+    // Make sure this is an element and it's of a type listed above.
+    
+    if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {    
+        if($element['#type'] == 'item') {       
+	      $rows = $element['#markup'];
+	      if(empty($rows)) {
+		  	$output .= 'No recommendation for mentors';
+		  	return $output;
+		  }
+	      unset($form[$key]['#markup']);
+		  foreach ($rows as $key => $element) {
+			   	 $temp = $temp + 1;
+			   	 $picture;
+				  if(!empty($element['picture'])) {
+				  	$picture = file_load($element['picture']);
+				  } else {
+				  	if($element['gender'] == 0) {
+			    		$picture = file_load(46);
+			    	} else {
+			    		$picture = file_load(44);
+			    	}
+				  }
+			      //$rendered = drupal_render($element);
+			      $style = variable_get('user_picture_style', '');
+			      $output .= '<div>';
+			      $output .= '<div class="profile-pic-wrapper" style="float:left;position:relative;margin:5px 5px 5px 5px"; >';
+			      $output .= '<div style="margin:3px 3px 3px 3px">';
+			      $output .= '<div class="profile-pic">';
+			      $output .= '<div class="picture-wrapper">';
+			      $output .= '<span class="bookmarked-icon"></span>';
+			      $profile_link = "mentor/". $element['mid'] ."/profile";
+			      $output .= '<a href="'. $profile_link .'"><div class="bookmark-IE7 "></div><div class="">';
+			      $output .= '<div class="picture picture-no-frame large">';
+			      $output .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentor', 'title' => 'Mentor')).'<span></span>';
+			      $output .= '</div>';
+			      $output .= '</div></a>';
+			      //$output .= '</a><img src="/sites/all/modules/custom/usProfile/usProfile_babysitter/images/video-profile-banner.png" class="modal_popup_link" data-modal-href="/profile_video/play_asset/c44afce3e822d" data-modal-width="540" data-modal-height="490" data-modal-title="Natalie Ganem" target="_blank" style="position:absolute;bottom:0;left:0;width:144px;height:27px;min-width:144px;min-height:27px;z-index:999" width="144" height="27" alt="Video Profile" title="Video Profile">';
+			      $output .= '</div></div>';
+			      //$output .= '<div class="profile-pic-school">'.$element['last_school_attended'].'</div>';
+			      if(!empty($element['last_name'])){
+			      	$element['last_name'] = ($element['last_name'] != '') ? $element['last_name'][0].'.' : '';
+			      }
+			       
+			      $output .= '<div class="profile-pic-school" style="font-weight: bold;">'.$element['first_name'].' '.$element['last_name'].'</div>';
+			      if($element['mentor_type']=="student"){
+			      	$output .= '<div class="profile-pic-school">'.$element['school_attending'].'</div>';
+			      }else{
+			      	$output .= '<div class="profile-pic-school">'.$element['last_school_attended'].'</div>';
+			      }
+			      $output .= '<div class="profile-pic-school">'.$element['subcategory_name'].'</div>';
+			      $output .= '<div class ="profile-review">';
+			      //$output .= '<h2><a href="/profile/natalie-ganem#sitter-review">20 reviews</a></h2>';
+			      $output .= '<div style="margin-top: 3px"> <a href="/user/' . $element['mid'] . '">'
+							  .theme('fivestar_static', array('rating' => $element['rating']['average'], 'stars' => 5, 'tag' => 'vote',
+							   					'widget' => array( 'name' => 'oxygen', 'css' => drupal_get_path('module', 'fivestar') . '/widgets/oxygen/oxygen.css' ))) 
+							   . '</a></div>';
+			      $output .= '</div>';
+			      //$output .= '<div class="bookmark-babysitter bookmark-babysitter-78449" >
+				//<a  class="bookmark-babysitter-78449 bookmark">Bookmark</a>
+			//</div>
+		$output .= '</div></div></div>';
+			      
+			   
+		  } 
+		}
+      }
+    } 
+
+  $output .= '</div>';
+ 
+  $output .= '<script type="text/javascript">	
+		(function ($) {
+			$("div#mentor_touchScroller").smoothDivScroll({ 
+  				visibleHotSpotBackgrounds: "always",
+    			hotSpotScrollingStep: 5
+			});
+		})(jQuery);
+	
+</script>';
+  //$output .= drupal_render_children($form);
+  return $output;
+}

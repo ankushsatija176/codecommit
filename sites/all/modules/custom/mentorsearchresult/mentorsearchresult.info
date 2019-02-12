@@ -1,0 +1,4 @@
+name = Mentor Search Result 
+description = "Mentor Search Results"
+package = mentorsearchresult
+core = 7.x

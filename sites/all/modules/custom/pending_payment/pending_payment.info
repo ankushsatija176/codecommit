@@ -1,0 +1,4 @@
+name = Pending payments
+description = "Allows users to send invitation to friends to join the site"
+package = pending_payment
+core = 7.x

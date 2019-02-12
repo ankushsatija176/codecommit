@@ -1,0 +1,1919 @@
+<?php
+
+module_load_include('inc', 'mentorprofile', 'mentorprofile.pages');
+module_load_include('inc', 'mentoringcommon', 'mentoringcommon.module');
+
+function mentorprofile_menu() {
+  $items['mentorprofile/profile'] = array(
+    'title' => 'View',
+    'page callback' => 'mentorprofile_view',
+    //'page arguments' => array('mentorprofile_edit'),
+    'access callback' => TRUE,
+    //'access arguments' => array(1),
+    //'type' => MENU_LOCAL_TASK,
+    //'file' => 'user.pages.inc',
+  );
+  
+   $items['mentorprofile/%mentorprofile'] = array(
+    'title' => '',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentor_profile_form', 1),
+    'access callback' => TRUE,
+    //'file' => 'mentor.module',
+   	'file path' => drupal_get_path('module', 'mentor'),
+  );
+   $items['mentorprofile/%mentorprofile/searchMentee'] = array(
+   		'title' => 'Search Mentee',
+   		'page callback' => 'mentorprofile_mentee_search',
+   		'access callback' => 'mentorprofile_view_access',
+   		'access arguments' => array(1),
+   		'type' => MENU_LOCAL_TASK,
+   		//'page arguments' => array('menteeprofile_recommendation_form', 1),
+   		//'access callback' => 'menteeprofile_view_access',
+   		//'access arguments' => array(1),
+   		//'type' => MENU_LOCAL_TASK,
+   		//'file' => 'menteeprofile.pages.inc',
+   );
+  $items['mentorprofile/%mentorprofile/edit'] = array(
+    'title' => 'View/Edit Profile',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentor_profile_form', 1),
+    'access callback' => TRUE,
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    //'file' => 'user.pages.inc',
+  	'file path' => drupal_get_path('module', 'mentor'),
+  );
+  
+  $items['mentorprofile/%mentorprofile/connections'] = array(
+    'title' => 'Connections',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentorprofile_connection_form', 1),
+    'access callback' => 'mentorprofile_view_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    //'file' => 'user.pages.inc',
+  );
+  
+  $items['mentorprofile/%mentorprofile/notifications'] = array(
+    'title' => 'Notifications',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentorprofile_notifications_form', 1),
+    'access callback' => 'mentorprofile_view_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+  );
+  
+  $items['mentorprofile/%mentorprofile/recommendations'] = array(
+    'title' => 'Recommendations',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentorprofile_recommendation_form', 1),
+    'access callback' => 'mentorprofile_view_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'mentorprofile.pages.inc',
+  );
+  
+  $items['mentorprofile/%mentorprofile/messages'] = array(
+    'title' => 'Messages',
+    'page callback'    => 'privatemsg_list_page',
+    'page arguments'   => array('list'),
+    'file'             => 'privatemsg.pages.inc',
+    'file path' => drupal_get_path('module', 'privatemsg'),
+    'access callback' => 'mentorprofile_view_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+  ); 
+ 
+  $items['mentor/%mentorprofile/profile'] = array(
+    'title' => '',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentorprofile_form', 1),
+    'access callback' => TRUE,
+    //'access arguments' => array(1),
+    //'type' => MENU_LOCAL_TASK,
+  ); 
+  $items['mentor/%mentorprofile/invite'] = array(
+  		'title' => '',
+  		'page callback' => 'mentee_invitation',
+  		'page arguments' => array(1),
+  		'access callback' => TRUE,
+  		//'access arguments' => array(1),
+  		//'type' => MENU_LOCAL_TASK,
+  );
+  $items['mentorprofile/message'] = array(
+    'title' => 'Write a message',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('privatemsg_new', 'adityasood'),
+    'access callback' => TRUE,
+    'file' => 'privatemsg.pages.inc',
+    //'access arguments' => array(1),
+    //'type' => MENU_LOCAL_TASK,
+  );
+  
+  $items['connection/%/decilne'] = array(
+    'title' => '',
+    'page callback' => 'userprofle_connection_action',
+    'page arguments' => array(1),
+    'access callback' => 'mentorprofile_view_access',
+    'access arguments' => array(1),
+  );
+  
+  $items['mentorprofile/msgs'] = array(
+    'title' => 'Messages',
+    'page callback'    => 'mentorprofile_load_messages',
+    //'page arguments'   => array('list'),
+    //'file'             => 'privatemsg.pages.inc',
+    //'file path' => drupal_get_path('module', 'privatemsg'),
+    'access callback' => TRUE,
+    //'access arguments' => array(1),
+    //'access arguments' => array($_SESSION['user']->uid),
+  );
+  
+  $items['mentor/%/rate'] = array (
+  	'title' => '',
+    'page callback' => 'mentorprofile_rate',
+    'page arguments' => array(1),
+    'access callback' => 'mentor_rate_access',
+    'access arguments' => array(1),
+  ); 
+  
+  $items['mentor/%/reviews'] = array (
+  	'title' => '',
+    'page callback' => 'mentorprofile_reviews',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+  ); 
+   
+  return $items;
+}
+
+function mentor_rate_access() {
+  if(isset($_SESSION['user'])) {
+  		$user = user_load($_SESSION['user']->uid);
+	 	$roles = $user->roles;
+	 	if(empty($roles)){
+	 		return FALSE;
+	 	}
+	 	foreach($roles as $element) {
+	 		//drupal_set_message($element);
+	 		if(substr( $element, 0, 6 )  === 'mentee') {
+	 			return TRUE;
+	 		}
+	 	}
+  }	
+  return FALSE;
+}
+
+function mentorprofile_rate($uid) {
+	$rating = mentoringcommon_mentor_rating_by_mentee($uid, $_SESSION['user']->uid);
+    if (!empty($rating)) {
+       $voting_message = "<div>You have already rated this mentor.</div>";
+       drupal_set_message($voting_message);
+     }
+     else {
+     	$account =  user_load($uid);
+     	//$account->roles = array('mentor');
+     	return user_view_page($account);
+     	//drupal_goto('user/'. $uid);
+     	
+     }
+	drupal_goto('mentor/' . $uid . '/profile');
+}
+
+function mentorprofile_reviews($uid) {	
+ 	$account =  user_load($uid);
+ 	return user_view_page($account);     
+}
+
+
+function mentorprofile_load_messages() {
+	$uid = $_SESSION['user']->uid;
+	drupal_goto('mentorprofile/' . $uid . '/messages');
+}
+
+function usermsg_list_page($argument = 'list', $uid = NULL) {
+	module_load_include('inc', 'privatemsg', 'privatemsg.pages');
+	return privatemsg_list_page($argument, $uid);
+}
+
+function mentorprofile_view_access($uid) {
+	if(isset($_SESSION['user']) && $_SESSION['user']->uid == $uid->uid) {
+  		return TRUE;
+  	}
+  	return FALSE;
+}
+function mentorprofile_mentee_search(){
+	drupal_goto('mentee/search');
+}
+function mentorprofile_view() {
+	$uid = $_SESSION['user']->uid;
+	drupal_goto('mentorprofile/' . $uid);
+}
+
+function mentorprofile_load($uid, $reset = FALSE) {
+  $users = mentor_load_multiple(array($uid), array(), $reset);
+  return reset($users);
+}
+
+function mentorprofile_load_multiple($uids = array(), $conditions = array(), $reset = FALSE) {
+  $user = entity_load('user', $uids, $conditions, $reset);    
+  return $user;
+}
+
+function mentorprofile_notifications_form($form, &$form_state, $account) {
+	$uid;
+	if(isset($_SESSION['user']) && $_SESSION['user']->uid == $account->uid) {
+		$uid = $_SESSION['user']->uid;
+	} else {
+		$uid = $account->uid;
+	}
+	
+	$query = db_select('connections', 'c');   
+	$query->join('mentor', 'mr', 'mr.mid = c.mentor_id');
+    $query->join('mentee', 'm', 'm.mid = c.mentee_id');
+	$query->join('users', 'u', 'u.uid = m.mid');
+	$query->condition('mr.mid', $uid,'=');
+	//$query->condition('c.status', 'Pending','=');
+	$query->fields('m')
+		->fields('c')
+		->fields('u', array('picture'));
+	$query->addField('c', 'status', 'connection_status', 'subscription_id');
+	$result = $query->execute();
+	
+	$notification_array = array();
+  foreach($result as $record) {
+    $mentee = array();
+    $mentee['mid'] = $record->mid;
+    $mentee['picture'] = $record->picture;
+    if($record->last_name != '')
+      $mentee['mentee_name'] = $record->first_name . ' ' . $record->last_name[0].'.';
+    else
+      $mentee['mentee_name'] = $record->first_name;
+    $mentee['cid'] = $record->cid;
+    $mentee['connection_status'] = $record->connection_status;
+    $mentee['state'] = $record->state;
+    $mentee['city'] = $record->city;
+    $mentee['school_name'] = $record->school_name;
+    $mentee['yearOfSchool'] = $record->year_of_school;
+    $mentee['mentee_type'] = $record->mentee_type;
+    $mentee['college_name'] = $record->college_name;
+    $mentee['yearOfIntendedTransfer'] = $record->year_of_intended_transfer;
+    $mentee['area_of_mentoring'] = $record->area_of_mentoring;
+    $mentee['specialization'] = $record->specialization;
+    $eng_model = db_query("SELECT subscription_name FROM {subscription} WHERE sid = :sid", array(':sid' => $record->subscription_id))->fetchField();
+    $mentee['eng_model'] = $eng_model;
+
+    $notification_array[$record->mid] = $mentee;
+  }
+
+	  
+	$form['notifications'] = array(
+	    '#type'   => 'container',    
+	    //'#attributes' => array('class' => array('container-inline')),
+	    '#weight' => -10,
+	    '#theme' => 'mentorprofile_notifications_form',	    
+  	);
+  	
+  	$form['notifications']['notification'] = array(
+    '#type' => 'item',
+    '#title' => t(''),
+    '#markup' => $notification_array,
+  );
+  return $form;
+}
+
+function mentorprofile_connection_form($form, &$form_state, $account) {
+	$uid;
+	if(isset($_SESSION['user']) && $_SESSION['user']->uid == $account->uid) {
+		$uid = $_SESSION['user']->uid;
+	} else {
+		$uid = $account->uid;
+	}
+	
+	$query = db_select('connections', 'c');   
+	$query->join('mentor', 'mr', 'mr.mid = c.mentor_id');
+    $query->join('mentee', 'm', 'm.mid = c.mentee_id');
+    $query->leftJoin('specialization_category', 'sc', 'sc.cid = m.fos_id');
+	//$query->join('specialization_subcategory', 'ssc', 'ssc.scid = m.fos_sub_id');
+	//$query->join('area_mentoring', 'aom', 'aom.aid = m.aom_id');
+	$query->join('users', 'u', 'u.uid = m.mid');
+	$query->condition('mr.mid', $uid,'=');
+	$query->fields('m')
+		->fields('sc', array('name'))
+		//->fields('ssc', array('name'))
+		->fields('u', array('picture'));
+		//->fields('aom', array('name'));
+	$query->addField('sc', 'name', 'category_name');
+	$query->addField('c', 'status', 'connection_status');
+	$query->addField('c', 'last_update_time', 'lastupdate_time');
+	$query->addField('c', 'subscription_id', 'subscription');
+	//$query->addField('ssc', 'name', 'subcategory_name');
+	//$query->addField('aom', 'name', 'area_mentoring');
+	$result = $query->execute();
+	
+	$mentee_array = array();
+  foreach($result as $record) {
+    $mentee = array();
+    $mentee['mid'] = $record->mid;
+    $mentee['picture'] = $record->picture;
+    $mentee['first_name'] = $record->first_name;
+    if($record->last_name != '')
+      $mentee['last_name'] = ' '.$record->last_name[0].'.';
+    else
+      $mentee['last_name'] = '' ;
+    $mentee['school_name'] = $record->school_name;
+    $mentee['yearOfSchool'] = $record->year_of_school;
+    $mentee['mentee_type'] = $record->mentee_type;
+    $mentee['college_name'] = $record->college_name;
+    $mentee['yearOfIntendedTransfer'] = $record->year_of_intended_transfer;
+    $mentee['state'] = $record->state;
+    $mentee['city'] = $record->city;
+    $mentee['mentoring_request'] = $record->mentoring_request;
+    $mentee['mentoring_request_title'] = $record->mentoring_request_title;
+    $mentee['fos'] = $record->category_name;
+    //$mentee['fos_sub'] = $record->subcategory_name;
+    $mentee['area_of_mentoring'] = $record->area_of_mentoring;
+    $mentee['connection_status'] = $record->connection_status;
+    if($mentee['connection_status'] === "Confirmed"){
+      $mentee['lastupdate_date'] = date("m/d/Y", strtotime($record->lastupdate_time));
+      if($record->subscription == "1")
+        $mentee['end_date'] = date("m/d/Y", strtotime("+3 weeks", strtotime($record->lastupdate_time)));
+      else if($record->subscription == "2")
+        $mentee['end_date'] = date("m/d/Y", strtotime("+3 weeks", strtotime($record->lastupdate_time)));
+      else
+        $mentee['end_date'] = date("m/d/Y", strtotime("+3 months", strtotime($record->lastupdate_time)));
+    }
+    $mentee['specialization'] = $record->specialization;
+
+    $mentee_array[$record->mid] = $mentee;
+  }
+
+  $query = db_select('mentee_specialization', 'ms');
+  $query->join('specialization_subcategory', 'ssc', 'ssc.scid = ms.spec_id'); //JOIN node with users 
+  $query->condition('ms.mentee_id', $account->uid,'=');
+  $query->fields('ms')//SELECT the fields from user
+     ->fields('ssc');
+  $result = $query->execute();
+
+  $fieldOfStudy = '';
+  foreach ($result as $fos) {
+    $fieldOfStudy .= $fos->name . ', '; 
+  }
+  $account->fos_sub = $fieldOfStudy;
+
+  $query = db_select('mentee_aom', 'ma');
+  $query->join('area_mentoring', 'am', 'am.aid = ma.aom_id'); //JOIN node with users
+  $query->condition('ma.mentee_id', $account->uid,'=');
+  $query->fields('ma')//SELECT the fields from user
+     ->fields('am');
+  $result = $query->execute();
+
+  $areaOfMentoring = '';
+  foreach ($result as $aom) {
+    $areaOfMentoring .= $aom->name . ', '; 
+  }
+  $account->area_mentoring = $areaOfMentoring;
+
+  $form['connection'] = array(
+    '#type'   => 'container',    
+    //'#attributes' => array('class' => array('container-inline')),
+    '#weight' => -10,
+    '#theme' => 'mentorprofile_connection_form',	    
+  );
+
+  $form['connection']['mentee'] = array(
+    '#type' => 'item',
+    '#title' => t(''),
+    '#markup' => $mentee_array,
+  );
+  return $form;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function mentorprofile_theme() {
+  return array(
+    'mentorprofile_connection_form' => array(
+      'render element' => 'form'
+    ),
+    'mentorprofile_notifications_form' => array(
+      'render element' => 'form'
+    ), 
+    'mentorprofile_basic_form' => array(
+      'render element' => 'form'
+    ),
+    'mentorprofile_recommendation_list' => array(
+      'render element' => 'form'
+    ),
+    'mentorprofile__page' =>  array(
+      'template' => 'theme/mentorprofile--page',
+      'render element' => 'page'
+    ),
+    /*'node_mentorprofile' => array(
+      //'arguments' => array('form' => NULL),
+	  'render element' => 'node',
+	  'template' => 'templates/node--mentorprofile',
+    ),*/
+  );
+}
+
+function mentorprofile_preprocess_page(&$variables, $hook) {
+  
+  
+  $path=drupal_get_path_alias();
+
+  	if(0 === strpos($path, 'mentorprofile')) {
+  		$path_array = explode("/", $path);
+	    $variables['theme_hook_suggestions'][] = 'mentorprofile__page';
+	    
+	    $user_picture = get_user_picture($path_array[1]);	    
+	    $variables['test_var'] = 'skoolmentor.com/sites/default/files/pictures/'.$user_picture->filename;
+	    $variables['user_id'] = $path_array[1];
+	    $variables['showRating'] = FALSE;
+	    $variables['rateMentor'] = FALSE;
+	    if(isset($_SESSION['user'])) {
+	    	if($_SESSION['user']->uid == $path_array[1]) {
+	    		$variables['showRating'] = FALSE;
+	    		$variables['rateMentor'] = FALSE;
+	    	} else {
+	    		$user = user_load($_SESSION['user']->uid);
+	    		$roles = $user->roles;
+			 	if(!empty($roles)){			 		
+				 	foreach($roles as $element) {
+				 		//drupal_set_message($element);
+				 		if(substr( $element, 0, 6 ) === 'mentee') {
+				 			$query = db_select('connections', 'c');   
+							$query->condition('c.mentor_id', $path_array[1],'=');
+							$query->condition('c.mentee_id', $_SESSION['user']->uid,'=');
+							$query->fields('c');
+							$query->addField('c', 'status', 'connection_status');
+							$result = $query->execute();
+							
+							$notification_array = array();
+							foreach($result as $record) {
+								if($record->connection_status == 'Confirmed') {
+									$rating = mentoringcommon_mentor_rating_by_mentee($variables['node']->uid, $user_id);
+									if (empty($rating)) {
+										$variables['rateMentor'] = TRUE;
+									}
+								}
+							}				 			
+				 		}
+				 	}
+				 }
+	    	}
+	    }
+	}
+  //}
+}
+
+function theme_mentorprofile_notifications_form($variables) {
+	$n_count = 0;
+	$output = '<div class="mentor-profile-blocks-heading1">Notifications</div>
+			<div class="mentor-profile-blocks-heading2">';
+    drupal_add_css(drupal_get_path('module', 'mentoringcommon') . '/css/common.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+    $form = $variables['form'];    
+    
+    foreach ($form as $key => $element) {
+    	// Set which elements to render in the table.
+	    $allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes','container', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+	    // Make sure this is an element and it's of a type listed above.
+	    if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+	    	if($element['#type'] == 'container'){
+	    		$form = $element;
+	    		foreach ($form as $key => $element) {
+	    			// Set which elements to render in the table.
+	    			$allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden','container');
+	    			// Make sure this is an element and it's of a type listed above.
+	    
+	    
+	    if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {    
+	        if($element['#type'] == 'item') {       
+		      $notification_array = $element['#markup'];
+		      unset($form[$key]['#markup']);
+		      /*if(empty($notification_array)) {
+				  	$output .= 'No new notifications</div>';
+				  	return $output;
+				}*/
+			  
+		      foreach ($notification_array as $key=>$notification_data) {
+		      
+		      	if($notification_data['connection_status'] == 'Pending') {
+			      	$n_count = $n_count + 1;
+					$picture;
+					  if(!empty($notification_data['picture'])) {
+					  	$picture = file_load($notification_data['picture']);
+					  } else {
+					  	$picture = get_user_default_picture($notification_data['mid'], 'mentee');
+					  }
+					  $style = variable_get('user_picture_style', '');
+				      $output .= '<div id="mentor-notification-item" class="user-list-item">';
+				      if(strpos($notification_data['area_of_mentoring'],'College major and activities advising') !== false){
+				      	$aomString =  str_replace("College major and activities advising",$notification_data['specialization'],$notification_data['area_of_mentoring']);
+				      }
+				      $output .= '<div class="user-grid-pic mentor-profile-usr-pic1" >';
+				      $output .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentee', 'title' => 'Mentee', 'width'=>'100%'));
+				      $output .= '</div>';
+				      $mentee_details = '<span><a class="mentor-name" href="/mentee/'. $notification_data['mid'] .'/profile">' . $notification_data['mentee_name'] . '</a> wants to connect to you.</span>';
+              if($notification_data['mentee_type'] == 'highschool'){
+                $mentee_details .= '<div><span>Student at </span>'.$notification_data['school_name'] . ', class of ' . $notification_data['yearOfSchool'] . '</div>';
+              }else if($notification_data['mentee_type'] == 'transfer'){
+                $mentee_details .= '<div><span>Student at </span>'.$notification_data['college_name'] . ', class of ' . $notification_data['yearOfIntendedTransfer'] . '</div>';
+              }
+				      $mentee_details .= '<div>Looking for mentoring in: ' . $aomString . '</div>';
+				      $mentee_details .= '<div>Engagement model chosen: ' . $notification_data['eng_model'] . '</div>';
+				      //$mentee_details .= '<div>'.$mentee_data->city . ', '. $mentee_data->state . '</div>';
+				      $mentee_details .= '<div class="container-inline mentor-profile-con-div4" >
+						        			<div class="mentor-profile-con-div5"><a class="accept_button" target="_self" data-track="login" href="/mentee/' . $notification_data['mid'] . '/accept">Accept</a></div>
+								            <div class="mentor-profile-con-div6"><a class="decline_button" target="_self" data-track="login" href="/mentee/' . $notification_data['mid'] . '/decline">Decline</a></div>
+						        		</div>';
+				      $output .= '<div class="mentor-profile-con-div2">' . $mentee_details . '</div>';      	
+				      $output .= '</div>';
+				      
+				}
+		      }
+	        }
+	     }
+	     }}}
+    }
+    /*if($n_count == 0) {
+    	$output .= 'No new notifications</div>';
+		return $output;
+    }*/
+    $output .= '</div>';
+  $output .= drupal_render_children($form);
+  return $output;
+}
+
+function theme_mentorprofile_connection_form($variables) {
+	
+	$role;  
+	$submit_rendered = '';
+	$temp = 0;
+  $output = '<div class="mentor-profile-blocks-heading1">Connections</div><div class="mentor-profile-blocks-heading2">';
+  drupal_add_css(drupal_get_path('module', 'mentoringcommon') . '/css/common.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  $form = $variables['form'];
+  /*if(empty($form)) {
+  	$output .= 'No new connections</div>';
+  	return $output;
+  }*/
+  
+  foreach ($form as $key => $element) {
+    // Set which elements to render in the table.
+    $allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes','container', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+    // Make sure this is an element and it's of a type listed above.
+    if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+    	if($element['#type'] == 'container'){
+    		$form = $element;
+    		foreach ($form as $key => $element) {
+    			// Set which elements to render in the table.
+    			$allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden','container');
+    			// Make sure this is an element and it's of a type listed above.
+    
+    			
+    
+    if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+    
+       if($element['#type'] == 'item') {       
+	      $mentee_array = $element['#markup'];
+	      unset($form[$key]['#markup']);
+	      foreach ($mentee_array as $key=>$mentee_data) {
+	      	if($mentee_data['connection_status'] != 'Decline'){
+    		$temp = $temp + 1;
+			$picture;
+			  if(!empty($mentee_data['picture'])) {
+			  	$picture = file_load($mentee_data['picture']);
+			  } else {
+			  	$picture = get_user_default_picture($mentee_data['mid'], 'mentee');
+			  }
+			  $style = variable_get('user_picture_style', '');
+		      //$output .= '<div id="mentor-conn-item' . $temp . '" onMouseOver="javascript:showButton(' . $temp . ')" onMouseOut="javascript:hideButton(' . $temp . ')" class="user-list-item">';
+		      $output .= '<div id="mentor-conn-item' . $temp . '" class="user-list-item">';
+		      
+		      $output .= '<div class="user-grid-pic mentor-profile-usr-pic1">';
+		      $output .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentee', 'title' => 'Mentee', 'width'=>'100%'));
+		      $output .= '</div>';
+		      
+		      $mentee_details = '<span><a class="mentor-name" href="/mentee/'. $mentee_data['mid'] .'/profile">' . $mentee_data['first_name'] . $mentee_data['last_name'] . '</a></span>';
+          if($mentee_data['mentee_type'] == 'highschool'){
+            $mentee_details .= '<div>'.$mentee_data['school_name'] . ', class of ' . $mentee_data['yearOfSchool'] . '</div>';
+          }else if($mentee_data['mentee_type'] == 'transfer'){
+            $mentee_details .= '<div>'.$mentee_data['college_name'] . ', class of ' . $mentee_data['yearOfIntendedTransfer'] . '</div>';
+          }
+		      $mentee_details .= '<div class="wordwrap mentor-profile-details-div1">Area wants mentoring: ' . $mentee_data['area_of_mentoring'] . '</div>';
+		      $mentee_details .= '<div class="wordwrap mentor-profile-details-div1">Specialization: ' . $mentee_data['specialization'] . '</div>';
+		      //$mentor_details .= '<br/>Specialization: '. $mentee_data['subcategory_name'];
+		      $mentee_details .= '<div>'.$mentee_data['city'] . ', '. $mentee_data['state'] . '</div>';
+		      if($mentee_data['connection_status'] == 'Confirmed') {
+		      	$mentee_details .= '<div>Session Start Date : ' . $mentee_data['lastupdate_date'] . '</div>';
+		      	$mentee_details .= '<div>Session End Date &nbsp: ' . $mentee_data['end_date'] . '</div>';
+		      }
+		      $output .= '<div class="mentor-profile-con-div2">' . $mentee_details . '</div>';
+		      
+		      if($mentee_data['connection_status'] == 'Confirmed') {
+		      	$output .= '<div class=" mentor-profile-button-div3" id="mentor-message-cover' . $temp . '" ><a class="accept_button" target="_self" data-track="login" href="/messages/new/' . $key . '">Message</a></div>';
+		      } else {
+		      	$output .= '<div class=" mentor-profile-button-div3" id="mentor-message-cover' . $temp . '" ><a class="accept_button" target="_self" data-track="login" href="#">Pending</a></div>';
+		      }
+		      $output .= '</div>';
+		  }
+      }
+    }}
+    			}}}
+  }
+  $output .= '</div>';
+  $output .= '<script type="text/javascript">
+  				function showButton(id) {
+					document.getElementById("mentor-message-cover" + id).style.visibility = "visible";
+					document.getElementById("mentor-message-cover" + id).style.display = "inline-block";					
+  				}
+  				function hideButton(id) {
+					document.getElementById("mentor-message-cover" + id).style.visibility = "hidden";
+  				}	
+				(function ($) {
+				var itemId;
+				var mesageId;
+					for(var i=1; i<1000; i++) {
+						itemId = "#mentor-conn-item" + i;
+						mesageId = "#mentor-message-cover" + i;
+						//uncomment below to enable visibility on mouseover 
+						//$(mesageId).hide();
+						$(itemId).mouseover( function () { 
+						
+					        $(mesageId).show();
+							//$(".mentor-message-cover").visibility = "visible";
+					    });
+					    $(itemId).mouseout( function () { 
+					        $(mesageId).hide();
+					    });
+					 }
+				})(jQuery);
+	
+			</script>';
+  $output .= drupal_render_children($form);
+  return $output;
+}
+
+
+function mentorprofile_form($form, &$form_state, $account) {
+	
+	$uid = $account->uid;
+    $account = mentorprofile_loadmentor($uid);
+
+   global $user;
+   //$account = $form['#user'];
+   $register = ($account->uid > 0 ? FALSE : TRUE);
+   //$form['#user'] = $account;
+  
+	// Account information.
+  $form['account'] = array(
+    '#type'   => 'container',    
+    //'#attributes' => array('class' => array('container-inline')),
+    '#weight' => -10,
+    '#theme' => 'mentorprofile_basic_form',
+  );
+  
+  $form['account']['role'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $account->role,
+  );
+  
+  $form['account']['user'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $account,
+  );
+  
+  $form['#attached']['css'] = array(
+    drupal_get_path('module', 'mentorprofile') . '/mentorprofile.css',
+  );
+  
+  if($account->role == 'authenticated-user') {
+	
+	if( $account->cid == 0) {
+	$form['account']['submit'] = array(
+	    '#type' => 'submit',
+	    '#value' => t('Connect'),
+	    '#prefix' => '<div >', 
+		'#suffix' => '</div>',
+	  );
+	} else if( $account->connection_status == 'Pending'){
+	  $form['account']['connection_status'] = array(
+	    '#type' => 'item',
+	    '#value' => t('Connection request pending'),
+	    '#prefix' => '<div style = "width: 50px">', 
+		'#suffix' => '</div>',
+		'#access' => TRUE,
+	  );
+	}
+	
+	  
+	$form['account']['mentee_id'] = array(
+	    '#type' => 'hidden',
+	    '#default_value' => $account->mentee_id,
+	    '#access' => TRUE,
+    );
+  }  
+	$form['account']['mentor_id'] = array(
+	    '#type' => 'hidden',
+	    '#id' => 'mentor_id',
+	    '#default_value' => $account->mid,
+	    '#access' => TRUE,
+	  );
+	  
+   $form['account']['mentor_email'] = array(
+	    '#type' => 'hidden',
+	    '#default_value' => $account->email,
+	    '#access' => TRUE,
+    );
+    
+    
+    /*$values = array('user' => $account->mid, 'average'=>60, 'count' => 5);
+
+   $settings = array(
+    'content_type' => 'node',
+    'content_id' => 2,
+    'entity' => 'menteeprofile',
+    'stars' => 5,
+    'field_name' => 'field_fivestar_awesomeness',
+    'autosubmit' => TRUE,
+    'allow_clear' => FALSE,
+    'langcode' => 'und',
+    'text' => 'smart', // options are none, average, smart, user, and dual
+    'tag' => 'vote',
+    'style' => 'dual', // options are average, dual, smart, user
+    'widget' => array( 'name' => 'oxygen', 'css' => drupal_get_path('module', 'fivestar') . '/widgets/oxygen/oxygen.css' )
+  );
+
+	//$fivestar_values = fivestar_get_votes('node', 1, 'vote', $account->mid);
+   $form['custom_five_star'] = drupal_get_form('fivestar_custom_widget', $values, $settings);*/
+       
+	
+  /*$path = drupal_get_path('module', 'fivestar');      
+  drupal_add_js($path . '/js/fivestar.js');
+  drupal_add_css($path . '/css/fivestar.css');
+
+  $rating = votingapi_select_single_result_value(array(
+        'entity_id' => '1',
+        'entity_type' => 'product',
+        'tag' => 'vote',
+        'function' => 'average',
+   ));
+   $form['votes'] = array(
+      '#markup' =>  theme('fivestar_static', array('rating' => $rating, 'stars' => 5, 'tag' => 'vote')),
+   );*/
+     
+  $form['account']['basic_info'] = array(
+    '#type' => 'item',
+    '#title' => t('Personal Details'),
+    '#prefix' => '<div id="user_basic_info_fieldset">',
+    '#suffix' => '</div>',
+    '#access' => TRUE,
+    //'#collapsible' => TRUE,
+  );
+ 
+  $form['account']['basic_info']['first_name'] = array(
+    '#type' => 'item',
+    '#title' => t('Name:'),
+    '#maxlength' => 255,
+    '#markup' => $account->first_name . ' ' .$account->last_name,
+    //'#attributes' => array('class' => array('username')),
+    '#access' => TRUE,
+    //'#weight' => -10,
+  );
+  
+  $form['account']['basic_info']['bday'] = array(
+    '#type' => 'item',
+    '#title' => t('Date of birth:'),
+    '#markup' => date('F d, Y', strtotime($account->birthday)),
+    '#access' => !($account->role == 'anonymous-user'),
+  );
+    
+  $form['account']['basic_info']['gender'] = array(
+    '#title' => t('Gender:'),
+    '#type' => 'item',
+    '#markup' => ($account->gender == '0' ? 'Male': 'Female'),
+    '#access' => TRUE,
+  );
+  
+  $form['account']['basic_info']['zipcode'] = array(
+    '#type' => 'item',
+    '#title' => t('Zip code:'),    
+    '#markup' => $account->zipcode,
+    '#access' => !($account->role == 'anonymous-user'),
+  );
+  $form['account']['basic_info']['mobile'] = array(
+    '#type' => 'item',
+    '#title' => t('Mobile:'),    
+    '#markup' => $account->mobile,
+    '#access' => $account->connected || $account->role == 'full-profile',
+  );
+  
+  $form['account']['basic_info']['skype_id'] = array(
+    '#type' => 'item',
+    '#title' => t('Skype Id:'),    
+    '#markup' => $account->skype_id,
+    '#access' => $account->connected || $account->role == 'full-profile',
+  );
+  
+  $form['account']['mentor_type'] = array(
+    '#type' => 'item',
+    '#markup' =>  $account->mentor_type,
+    '#title' => t('Mentor Type:'),
+    '#access' => TRUE,
+  );
+  
+  if($account->mentor_type == 'professional') {
+	  $form['account']['professional'] = array(
+	    '#type' => 'item',
+	    '#prefix' => '<div id="user_professional_info_fieldset">',
+    	'#suffix' => '</div>',
+	    '#title' => t('Professional Information'),
+	    //'#collapsible' => TRUE,
+	    '#access' => TRUE,
+	    '#states' => array(
+	      'visible' => array(
+	        ':input[name="mentor_type"]' => array('value' => 'professional'),
+	      ),
+	    ),
+	  );
+	  
+	  $form['account']['professional']['employer'] = array(
+	    '#type' => 'item',
+	    '#title' => t('Employer:'),
+	    '#markup' => !empty($account->employer) ? $account->employer : '',
+	    //'#access' => !($account->role == 'anonymous-user'),
+	    '#access' => TRUE,
+	    '#states' => array(
+	      'visible' => array(
+	        ':input[name="mentor_type"]' => array('value' => 'professional'),
+	      ),
+	    ),
+	  );
+	  
+	  $form['account']['professional']['title'] = array(
+	    '#type' => 'item',
+	    '#title' => t('Job Title:'),
+	    '#markup' => $account->title,
+	    '#access' => TRUE,
+	    '#states' => array(
+	      'visible' => array(
+	        ':input[name="mentor_type"]' => array('value' => 'professional'),
+	      ),
+	    ),
+	  );
+	  
+	  $form['account']['professional']['years_of_exp'] = array(
+	    '#title' => t('Yrs. Of Experience:'),
+	    '#type' => 'item',
+	    '#markup' => $account->years_of_exp,
+	    '#access' => TRUE,
+	    '#states' => array(
+	      'visible' => array(
+	        ':input[name="mentor_type"]' => array('value' => 'professional'),
+	      ),
+	    ),
+	  );
+	  
+	  $form['account']['professional']['linkedInProfile'] = array(
+	    '#type' => 'item',
+	    '#title' => t('Linkedin Profile:'),
+	    '#markup' => $account->linkedInProfile,
+	    '#access' => $account->connected || $account->role == 'full-profile',
+	    '#states' => array(
+	      'visible' => array(
+	        ':input[name="mentor_type"]' => array('value' => 'professional'),
+	      ),
+	    ),
+	  );
+	  
+	  $form['account']['professional']['last_school_attended'] = array(
+	    '#type' => 'item',
+	    '#title' => t('Last School Attended:'),
+	    '#markup' => $account->last_school_attended,
+	    '#access' => TRUE,
+	    '#states' => array(
+	      'visible' => array(
+	        ':input[name="mentor_type"]' => array('value' => 'professional'),
+	      ),
+	    ),
+	  );
+	  
+	  $form['account']['professional']['year_of_school'] = array(
+	    '#type' => 'item',
+	    '#title' => t('Class of:'),
+	    '#markup' => $account->year_of_school,
+	    '#access' => TRUE,
+	    '#states' => array(
+	      'visible' => array(
+	        ':input[name="mentor_type"]' => array('value' => 'professional'),
+	      ),
+	    ),
+	  );
+  } else {
+  
+	  $form['account']['student'] = array(
+	    '#type' => 'item',
+	    '#prefix' => '<div id="user_student_info_fieldset">',
+    	'#suffix' => '</div>',
+	    '#title' => t('Student Information:'),
+	    //'#collapsible' => TRUE,
+	    '#access' => TRUE,
+	    '#states' => array(
+	      'visible' => array(
+	        ':input[name="mentor_type"]' => array('value' => 'student'),
+	      ),
+	    ),
+	  );
+	  
+	  $form['account']['student']['school_attending'] = array(
+	    '#type' => 'item',
+	    '#title' => t('School Attending:'),
+	    '#markup' => $account->school_attending,
+	    '#access' => TRUE,
+	    '#states' => array(
+	      'visible' => array(
+	        ':input[name="mentor_type"]' => array('value' => 'student'),
+	      ),
+	    ),
+	  );
+	  
+	$form['account']['student']['year_of_school'] = array(
+	    '#type' => 'item',
+	    '#title' => t('Class of:'),
+	    '#markup' => $account->year_of_school,
+	    '#access' => TRUE,
+	    '#states' => array(
+	      'visible' => array(
+	        ':input[name="mentor_type"]' => array('value' => 'professional'),
+	      ),
+	    ),
+	  );
+  } 
+  
+  $form['account']['academic_details'] = array(
+    '#type' => 'item',
+    '#title' => t('Academic Details'),
+    '#access' => TRUE,
+    '#prefix' => '<div id="user_skill_set_fieldset">',
+    '#suffix' => '</div>',
+    //'#collapsible' => TRUE,
+  );
+  
+  $form['account']['academic_details']['areaofmentoring'] = array(
+    '#type' => 'item',
+    '#title' => t('Areas available for mentoring in:'),
+    '#markup' => $account->area_mentoring,
+    '#access' => TRUE,
+  );
+  
+  $form['account']['academic_details']['fieldOfStudy'] = array(
+    '#type' => 'item',
+    '#title' => t('Field of Study'),
+    '#markup' => $account->fos,
+    '#access' => TRUE,
+  );
+  
+  $form['account']['academic_details']['fieldOfSpecialization'] = array(
+    '#type' => 'item',
+    '#title' => t('Field of Specialization'),
+    '#markup' => $account->specialization,
+    '#access' => TRUE,
+  );
+  
+  $form['account']['academic_details']['degree'] = array(
+    '#title' => t('Degree'),
+    '#type' => 'item',
+    '#markup' => $account->degree,
+    '#access' => TRUE,
+  );
+
+  $form['account']['academic_details']['highSchoolName'] = array(
+    '#title' => t('High School Attended'),
+    '#type' => 'item',
+    '#markup' => $account->highSchoolName,
+    '#access' => TRUE,
+  );
+
+  $form['account']['academic_details']['year_of_highschool'] = array(
+    '#title' => t('Year of High School Graduation'),
+    '#type' => 'item',
+    '#markup' => $account->year_of_highschool,
+    '#access' => TRUE,
+  );
+
+  $countrySchool = $account->countrySchool;
+  $stateSchool = $account->stateSchool;
+  $citySchool = $account->citySchool;
+
+  if(isset($countrySchool)){
+    if(isset($stateSchool)){
+        if(isset($citySchool)){
+            $location = $citySchool.','.$stateSchool.','.$countrySchool;
+        } else{
+            $location = $stateSchool.','.$countrySchool;
+        }
+    } else{
+        $location = $countrySchool;
+    }
+  } else{
+    $location = NULL;
+  }
+
+  $form['account']['academic_details']['location_of_highschool'] = array(
+    '#title' => t('Location of High School'),
+    '#type' => 'item',
+    '#markup' => $location,
+    '#access' => TRUE,
+  );
+  
+  $form['account']['general_details'] = array(
+    '#type' => 'item',
+    '#title' => t('General Information:'),
+    //'#collapsible' => TRUE,
+    '#access' => TRUE,
+  );
+  
+  $form['account']['general_details']['about_me'] = array(
+    '#type' => 'item',
+    '#title' => t('About myself'),
+    '#markup' => $account->about_me,
+    '#access' => TRUE,
+  );
+
+  $form['account']['general_details']['other_colleges_accepted_at'] = array(
+    '#type' => 'item',
+    '#title' => t('Other Colleges Accepted At'),
+    '#markup' => $account->other_colleges_accepted_at,
+    '#access' => TRUE,
+  );
+
+  $form['account']['general_details']['fb_uname'] = array(
+    '#type' => 'item',
+    '#title' => t('Facebook Profile Link'),
+    '#markup' => $account->fb_uname,
+    '#access' => TRUE,
+  );
+  
+  $form['account']['general_details']['response_time'] = array(
+    '#title' => t('Expected response time'),
+    '#type' => 'item',
+    '#markup' => $account->response_time, 
+    '#access' => TRUE,   
+  );
+  $form['account']['general_details']['available_time'] = array(
+    '#type' => 'item',
+    '#title' => t('My Typical Available Times During The Week'),
+    '#markup' => $account->available_time,
+    '#access' => TRUE,
+  );
+  $form['account']['general_details']['volunteer'] = array(
+    '#title' => t('Volunteer'),
+    '#type' => 'item',
+    '#markup' => $account->volunteer_text, 
+    '#access' => TRUE,   
+  );
+  $form['account']['general_details']['eng_model'] = array(
+    '#title' => t('Model of Engagement'),
+    '#type' => 'item',
+    '#markup' => $account->engagement_model_with_mentee, 
+    '#access' => TRUE,   
+  );
+  /*
+  $form['account']['general_details']['mentoring_motivation'] = array(
+    '#type' => 'item',
+    '#title' => t('What motivates you to be a mentor'),
+    '#access' => TRUE,
+    '#markup' => $account->mentoring_motivation,
+  ); 
+  */
+  /*$form['account']['general_details']['hobbies'] = array(
+    '#type' => 'item',
+    '#title' => t('Hobbies:'),
+    '#markup' => $account->hobbies,
+    //'#disable' => TRUE,
+  );*/
+  
+	$form['#submit'][] = 'mentorprofile_connection_button_form_submit';
+	return $form;
+  /*$forms[]  = drupal_get_form('mentorprofile_basic_form', $account);
+  $forms[]  = drupal_get_form('mentorprofile_academic_details_form', $account);
+  $forms[]  = drupal_get_form('mentorprofile_mentor_type_form', $account);
+  $forms[]  = drupal_get_form('mentorprofile_general_details_form', $account);
+  return NULL;*/
+	
+}
+
+function mentorprofile_connection_button_form($form, &$form_state, $account, $uid) {
+
+}
+
+function mentorprofile_connection_button_form_submit($form, &$form_state) {
+	$account = $form_state['values']['user'];
+	//if($account->membership == 'mentee-premium-3-months' || $account->membership == 'mentee-premium-6-months' || $account->membership == 'mentee-premium-9-months') {	
+		//mentoringcommon_connect($form_state['values']['mentor_id'], $form_state['values']['mentee_id']);
+		$connection = array();
+		$connection['mentor_id'] = $form_state['values']['mentor_id'];
+		$connection['mentee_id'] = $form_state['values']['mentee_id'];
+		$connection['status'] = 'Pending';
+		$connection['requestor_type'] = '1';
+		
+		$query = db_select('mentee', 'm'); 
+	    $query->join('users', 'u', 'u.uid = m.mid');  
+	    $query->leftJoin('specialization_category', 'sc', 'sc.cid = m.fos_id');
+		//$query->join('specialization_subcategory', 'ssc', 'ssc.scid = m.fos_sub_id');
+		//$query->join('education_qualification', 'eq', 'eq.eid = m.degree_id'); //JOIN node with users
+		
+		$query->condition('m.userid', $form_state['values']['mentee_id'],'=');	   
+		$query->fields('m')
+			->fields('sc', array('name'))
+			//->fields('ssc', array('name'))
+			->fields('u', array('mail'));
+		$query->addField('sc', 'name', 'category_name');
+		//$query->addField('ssc', 'name', 'subcategory_name');
+		$result = $query->execute();
+		
+		$mentee = array();
+		if(	$record = $result->fetchAssoc()) {
+			$mentee['email'] = $record['mail'];
+			$mentee['first_name'] = $record['first_name'];
+			if($record['last_name'] != '')
+	    		$mentee['last_name'] = $record['last_name'][0].'.';
+	    	else
+	    		$mentee['last_name'] = '';
+	    	$mentee['gender'] = $record['gender'];
+		}
+		
+		$values = $form_state['values'];
+	  $activation_code = user_password();
+	  //$values['sender'] = $mentee;
+	  if($form_state['values']['last_name'] != '')
+	  	$values['recipient'] = $form_state['values']['first_name'] . ' ' . $form_state['values']['last_name'][0].'.';
+	  else
+	  	$values['recipient'] = $form_state['values']['first_name'];
+	  $values['sender_name'] = $mentee['first_name'] . ' ' . $mentee['last_name'];
+	  $values['sender_mail'] = $mentee['email'];
+	  $values['sender_gender'] = $mentee['gender'];
+	  $values['sender_id'] = $form_state['values']['mentee_id'];
+	  //$values['category'] = contact_load($values['cid']);
+	  drupal_mail('mentorprofile', 'mentor_connection_mail', $values['mentor_email'], language_default(), $values, 'administer@skoolmentor.com');
+		$success = drupal_write_record('connections', $connection);
+		drupal_set_message('A connection request has been sent. Once it is accepted, you will have to pay the fee for the connection.');
+		drupal_goto('mentor/' . $form_state['values']['mentor_id'] . '/profile');
+	/*} else {
+		drupal_set_message('Please upgrade your account to connect to mentors.','warning');
+		drupal_goto('membership-plans');
+		
+		//mentoringcommon_connect($form_state['values']['mentor_id'], $form_state['values']['mentee_id']);
+		//drupal_goto('mentorprofile/' . $form_state['values']['mentor_id'] . '/view');
+	}*/
+}
+
+function mentee_invitation($menteeid) {
+	
+	//drupal_set_message('<pre>'.print_r($menteeid,true).'</pre>');
+	$mentor = mentorprofile_loadmentor($_SESSION['user']->uid);
+	$values = array();
+	//$values['sender'] = $mentor;
+	if($mentor->last_name != '')
+		$values['sender_name'] = $mentor->first_name . ' ' . $mentor->last_name[0].'.';
+	else
+		$values['sender_name'] = $mentor->first_name;
+	$values['sender_mail'] = $mentor->email;
+	$values['sender_id'] = $_SESSION['user']->uid;
+	$values['connection_status'] = $mentor->connection_status;
+	if($values['connection_status'] == 'Decline')
+		reset_connection_by_id($mentor->cid,false);
+	drupal_mail('mentorprofile', 'mentor_invitation_mail', $menteeid->mail, language_default(), $values, 'administer@skoolmentor.com');
+	drupal_set_message('Invitation sent to '.$menteeid->name.'.');
+	drupal_goto('mentee/'.$menteeid->uid.'/profile');
+}
+
+function mentorprofile_mail($key, &$message, $params)
+{
+  // The key allows for a module to define multiple mails. This
+  // key needs to be the same as the first parameter in drupal_mail() above
+  //if($key == 'user_activation_mail')
+  switch ($key) {  
+  	case 'mentor_connection_mail':
+  		$pro;
+  		if($param['sender_gender'] == '0')
+  			$pro = 'his';
+  		else
+  			$pro = 'her';
+	    $message['subject'] = $params['sender_name'] . ' sent you request';
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi ' . $values['recipient'] .',';
+	    $message['body'][] = 'You have received a connection request from '. $params['sender_name'];
+	    // Adding an empty string to the body array adds an extra line in the email
+	    //$message['body'][] = 'Please click on below link to view ' . $pro . ' profile and connect:<br/>';
+	    //$message['body'][] = 'skoolmentor.com/mentee/'. $params['sender_id'] . '/profile';
+	    $message['body'][] = 'skoolmentor.com/mentee/'. $params['sender_id'] . '/profile';
+	    $message['body'][] = 'Regards,';
+	    $message['body'][] = 'The SkoolMentor Team';
+	    break;
+	case 'mentor_invitation_mail':
+	   	$message['subject'] = $params['sender_name'].' has invited you to connect';
+	   	// Each element of the body array becomes a new line in the email.
+	   	$message['body'][] = 'Hi , ';
+	   	$message['body'][] = '' . $params['sender_name'] .' has invited you to connect with him.';
+	   	// Adding an empty string to the body array adds an extra line in the email
+	   	$message['body'][] = 'You can view ' . $params['sender_name'] .'\'s profile at below link.';
+	   	$message['body'][] = 'https://skoolmentor.com/mentor/' . $params['sender_id'] .'/profile';
+	   	$message['body'][] = 'Regards,';
+	    $message['body'][] = 'The SkoolMentor Team';
+	   	break;
+  }
+}
+
+function mentorprofile_send_message() {
+	/*$entries = db_query("SELECT mid, name FROM {mentee} WHERE userid = ".$form_state['values']['mentee_id']);
+
+	  $options = array();
+	  foreach($entries as $record)
+	  {
+	    $options[$record->scid] =$record->name;
+	  }*/
+	/*$connection = array();
+	$connection['mentor_id'] = $form_state['values']['mentor_id'];
+	$connection['mentee_id'] = $form_state['values']['mentee_id'];
+	$connection['status'] = 'Pending';
+	$connection['requestor_type'] = '1';
+	$success = drupal_write_record('connections', $connection);
+	drupal_goto('menteeprofile/view');*/
+	//return drupal_get_form('privatemsg_new', array('adityasood'));
+}
+
+function mentorprofile_basic_form($form, &$form_state, $account) {
+	//$form['#prefix'] = '<div id="dropdown_specialization_replace">';
+  	//$form['#suffix'] = '</div>';
+  $form['account'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Personal Details'),
+    //'#collapsible' => TRUE,
+  );
+  
+  /*$form['account']['edit'] = array(
+    '#type' => 'textfield',
+    '#default_value' => isset($form_state['values']['edit']) ? $form_state['values']['edit'] : ''
+  );*/
+  
+  $edit = '';
+  if(isset($form_state['values']['edit'])){
+  
+  	$edit = $form_state['values']['edit'];
+  }
+ 
+  $form['account']['first_name'] = array(
+    '#type' => ($edit ? 'textfield' : 'item'),
+    '#title' => t('Name:'),
+    '#maxlength' => 255,
+    '#markup' => $account->first_name . ' ' .$account->last_name,
+    //'#attributes' => array('class' => array('username')),
+    //'#access' => ($register || ($user->uid == $account->uid && user_access('change own username')) || $admin),
+    //'#weight' => -10,
+  );
+  
+  $form['account']['bday'] = array(
+    '#type' => 'item',
+    '#title' => t('Date of birth:'),
+    '#markup' => date('F Y, d', strtotime($account->birthday)),
+    '#access' => !($account->role == 'anonymous-user'),
+  );
+    
+  $form['account']['gender'] = array(
+    '#title' => t('Gender:'),
+    '#type' => 'item',
+    '#markup' => ($account->gender == '0' ? 'Male': 'Female'),
+  );
+  
+  $form['account']['zipcode'] = array(
+    '#type' => 'item',
+    '#title' => t('Zip code:'),    
+    '#markup' => $account->zipcode,
+    '#access' => $account->role == 'full-profile',
+  );
+  
+  
+  
+  /*$form['account']['submit'] = array(
+    '#type' => 'button',
+    '#value' => t('Submit'),    
+    '#ajax' => array(
+    	'event' => 'click',
+        'callback' => 'mentorprofile_ajax_callback',
+        'progress' => array(
+	        'message' => '',
+	      ),
+        'wrapper' => 'dropdown_specialization_replace',
+      ),
+  );*/
+  
+  return $form;
+}
+
+function mentorprofile_ajax_callback($form, &$form_state) {
+    $new_state = array();
+  $new_state['build_info'] = $form_state['build_info'];
+  $new_state['rebuild'] = TRUE;
+  $new_state['values'] = array();
+  $new_state['values']['edit'] = 'edit';
+  $new_state += form_state_defaults();
+
+  $new_form_array = drupal_rebuild_form('dropdown_specialization_replace', $new_state);
+  $new_form = drupal_render($new_form_array);
+
+  $commands = array();
+  $commands[] = ajax_command_html('#form-container-element-id', $new_form);
+
+  return array('#type' => 'ajax', '#commands' => $commands);
+}
+
+function mentorprofile_basic_form_submit($form, $form_state) {
+// my_form submit handler
+
+    $form_state['rebuild'] = true; // appears necessary, otherwise won't work at all
+
+}
+
+function mentorprofile_general_details_form($form, &$form_state, $account) {
+  $form['general_details'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('General Information:'),
+    '#collapsible' => TRUE,
+  );
+  
+  $form['general_details']['mentoring_motivation'] = array(
+    '#type' => 'textarea',
+    '#title' => t('What motivates you to be a mentor?'),
+    '#editable' => FALSE,
+    '#default_value' => $account->mentoring_motivation,
+  );
+  
+  /*$form['general_details']['hobbies'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Hobbies:'),
+    '#default_value' => $account->hobbies,
+    '#disable' => TRUE,
+  );*/
+  return $form;
+}
+
+
+function mentorprofile_academic_details_form($form, &$form_state, $account) {
+
+  $form['academic_details'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Academic Details'),
+    '#access' => $account->role == 'full-profile',
+    '#collapsible' => TRUE,
+  );
+  
+  $form['academic_details']['fieldOfStudy'] = array(
+    '#type' => 'item',
+    '#title' => t('Field of Study'),
+    '#markup' => $account->fos,
+    '#access' => $account->role == 'full-profile',
+  );
+  
+  $form['academic_details']['fieldOfSpecialization'] = array(
+    '#type' => 'item',
+    '#title' => t('Field of Specialization'),
+    '#markup' => $account->fos_sub,
+    '#access' => $account->role == 'full-profile',
+  );
+  
+   $form['academic_details']['degree'] = array(
+    '#title' => t('Degree'),
+    '#type' => 'item',
+    '#markup' => $account->degree,
+    '#access' => $account->role == 'full-profile',
+  );
+  return $form;
+}
+
+function theme_mentorprofile_basic_form($variables) {
+  	
+  
+    $role;  
+	$mentor_id;
+	$account;
+	$submit_rendered = '';
+  $output = '';
+  $basic_info = '';
+  $professional = '';
+  $student_info = '';
+  $academic_details = '';
+  $general_details = '';  
+  drupal_add_css(drupal_get_path('module', 'mentoringcommon') . '/css/common.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+    
+  $form = $variables['form'];
+   
+  foreach ($form as $key => $element) {
+    // Set which elements to render in the table.
+    $allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+    // Make sure this is an element and it's of a type listed above.
+    //drupal_set_message($key);  
+    if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+        
+      	if($element['#type'] == 'submit') {
+      		$submit_rendered = drupal_render($element);
+      	}
+      	/*if($element['#type'] == 'hidden' && $key == 'mentor_id') {      	
+      		$mentor_id = $element['#default_value'];
+      	}
+      	if($key == 'role') {
+      		$role = $element['#default_value'];
+      	} else */
+      	if ($key == 'user'){
+      		$account = $element['#default_value'];
+      	} else if($key == 'basic_info') {
+      		$label = $element['#title'];
+	        unset($form[$key]['#title']);
+	        $basic_info .= '<div><br/><div class="mentor-profile-tab-header1">&nbsp;&nbsp;&nbsp;</div>';
+	        foreach($form[$key] as $field => $field_element) {
+	        	if (is_array($form[$key][$field]) && $field_element['#access'] && isset($field_element['#type']) && in_array($field_element['#type'], $allowed_elements)) {
+	        		
+	        		$label = $field_element['#title'];
+	        		$basic_info .= '<div class="mentor-profile-tab-header2"><div class="mentor-profile-con-div2"><b>' . $label . '</b></div>
+	        						<div class="wordwrap mentor-profile-con-div2">&nbsp;' . $field_element['#markup'] . '</div></div>';
+	        	}
+	        }
+	        $basic_info = '<div>' . $basic_info . '</div></div>';
+	        //$rendered = drupal_render($form[$key]);	
+	        //$basic_info .= '<table><tr><font size="4">Basic Information</font></tr><tr>'. $rendered .'</tr></table>';
+      	} else if($key == 'professional') {
+      		$label = $element['#title'];
+	        unset($form[$key]['#title']);
+	        $professional .= '<div><br/><div class="mentor-profile-con-div2 mentor-profile-tab-header1">&nbsp;&nbsp;&nbsp;</div>';
+	        if($account->role == 'full-profile') {
+	        	//$professional .= '<div style="margin-left: 20%;">'.'<button onclick="location.href=\'/mentorprofile/editabout\'" id="editprofile" type="button">Edit</button></div>';
+	        }
+	        $professional .= '<div class="mentor-profile-tab-header3">'; 
+	        foreach($form[$key] as $field => $field_element) {
+	        	if (is_array($form[$key][$field]) && $field_element['#access'] && isset($field_element['#type']) && in_array($field_element['#type'], $allowed_elements)) {
+	        		
+	        		$label = $field_element['#title'];
+	        		$professional .= '<div class="mentor-profile-tab-header2"><div class="mentor-profile-con-div2"><b>' . $label . '</b></div>
+	        						<div class="wordwrap mentor-profile-con-div2" >&nbsp;' . $field_element['#markup'] . '</div></div>';
+	        	}
+	        }
+	        $professional = '<div>' . $professional . '</div></div></div>';
+	        //$professional .= '<table><tr><font size="4">Professional</font></tr><tr>'. $rendered .'</tr></table>';
+      	} else if($key == 'student') {
+      		$label = $element['#title'];
+	        unset($form[$key]['#title']);
+	        $student_info .= '<div><br/><div class="mentor-profile-con-div2 mentor-profile-tab-header1">&nbsp;&nbsp;&nbsp;</div>';
+	        if($account->role == 'full-profile') {
+	        	///$student_info .= '<div style="margin-left: 20%;">'.'<button onclick="location.href=\'/mentorprofile/editabout\'" id="editprofile" type="button">Edit</button>'.'</div>';
+	        }
+	        $student_info .= '<div class="mentor-profile-tab-header3">';
+	        foreach($form[$key] as $field => $field_element) {
+	        	if (is_array($form[$key][$field]) && $field_element['#access'] && isset($field_element['#type']) && in_array($field_element['#type'], $allowed_elements)) {
+	        		
+	        		$label = $field_element['#title'];
+	        		$student_info .= '<div class="mentor-profile-tab-header2"><div class="mentor-profile-con-div2"><b>' . $label . '</b></div>
+	        						<div class="wordwrap mentor-profile-con-div2">&nbsp;' . $field_element['#markup'] . '</div></div>';
+	        	}
+	        }
+	        $student_info = '<div>' . $student_info . '</div></div></div>';
+	        //$rendered = drupal_render($form[$key]);	
+	        //$student_info .= '<table><tr><font size="4">'. $label .'</font></tr><tr>'. $rendered .'</tr></table>';
+      	} else if($key == 'academic_details') {
+      		$label = $element['#title'];
+	        unset($form[$key]['#title']);
+	        $academic_details .= '<div><br/><div class="mentor-profile-con-div2 mentor-profile-tab-header1">&nbsp;&nbsp;&nbsp;</div>';
+	        if($account->role == 'full-profile') {
+	        	//$academic_details .= '<div style="margin-left: 20%;">'.'<button onclick="location.href=\'/mentorprofile/editabout\'" id="editprofile" type="button">Edit</button>'.'</div>';
+	        }
+	        $academic_details .= '<div class="mentor-profile-tab-header3">';
+	        foreach($form[$key] as $field => $field_element) {
+	        	if (is_array($form[$key][$field]) && $field_element['#access'] && isset($field_element['#type']) && in_array($field_element['#type'], $allowed_elements)) {
+	        		
+	        		$label = $field_element['#title'];
+	        		$academic_details .= '<div class="mentor-profile-tab-header2"><div class="mentor-profile-con-div2"><b>' . $label . '</b></div>
+	        						<div class="wordwrap mentor-profile-con-div2">&nbsp;' . $field_element['#markup'] . '</div></div>';
+	        	}
+	        }
+	        $academic_details = '<div>' . $academic_details . '</div></div></div>';
+	        //$rendered = drupal_render($form[$key]);	
+	        //$academic_details .= '<table><tr><font size="4">Skill Set</font></tr><tr>'. $rendered .'</tr></table>';
+      	} else if($key == 'general_details') {
+      		$label = $element['#title'];
+	        unset($form[$key]['#title']);
+	        $general_details .= '<div><br/><div class="mentor-profile-con-div2 mentor-profile-tab-header1">&nbsp;&nbsp;&nbsp;</div>';
+	        if($account->role == 'full-profile') {
+	        	//$general_details .= '<div style="margin-left: 20%;">'.'<button onclick="location.href=\'/mentorprofile/editabout\'" id="editprofile" type="button">Edit</button>'.'</div>';
+	        }
+	        $general_details .= '<div class="mentor-profile-tab-header3">';
+	        foreach($form[$key] as $field => $field_element) {
+	        	if (is_array($form[$key][$field]) && $field_element['#access'] && isset($field_element['#type']) && in_array($field_element['#type'], $allowed_elements)) {
+	        		
+	        		$label = $field_element['#title'];
+	        		$markUp =  $field_element['#markup'];
+              if($markUp == "All of the above"){
+                $markUp = "On demand 30 minutes, On demand 1 hour, 3 months.";
+              }
+              if($label =="Other Colleges Accepted At"){
+                $general_details .= '<div class="mentor-profile-tab-header2"><div class="mentor-profile-con-div2"><b>' . $label . '</b>&nbsp;<span><div class="tooltip" style="display: inline;font-weight: normal;"><img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" />
+              <span>This provides a list of colleges your potential mentors got accepted, other than the one they are currently studying at.</span></div></span></div>
+                      <div class="wordwrap mentor-profile-con-div2">&nbsp;' . $markUp . '</div></div>';
+              }else if($label =="Facebook Profile Link"){
+                $username = $markUp;
+                $markUp = "https://facebook.com/".$markUp;
+                $general_details .= '<div class="mentor-profile-tab-header2"><div class="mentor-profile-con-div2"><b>' . $label . '</b>&nbsp;<span><div class="tooltip" style="display: inline;font-weight: normal;"><img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" />
+              <span>Provide your Facebook profile username, so that Mentees can have a better understanding of you.<br/>Eg: skoolmentorUSA as in https://facebook.com/skoolmentorUSA</span></div></span></div>
+                      <div class="wordwrap mentor-profile-con-div2">&nbsp;<a href="' . $markUp . '/" target="_blank">'.$username.'</a></div></div>';
+              }else if($label =="Expected response time"){
+                $general_details .= '<div class="mentor-profile-tab-header2"><div class="mentor-profile-con-div2"><b>' . $label . '</b>&nbsp;<span><div class="tooltip" style="display: inline;font-weight: normal;"><img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" />
+              <span>This provides a rough guideline of how often to expect a response from your potential mentors. It is by no means binding because your mentor\'s  schedules could change anytime. Once you connect to your mentors you should decide on mutually agreeable response times.</span></div></span></div>
+                      <div class="wordwrap mentor-profile-con-div2">&nbsp;' . $markUp . '</div></div>';
+              }else if($label =="My Typical Available Times During The Week"){
+                $general_details .= '<div class="mentor-profile-tab-header2"><div class="mentor-profile-con-div2"><b>' . $label . '</b>&nbsp;<span><div class="tooltip" style="display: inline;font-weight: normal;"><img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" />
+                  <span>This schedule provides a rough idea of your mentor\'s availability during the week for a meeting on Skype or other virtual meeting places. This schedule is not binding because your mentor\'s schedule could change any time. Once you connect to your mentor, you should decide on mutually agreeable meeting times.</span></div></span></div>
+                  <div class="wordwrap mentor-profile-con-div2">&nbsp;' . $markUp . '</div></div>';
+              }else if($label == "Model of Engagement"){
+	        			$general_details .= '<div class="mentor-profile-tab-header2"><div class="mentor-profile-con-div2"><b>' . $label . '</b>&nbsp;<span><div class="tooltip" style="display: inline;font-weight: normal;"><img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" alt="Hint" />
+							<span>Engagement model - specifies the mentorship duration.</br></br>				
+<ul><li><b>On demand 30 mins/1 hr mentoring</b> is a mentoring session for 30 minutes/1 hour only. It requires no commitment beyond the 30 minutes/1 hour of mentoring by the mentor or the mentee.</li></br>				
+<li><b>3 months</b> - specifies a total mentoring duration of 3 months with the mentee. Within the 3 month period mentors and mentees  meet for approx 1-2 hours per month on a mutually agreed upon frequency and meeting duration to add up to approx 1-2 hours/month. Eg: mentors and mentees can choose to meet once a week for 25-30 minutes for upto 3 months.</li></ul>  </span></div></span></div>
+	        						<div class="wordwrap mentor-profile-con-div2">&nbsp;' . $markUp . '</div></div>';
+	        		}else{
+                $general_details .= '<div class="mentor-profile-tab-header2"><div class="mentor-profile-con-div2"><b>' . $label . '</b></div>
+	        				<div class="wordwrap mentor-profile-con-div2">&nbsp;' . $field_element['#markup'] . '</div></div>';
+	        		}
+	        	}
+	        }
+	        $general_details = '<div>' . $general_details . '</div></div></div>';
+	        //$rendered = drupal_render($form[$key]);	
+	        //$general_details .= '<table><tr><font size="4">General</font></tr><tr>'. $rendered .'</tr></table>';
+      	}
+    }    
+  }
+  
+  $output .= '<div>
+  				<div class="mentor-profile-usr-pic2">';
+  $output .='<div class=" mentor-profile-usr-pic3 ">';
+  $output .='<div class=" mentor-profile-usr-pic4">';
+  
+  $user = user_load($account->mid);
+  //var_dump($user);
+  if($user->picture){
+  	$output .= theme_image_style(
+  			array(
+  					'style_name' => 'thumbnail',
+  					'path' => $user->picture->uri,
+  					'attributes' => array(
+  							'class' => 'avatar',
+  							'style'=> 'object-fit:fill; height: 150px;'
+  					)
+  			)
+  	);
+  }else{
+  	$output .='<img src="/sites/default/files/styles/thumbnail/public/pictures/picture-571-1395975666.png" />';
+  }
+  
+  $output .='</div>';
+  $rating = mentoringcommon_mentor_rating($account->mid);
+   
+  $path = drupal_get_path('module', 'fivestar');
+  drupal_add_css($path . '/css/fivestar.css');
+  $output .= '<div class="mentor-profile-usr-pic9 ">';
+  $output.= render(theme('fivestar_static', array('rating' => $rating['average'], 'stars' => 5, 'tag' => 'userrating',
+  		'widget' => array( 'name' => 'oxygen', 'css' => $path . '/widgets/oxygen/oxygen.css' ))));
+   $output .= '</div><a class="mentor-profile-usr-pic6" href="/user/' . $account->mid.'">View Reviews
+		   </a>    
+		   <div class="mentor-profile-usr-pic7 "></div>';
+		   
+   if($account->role == 'authenticated-user') {
+   	  $user = user_load($account->mentee_id);
+   	  $roles = $user->roles;
+ 	  if(!empty($roles)){			 		
+	 	  foreach($roles as $element) {
+ 	  		//drupal_set_message($account->cid);
+	 		if( $account->cid != 0 && $account->connection_status == 'Confirmed' && substr( $element, 0, 6 ) === 'mentee') {
+	 			$user_rating = mentoringcommon_mentor_rating_by_mentee($account->mid, $account->mentee_id);
+	 			//if(empty($user_rating))
+	 				$output .= '<a class="mentor-profile-usr-pic6" href="/mentor/'.$account->mid .'/rate">Write a Review</a>';
+	 		}
+	 	  }
+	  }
+   }	
+  $output .= '</div>'; 
+  if($account->last_name != '.')
+  	$output .= ' <div class="mentor-profile-user-details1">' . $account->first_name . ' ' . $account->last_name ;
+  else
+  	$output .= ' <div class="mentor-profile-user-details1">' . $account->first_name;
+   if(!empty($professional)) {
+   	$output .= '<div class = "wordwrap mentor-profile-user-details2" >' .$account->last_school_attended.' , Class of '.$account->year_of_school.'</div>';
+   }else{
+   	$output .= '<div class = "wordwrap mentor-profile-user-details2" >' .$account->school_attending.' , Class of '.$account->year_of_school.'</div>';
+   }
+  $output .= '<div class = "wordwrap mentor-profile-user-details2" > Specialization: '.$account->specialization.'</div>';
+  if($account->volunteer == '1'){
+  	$output .= '<img style="max-width: 30%;" src="/sites/all/modules/custom/faqs/volunteer.png" />';
+  }
+  $output .= '</div>';
+ 
+  				 if(!empty($submit_rendered)){
+  				 	$userId = $_SESSION['user']->uid;
+  				 	$user = user_load($userId);
+  				 	$role = '';
+  				 	foreach ($user->roles as $value) {
+						if(strpos($value,'mentee') !== false){
+							$role = 'mentee';
+							break;
+						}
+					}		
+
+						if($role == 'mentee') {
+		  				 	if($account->accept_mentee != "2"){
+		  						$output .= ' <div class="mentor-profile-button-div2"><div class="form-submit button small round steel_blue" id="connectmentor'.$account->mid .'" mentorid=' .$account->mid . ' volunteer="' . $account->volunteer  . '" subscription="' . $account->engagement_model_with_mentee . '"type="button">Connect</div></div>';
+		  				 	}else{
+		  				 		$output .= '<div class="mentor-profile-button-div2 "><div class="form-submit button small round decline_button" type="button" disabled="disabled">Connect</div>
+					      			<span >
+		      					<div class="tooltip" style="display: inline;font-weight: normal;">
+		      					<img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" />
+								<span style="margin-top: -0%;"> This mentor is not accepting any new mentees.<br/> Please try again after some days.
+		      					</br>
+								</span>
+		      					</div>
+		      					</span></div>';
+		  				 	}
+		  				 
+	  				 }
+  				 }
+  				 if(empty($submit_rendered) && $account->cid != 0 && $account->role == 'authenticated-user') {
+  				 	
+  				 	if($account->connection_status == 'Confirmed') {
+  				 		$output .= '<div  class=" mentor-profile-button-div2"><button class="button small round steel_blue" onclick="location.href=\'/messages/new/' . $account->mid . '\'" id="editprofile" type="button">Send Message</button></div>';
+  				 	} else if($account->connection_status == 'Pending') {
+  				 		$output .= '<div  class="mentor-profile-button-div2 small steel_blue">Connection Request Pending</div>';
+  				 	} else if($account->connection_status == 'Payment Pending') {
+				      	$output .= '<div class="mentor-profile-user-details1" style="font-size:17px"><a href="/mentee/connection/?mentor_id=' . $account->mid  . '&subscription=' .  $account->alias.'&volunteer=' . $account->volunteer   .'"  class="button small round steel_blue pay_button" >Pay</a>
+				      				<a href="/connection/'.$account->cid.'/reset"  class="button small round steel_blue" >Reset Connection</a></div>';
+				    } else if($account->connection_status == 'Decline') {
+				    	$output .= '<div  class=" mentor-profile-button-div2"><button class="button small round grey" onclick="location.href=\'/messages/new/' . $account->mid . '\'" id="editprofile" type="button" disabled="true">Request Declined</button></div>';
+				    }
+  				 }  				
+  $output .= '</div><div class="mentor-profile-tab-heading1">';
+  $output .= '<div id="profile_nav_menu"><ul>
+  <li class="active" name="basicinfoPan" >Basic Info</li>';
+   if(!empty($professional)) {
+   	$output .= '<li class="inactive" name="professionalPan" >Professional</li>';
+   }else{
+   $output .= '	<li class="inactive" name="professionalPan" >Student</li>';
+   }
+  $output .= '<li class="inactive" name="skillsetPan">Skill Set</li>
+ <li class="inactive" name="generaldetailsPan" >General</li>
+  </ul></div>';
+  $output .= '<div class="mentor-profile-tab-div1 ">';
+  if(!empty($professional)) {
+  	$output .= '<div id= "professionalPan" class="mentor-profile-tab-div2 mentor-profile-tab-div3">' . $professional . '</div>';
+  } else {
+  	$output .= '<div id= "professionalPan" class="mentor-profile-tab-div2 mentor-profile-tab-div3">' . $student_info . '</div>';
+  }
+  $output .= '<div id= "skillsetPan" class="mentor-profile-tab-div2 mentor-profile-tab-div3">' . $academic_details . '</div>  					
+					<div id= "basicinfoPan" class="mentor-profile-tab-div2 ">' . $basic_info  . '</div>
+	  				<div id= "generaldetailsPan" class="mentor-profile-tab-div2 mentor-profile-tab-div3">' . $general_details . '</div>
+	  							</div></div>
+  			</div>';
+  
+  $output .= '<script type="text/javascript">
+		(function ($) {
+      $(".inactive").click(function(){
+        var $currentPan = $(".active").attr("name");
+        var $newPan = $(this).attr("name");
+        $("#"+$currentPan+"").css("display","none");
+        $("#"+$newPan+"").css("display","block");
+        $(".active").attr("class","inactive");
+        $(this).attr("class","active");
+      });
+      $("[name=basicinfoPan]").click(function(){
+        var $currentPan = $(".active").attr("name");
+        var $newPan = $(this).attr("name");
+        $("#"+$currentPan+"").css("display","none");
+        $("#"+$newPan+"").css("display","block");
+        $(".active").attr("class","inactive");
+        $(this).attr("class","active");
+      });
+      $("[id^=connectmentor]").click(function(){
+        var $mentor_id = $(this).attr("mentorid");
+        var $subscription = $(this).attr("subscription");
+        var $volunteer = $(this).attr("volunteer");
+        if($volunteer == "1"){
+          $("#subscriptionWindow").find(".views-row-first").find(".views-field-display-price").find("span").text("$0.00");
+          $("#subscriptionWindow").find(".views-row-mid").find(".views-field-display-price").find("span").text("$0.00");
+          $("#subscriptionWindow").find(".views-row-last").find(".views-field-display-price").find("span").text("$0.00");
+        }else{
+          $("#subscriptionWindow").find(".views-row-first").find(".views-field-display-price").find("span").text("$25.00");
+          $("#subscriptionWindow").find(".views-row-mid").find(".views-field-display-price").find("span").text("$50.00");
+          $("#subscriptionWindow").find(".views-row-last").find(".views-field-display-price").find("span").text("$225.00");
+        }
+        if($subscription == "On Demand 30 minutes"){
+          $("#subscriptionWindow").find(".views-row-mid").hide();
+          $("#subscriptionWindow").find(".views-row-last").hide();
+        }else if($subscription == "On Demand 1 hour"){
+          $("#subscriptionWindow").find(".views-row-first").hide();
+          $("#subscriptionWindow").find(".views-row-last").hide();
+        }else if($subscription == "3 Month"){
+          $("#subscriptionWindow").find(".views-row-first").hide();
+          $("#subscriptionWindow").find(".views-row-mid").hide();
+        }else{
+          $("#subscriptionWindow").find(".views-row-last").show();
+          $("#subscriptionWindow").find(".views-row-first").show();
+          $("#subscriptionWindow").find(".views-row-mid").show();
+        }
+        $("#threemonthBuyButton").attr("href","/mentee/"+$mentor_id+"/connect/3month");
+        $("#ondemandBuyButton").attr("href","/mentee/"+$mentor_id+"/connect/ondemand");
+        $("#ondemand30minsBuyButton").attr("href","/mentee/"+$mentor_id+"/connect/30mins");
+        $("#subscriptionWindow").fadeIn(1000);
+      });
+    })(jQuery);
+  
+	</script>';
+  
+  return $output;
+  
+}
+
+function userprofle_connection_action($uid) {
+	$sql = "update {connections} set status = 'Decline',last_update_time = NOW() WHERE mentor_id=" . $_SESSION['user']->uid . " AND mentee_id=" . $uid;
+    $result = db_query($sql);
+    
+    $query = db_select('mentee', 'm'); 
+    $query->join('users', 'u', 'u.uid = m.mid');
+	
+	$query->condition('m.userid', $uid,'=');	   
+	$query->fields('m')
+		->fields('u', array('mail'));
+	$result = $query->execute();
+	
+	$mentee = array();
+	if(	$record = $result->fetchAssoc()) {
+		$mentee['email'] = $record['mail'];
+		$mentee['first_name'] = $record['first_name'];
+		if($record['last_name'] != '')
+    		$mentee['last_name'] = $record['last_name'][0].'.';
+    	else
+    		$mentee['last_name'] = '';
+	}
+	
+	$query = db_select('mentor', 'm'); 
+    $query->join('users', 'u', 'u.uid = m.mid');
+	
+	$query->condition('m.userid', $_SESSION['user']->uid,'=');	   
+	$query->fields('m')
+		->fields('u', array('mail'));
+	$result = $query->execute();
+	
+	$mentor = array();
+	if(	$record = $result->fetchAssoc()) {
+		$mentor['email'] = $record['mail'];
+		$mentor['first_name'] = $record['first_name'];
+		if($record['last_name'] != '')
+    		$mentor['last_name'] = $record['last_name'][0].'.';
+    	else
+    		$mentor['last_name'] = '';
+	}
+		
+    
+    	$values = array();
+	  //$values['sender'] = $mentor;
+	  $values['sender_name'] = $mentor['first_name'] . ' ' . $mentor['last_name'];
+	  $values['sender_mail'] = $mentor['email'];
+	  $values['sender_id'] = $_SESSION['user']->uid;
+	  //$values['category'] = contact_load($values['cid']);
+	  drupal_mail('mentorprofile', 'mentee_connection_decilne_mail', $mentee['email'], language_default(), $values, 'administer@skoolmentor.com');
+    
+    drupal_set_message('You are now connected to '. $mentee['first_name'] . ' ' . $mentee['first_name']);
+    drupal_goto('mentor/' . $_SESSION['user']->uid . '/profile');
+}
+
+function theme_mentorprofile_recommendation_list($variables) {
+	
+	drupal_add_css(drupal_get_path('module', 'mentoringcommon') . '/css/common.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+	
+  $form = $variables['form'];
+  $output = '<div class= " sidebar-div"><div class="mentor-profile-blocks-heading1">Recommendations</div><div class="mentor-profile-blocks-heading2">'; 
+  $temp = 0;
+  
+  foreach ($form as $key => $element) {
+    // Set which elements to render in the table.
+    $allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+    // Make sure this is an element and it's of a type listed above.
+    
+    if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+      if($element['#type'] == 'item' && $element['#title'] == 'Recommendation Based On Area') {
+        if($element['#type'] == 'item') {       
+          $rows = $element['#markup'];
+          if(empty($rows)) {
+            $output .= 'No recommendation of mentees</div>';
+            //return $output;
+          }
+          unset($form[$key]['#markup']);
+          foreach ($rows as $key => $element) {
+            if($element['connection_id'] == 0) {
+              $temp = $temp + 1;
+              $picture;
+              if(!empty($element['picture'])) {
+                $picture = file_load($element['picture']);
+              } else {
+                $picture = get_user_default_picture($element['mid'], 'mentee');
+              }
+              //$rendered = drupal_render($element);
+              $style = variable_get('user_picture_style', '');
+              //if($temp%2 == 0)
+              //$output .= '<div style="width: 100%; overflow: hidden; border-bottom: 1px solid gray; background-color:#d2d2d2">';
+              //else
+              //$output .= '<div style="width: 100%; overflow: hidden; border-bottom: 1px solid gray; background-color:#c0c0c0">';
+              $output .= '<div class="mentor-profile-usr-pic8">';
+                 
+              $output .= '<div class="user-grid-pic mentor-profile-usr-pic1"><div >'.theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentee', 'title' => 'Mentee')).'</div></div>';
+              $mentor_details = '<div class="mentor-profile-user-details3"><a style="color: black;" href="/mentee/'. $element['mid'] .'/profile">'.$element['first_name'] . ' ' . $element['last_name']. '</a></div><div>Area wants mentoring: ' . $element['area_mentoring'].'</div>';
+              $mentor_details .= 'Specialization: '.$element['subcategory_name'];
+              $mentor_details .= '<br/>State: '.$element['state'];
+              $mentor_details .= '<br/>City: '.$element['city'];
+              $output .= '<div class="mentor-profile-con-div2" style="color:black;">' . $mentor_details . '</div>';
+              $output .= '<div class="mentor-profile-button-div2"><button class="button small round steel_blue invite_mentee" onclick="location.href=\'/mentor/' . $element['mid'] . '/invite\'" type="button">Invite</button></div></div>';
+            }
+          }
+        }
+      } else if($element['#type'] == 'item' && $element['#title'] == 'Recommendation Based On School') {
+        if($element['#type'] == 'item') {
+          $rowsJunior = $element['#markup'];
+          $output .= '<div class= " sidebar-div"><div class="mentor-profile-blocks-heading1">Your High School/Community College Junior Recommendations</div><div class="mentor-profile-blocks-heading2">';
+          if(empty($rowsJunior)) {
+            $output .= 'No recommendation of mentees</div>';
+            //return $output;
+          }
+          unset($form[$key]['#markup']);
+          foreach ($rowsJunior as $key => $element) {
+            if($element['connection_id'] == 0) {
+              $temp = $temp + 1;
+              $picture;
+              if(!empty($element['picture'])) {
+                $picture = file_load($element['picture']);
+              } else {
+                $picture = get_user_default_picture($element['mid'], 'mentee');
+              }
+              $style = variable_get('user_picture_style', '');
+              $output .= '<div class="mentor-profile-usr-pic8">';
+              $output .= '<div class="user-grid-pic mentor-profile-usr-pic1"><div >'.theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentee', 'title' => 'Mentee')).'</div></div>';
+              $mentor_details = '<div class="mentor-profile-user-details3"><a style="color: black;" href="/mentee/'. $element['mid'] .'/profile">'.$element['first_name'] . ' ' . $element['last_name']. '</a></div><div>Area wants mentoring: ' . $element['area_mentoring'].'</div>';
+              $mentor_details .= 'Specialization: '.$element['subcategory_name'];
+              $mentor_details .= '<br/>State: '.$element['state'];
+              $mentor_details .= '<br/>City: '.$element['city'];
+              $output .= '<div class="mentor-profile-con-div2" style="color:black;">' . $mentor_details . '</div>';
+              $output .= '<div class="mentor-profile-button-div2"><button class="button small round steel_blue invite_mentee" onclick="location.href=\'/mentor/' . $element['mid'] . '/invite\'" type="button">Invite</button></div></div>';
+            }
+          }
+          $output .= '</div></div>';
+        }
+      }
+    }
+  } 
+
+  $output .= '</div></div>';
+  //$output .= drupal_render_children($form);
+  return $output;
+}
+
+
+
+/*function mentorprofile_preprocess_page(&$variables, $hook) {
+    $variables['theme_hook_suggestions'][] = 'node--mentorprofile';
+  
+}
+
+function mentorprofile_theme_registry_alter(&$theme_registry) {
+	
+  $mod_path = drupal_get_path('module', 'mentorprofile');
+  $theme_registry_copy = $theme_registry;       // munge on a copy
+  _theme_process_registry($theme_registry_copy, 'phptemplate', 'theme_engine', 'pow', $mod_path.'/templates');
+  $theme_registry += array_diff_key($theme_registry_copy, $theme_registry);
+  $hooks = array('node');
+  foreach ($hooks as $h) {
+    _mentorprofile_insert_after_first_element($theme_registry[$h]['theme paths'], $mod_path);
+  }
+}
+*/
+/**
+ * Helper function for re-ordering arrays (needed by theme_registry_alter)
+*/
+/*function _mentorprofile_insert_after_first_element(&$a, $element) {
+  if(is_array($a)) {
+    $first_element = array_shift($a);
+    array_unshift($a, $first_element, $element);
+  }
+}
+*/
+function mentorprofile_node_info() {
+  return array(
+    'mentorprofile' => array(
+      'name' => t('User profile'),
+      'base' => 'mentorprofile',
+      'description' => t('Use for multi-user blogs. Every user gets a personal blog.'),
+    )
+  );
+  }

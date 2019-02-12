@@ -1,0 +1,613 @@
+<?php
+function mentorsearchresult_menu() {
+  $items['mentor/searchResult'] = array(
+    'title' => 'Mentors',
+    'page callback' => 'mentorsearchresult_page',
+    'access callback' => TRUE,
+  );
+  
+  $items['mentee/%/connect/%'] = array(
+    'title' => '',
+    'page callback' => 'mentorsearchresult_mentee_connect',
+    'page arguments'   => array(1,3),
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+function mentorsearchresult_mentee_connect($mentor_id, $engagement_model) {
+
+	//mentoringcommon_connect_mentee($mentor_id);
+	$result = db_query("SELECT sid, subscription_name FROM {subscription} WHERE alias = :alias", array(':alias' => $engagement_model))->fetchField();
+	$query = db_select('subscription', 's');
+	$query->condition('s.alias', $engagement_model,'=');	   
+	$query->fields('s');
+	$result = $query->execute();
+	$sid;
+	$subscription_name;
+	if(	$record = $result->fetchAssoc()) {
+		$sid = $record->sid;
+		$subscription_name = $record->$subscription_name;
+	}
+	if($engagement_model == 'ondemand') {
+		$sid = 1;
+		$subscription_name = 'On Demand 1 hr';
+	} else {
+		$sid = 2;
+		$subscription_name = '3 Months';
+	}
+	$mentee_id = $_SESSION['user']->uid;
+	$connection = array();
+	$connection['mentor_id'] = $mentor_id;
+	$connection['mentee_id'] = $_SESSION['user']->uid;
+	$connection['status'] = 'Pending';
+	$connection['requestor_type'] = '1';
+	$connection['subscription_id'] = $sid;
+	$query = db_select('mentee', 'm'); 
+    $query->join('users', 'u', 'u.uid = m.mid');  
+    $query->leftJoin('specialization_category', 'sc', 'sc.cid = m.fos_id');
+	//$query->join('specialization_subcategory', 'ssc', 'ssc.scid = m.fos_sub_id');
+	//$query->join('education_qualification', 'eq', 'eq.eid = m.degree_id'); //JOIN node with users
+	
+	$query->condition('m.userid', $mentee_id,'=');	   
+	$query->fields('m')
+		->fields('sc', array('name'))
+		//->fields('ssc', array('name'))
+		->fields('u', array('mail'));
+	$query->addField('sc', 'name', 'category_name');
+	//$query->addField('ssc', 'name', 'subcategory_name');
+	$result = $query->execute();
+	
+	$mentee = array();
+	if(	$record = $result->fetchAssoc()) {
+		$mentee['email'] = $record['mail'];
+		$mentee['first_name'] = $record['first_name'];
+    	$mentee['last_name'] = $record['last_name'];
+	}
+	$query = db_select('mentor', 'm'); 
+    $query->join('users', 'u', 'u.uid = m.mid');  
+    $query->leftJoin('specialization_category', 'sc', 'sc.cid = m.fos_id');
+	
+	$query->condition('m.userid', $mentor_id,'=');	   
+	$query->fields('m')
+		->fields('sc', array('name'))
+		//->fields('ssc', array('name'))
+		->fields('u', array('mail'));
+	$query->addField('sc', 'name', 'category_name');
+	//$query->addField('ssc', 'name', 'subcategory_name');
+	$result = $query->execute();
+	
+	$mentor = array();
+	if(	$record = $result->fetchAssoc()) {
+		$mentor['email'] = $record['mail'];
+		$mentor['first_name'] = $record['first_name'];
+    	$mentor['last_name'] = $record['last_name'];
+    	$mentor['eng_model'] = $record['engagement_model_with_mentee'];
+    	$accept_mentee = $record['accept_mentee'];
+    	if(isset($accept_mentee) && $accept_mentee == 2) {
+    		drupal_set_message($mentor['first_name'] . ' ' . $mentor['last_name'] . " is not accepting currently any connection request.");
+    		drupal_goto();
+    	}
+    	
+    	if($mentor['eng_model'] != 'Both' && $mentor['eng_model'] != $subscription_name){
+    		drupal_goto();
+    	}
+	}
+	$values = array();
+  $activation_code = user_password();
+  //$values['sender'] = $mentee;
+  $values['mentee_name'] = $mentee['first_name'] . ' ' . $mentee['last_name'];
+  $values['mentor_name'] = $mentor['first_name'] . ' ' . $mentor['last_name'];
+  $values['mentee_mail'] = $mentee['email'];
+  $values['sender_id'] = $mentee_id;
+  $values['mentor_id'] = $mentor_id;
+  $values['model'] = $subscription_name;
+  //$values['category'] = contact_load($values['cid']);
+  drupal_mail('mentorsearchresult', 'mentorsearch_connection_mail', $mentor['email'], language_default(), $values, 'administer@skoolmentor.com');
+	//$success = drupal_write_record('connections', $connection);
+  	$query = "INSERT INTO connections (cid,mentor_id,mentee_id,status,requestor_type,subscription_id,create_time,last_update_time) VALUES (null,:mentor_id,:mentee_id,:status,:requestor_type,:subscription_id,NOW(),NOW())";
+	$result = db_query($query, array(':mentor_id' => $connection['mentor_id'], ':mentee_id' => $connection['mentee_id'], ':status' => $connection['status'],':requestor_type'=>$connection['requestor_type'],':subscription_id'=>$connection['subscription_id']));
+	
+	drupal_set_message('A connection request has been sent. Once it is accepted, you will have to pay the fee for the connection.');
+	drupal_goto('mentor/' . $mentor_id . '/profile');
+}
+
+function mentorsearchresult_mail($key, &$message, $params)
+{
+  // The key allows for a module to define multiple mails. This
+  // key needs to be the same as the first parameter in drupal_mail() above
+  //if($key == 'user_activation_mail')
+  switch ($key) {  
+  	case 'mentorsearch_connection_mail':
+	    $message['subject'] = 'Connection request from ' . $params['mentee_name'];
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = 'Hi ' . $params['mentor_name'].',';
+	    $message['body'][] = 'You have received a connection request from '. $params['mentee_name'] . '.';
+	    $message['body'][] = $params['mentee_name'] . ' has selected the engagement model as ' . $params['model'];
+	    // Adding an empty string to the body array adds an extra line in the email
+	    $message['body'][] = 'Please click on below link to view his profile :';
+	    //$message['body'][] = 'skoolmentor.com/menteeprofile/'. $params['sender_id'] . '/view';
+	    $message['body'][] = 'skoolmentor.com/mentee/'. $params['sender_id'] . '/profile
+
+Regards,
+The SkoolMentor Team';
+	    break;
+  }
+}
+
+function mentorsearchresult_page() {
+	$header = array(
+	    array('data' => 'First Name', 'field' => 'first_name', 'sort' => 'asc'),
+	    array('data' => 'Last Name', 'field' => 'last_name',),
+	    array('data' => 'Educational Qualification', 'field' => 'edu_qualification'),
+	    array('data' => 'Specialization', 'field' => 'subcategory_name'),
+	    );	
+	 
+	$query = db_select('mentor', 'm');   
+	$query->join('users', 'u', 'u.uid = m.mid');
+    $query->leftJoin('specialization_category', 'sc', 'sc.cid = m.fos_id');
+	$query->leftJoin('mentor_specialization', 'ms', 'ms.mentor_id = m.mid');
+	//$query->join('specialization_subcategory', 'ssc', 'ssc.scid = ms.type');
+	$query->join('education_qualification', 'e', 'e.eid = m.degree_id');
+	if(isset($_SESSION['user']->uid)) {
+		$query->leftJoin('connections', 'c', 'c.mentor_id = m.mid AND c.mentee_id ='.$_SESSION['user']->uid);
+		$query->leftJoin('subscription', 'sub', 'c.subscription_id = sub.sid');
+	}
+	
+	if(isset($_REQUEST['keyword'])) {
+		$value_keyword = $_GET['keyword'];
+		if($value_keyword == "Keyword Search")
+			$value_keyword = "";
+		$or = db_or();
+		$or->condition('m.first_name', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.last_name', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.state', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.city', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.last_school_attended', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.school_attending', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.specialization', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.title', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.employer', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('m.linked_in_profile', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('e.name', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$or->condition('sc.name', '%' . db_like($value_keyword) . '%', 'LIKE');
+		$query->condition($or);						
+	} else {
+	
+		if(isset($_REQUEST['firstname'])) {
+			if(!empty($_REQUEST['firstname'])) {
+				$value_firstname = $_GET['firstname'];
+				$query->condition('m.first_name', '%' . db_like($value_firstname) . '%', 'LIKE');
+			}	
+		}
+		
+		if(isset($_REQUEST['lastname'])) {
+			if(!empty($_REQUEST['lastname'])) {
+				$value_lastname = $_GET['lastname'];
+				$query->condition('m.last_name', '%' . db_like($value_lastname) . '%', 'LIKE');
+			}	
+		}
+		
+		if(isset($_REQUEST['state'])) {
+			if(!empty($_REQUEST['state'])) {
+				$value_state = $_GET['state'];
+				$query->condition('m.state', '%' . db_like($value_state) . '%', 'LIKE');
+			}	
+		}
+		
+		if(isset($_REQUEST['city'])) {
+			if(!empty($_REQUEST['city'])) {
+				$value_city = $_GET['city'];
+				$query->condition('m.city', '%' . db_like($value_city) . '%', 'LIKE');
+			}	
+		}
+		
+		if(isset($_REQUEST['mentorType'])) {
+			if(!empty($_REQUEST['mentorType'])) {
+				$value_mentorType = $_GET['mentorType'];
+				if($value_mentorType == 1) {
+					$value_mentorType = 'Professional';	
+				} else {
+					$value_mentorType = 'Student';		
+				}
+				$query->condition('m.mentor_type', $value_mentorType, '=');
+			}	
+		}
+		
+		if(isset($_REQUEST['school'])) {
+			if(!empty($_REQUEST['school'])) {
+				$value_school = $_GET['school'];
+				$query->condition(db_or()->condition('m.last_school_attended', '%' . db_like($value_school) . '%', 'LIKE')->condition('m.school_attending', '%' . db_like($value_school) . '%', 'LIKE'));
+			}		
+		}
+		if(isset($_REQUEST['subscription'])) {
+			if(!empty($_REQUEST['subscription'])) {
+				$value_subscription = $_GET['subscription'];
+				if($value_subscription=='monthly'){
+					//$query->condition(db_or()->condition('m.engagement_model_with_mentee', '%Month%', 'LIKE')->condition('m.engagement_model_with_mentee', 'Both', '='));
+					$query->condition('m.engagement_model_with_mentee', '%Month%', 'LIKE');
+				}else if($value_subscription == 'ondemand'){
+					//$query->condition(db_or()->condition('m.engagement_model_with_mentee', '%Demand%', 'LIKE')->condition('m.engagement_model_with_mentee', 'Both', '='));
+					$query->condition('m.engagement_model_with_mentee', '%Demand%', 'LIKE');
+				}else if($value_subscription == 'Both'){
+					$query->condition('m.engagement_model_with_mentee', 'Both', '=');
+				}
+			}
+		}
+		if(isset($_REQUEST['volunteer'])) {
+			if(!empty($_REQUEST['volunteer'])) {
+				$value_volunteer = $_GET['volunteer'];
+				if($value_volunteer == 'Yes'){
+					$value_volunteer = 1;
+				}else if($value_volunteer == 'No'){
+					$value_volunteer = 0;
+				}
+				$query->condition('m.volunteer', $value_volunteer, '=');
+			}
+		}	
+		if(isset($_REQUEST['degree'])) {
+			if(!empty($_REQUEST['degree'])) {
+				$value_degree = $_GET['degree'];
+				if(! empty($value_degree)) {
+					$or = db_or();
+					foreach($value_degree as $key => $value) {
+						$or->condition('m.degree_id',  $key, '=');
+					}
+					$query->condition($or);
+				}
+			}		
+		}	
+					
+		if(isset($_REQUEST['field_study'])) {
+			if(!empty($_REQUEST['field_study']) || !empty($_GET['field_study'])) {
+				$value_field_study = $_GET['field_study'];
+				/*$query1 = db_select('specialization_category', 'sc');
+				  $query1->condition('sc.name', '%' . $value_field_study . '%', 'LIKE'); 
+				  $result1 = $query1->execute();
+				  if($record = $result1->fetchAssoc()) {
+					 $query->condition('m.fos_id', $record['cid'], '=');	
+				  }*/
+				//$query->condition('m.fos_id', $value_field_study, '=');	
+				$query->condition('fos_id', '%' . $value_field_study . '%', 'LIKE');
+			}
+		}
+		
+		if(isset($_REQUEST['field_of_study'])) {
+			if(!empty($_REQUEST['field_of_study']) || !empty($_GET['field_of_study'])) {
+				$value_field_study = $_GET['field_of_study'];	
+				$query->condition('specialization', '%' . $value_field_study . '%', 'LIKE');
+			}
+		}
+		
+		if(isset($_REQUEST['field_spec'])) {
+			if(!empty($_REQUEST['field_spec'])) {
+				$value_field_spec = $_GET['field_spec'];				
+				$max = count($value_field_spec);	
+				if($max > 1) {
+					$or = db_or();
+					foreach($value_field_spec as $key => $value) {
+						$or->condition('ms.type',  $key, '=');
+					}
+					$query->condition($or);	
+				} else {
+					$keys = array_keys($value_field_spec);
+					if($value_field_spec[$keys[0]] != 0) {
+						$query->condition('ms.type',  $value_field_spec[$keys[0]], '=');
+					}	
+				}
+			}		
+		}
+		/*if(isset($_REQUEST['field_spec'])) {
+			if(!empty($_REQUEST['field_spec'])) {
+				$value_field_spec = $_GET['field_spec'];
+				
+				$query->condition('m.specialization', '%' . $value_field_spec . '%', 'LIKE');
+				
+			}
+		}*/
+	}
+	$query = $query->extend('PagerDefault')->limit(10);              //10 results per page
+	//$query->extend('TableSort')        //Sorting Extender
+	//->orderByHeader($header);	   
+	$query->fields('m')
+		//->fields('c', array('cid'))
+		->fields('u', array('picture'))	
+		//->fields('ssc', array('name'))
+		->fields('e', array('name'));
+	if(isset($_SESSION['user']->uid)) {
+		$query->fields('sub');
+	}
+	//$query->addField('ssc', 'name', 'subcategory_name');
+	if(isset($_SESSION['user']->uid)) {
+	    $query->fields('c', array('cid', 'status'));
+	}
+	$query->addField('e', 'name', 'edu_qualification');
+	$results = $query->execute();
+	$rows = array();   
+	foreach ($results as $mentor) {	
+	    
+	    /*$row_mentor = array();
+	    $row_mentor['last_name'] = $mentor->last_name;
+	    $row_mentor['mid'] = $mentor->mid;*/
+	    
+	    $connection_id = 0;
+	    $connection_status = ''; 
+	    if(isset($_SESSION['user']->uid)) {
+	    	$connection_id = $mentor->cid;
+	    	$connection_status = $mentor->status;
+	    }
+	    $rows[$mentor->mid] = array(
+	    	'last_name' => $mentor->last_name,
+	    	'mid' => $mentor->mid,
+	    	'picture' => $mentor->picture,
+	    	'first_name' => $mentor->first_name,
+	    	'edu_qualification' => $mentor->edu_qualification,
+	    	'subcategory_name' => $mentor->specialization,
+	    	'state' => $mentor->state,
+	    	'city'=> $mentor->city,
+	    	'connection_id' => $connection_id,
+	    	'last_school_attended' => $mentor->last_school_attended,
+	    	'mentor_type' => $mentor->mentor_type,
+	    	'school_attending' => $mentor->school_attending,
+	    	'connection_status' => $connection_status,
+	    	'about_me' => $mentor->about_me,
+	    	'year_of_school' => $mentor->year_of_school,
+	    	'engagement_model_with_mentee' => $mentor->engagement_model_with_mentee,
+	    	'alias' => $mentor->alias,
+	    	'volunteer' => $mentor->volunteer,
+	    );
+	}
+	
+	//Theme the html table
+	/*$html = theme('table',
+	            array(
+	                'header' => $header,
+	                'rows'=>$rows,
+	                //'caption' => 'Creating Drupal 7 style tables',   //Optional Caption for the table
+	                'sticky' => TRUE,                        //Optional to indicate whether the table headers should be sticky
+	                'empty' => 'No record found...',        //Optional empty text for the table if resultset is empty
+	            )
+	        );*/
+	$html = "";
+	if(isset($_SESSION['user']->uid)) {
+		$form = drupal_get_form('mentorsearch_form');
+		$html .= drupal_render($form);
+	}
+	        
+	$html .= theme('mentorsearchresult_display_list', array('rows' => $rows));
+	 
+	//Append pager
+	$html .= theme('pager',
+	            array(
+	                'tags' => array()
+	            )
+	        );
+	         
+	return ($html);	
+}
+
+function mentorsearchresult_theme() {
+	return array(
+	    'mentorsearchresult_display_list' => array(
+	      'variables' => array('rows' => NULL),
+	    ),
+	);
+}
+
+function theme_mentorsearchresult_display_list($variables) {
+  drupal_add_css(drupal_get_path('module', 'mentoringcommon') . '/css/common.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  $rows = $variables['rows'];
+  $output = '<div class="mentorsearch-results-div1">'; 
+  $temp = 0;
+  
+  $values = array('user' => 14, 'average'=>60, 'count' => 5);
+			
+   $settings = array(
+    'content_type' => 'entity',
+    'content_id' => 2,
+    'entity' => 'menteeprofile',
+    'stars' => 5,
+    'field_name' => 'field_fivestar_awesomeness',
+    'autosubmit' => TRUE,
+    'allow_clear' => FALSE,
+    'langcode' => 'und',
+    'text' => 'smart', // options are none, average, smart, user, and dual
+    'tag' => 'vote',
+    'style' => 'dual', // options are average, dual, smart, user
+    'widget' => array( 'name' => 'oxygen', 'css' => drupal_get_path('module', 'fivestar') . '/widgets/oxygen/oxygen.css' )
+  );
+  
+  if(empty($rows)) {
+  	$output .= 'No mentors meeting the search criteria are currently available</div>';
+  	return $output;
+  }
+  
+  $path = drupal_get_path('module', 'fivestar');				   
+  drupal_add_css($path . '/css/fivestar.css');
+  foreach ($rows as $key => $element) {
+   	 $temp = $temp + 1;
+   	 $rating = mentoringcommon_mentor_rating($element['mid']);
+   	 $picture;
+	  if(!empty($element['picture'])) {
+	  	$picture = file_load($element['picture']);
+	  } else {
+	  	$picture = file_load(29);
+	  }
+      $style = variable_get('user_picture_style', '');
+      $output .= '<div id="user-list-item' . $temp . '" onMouseOver="javascript:showButton(' . $temp . ')" onMouseOut="javascript:hideButton(' . $temp . ')" class="user-list-item mentorsearch-results-div2">';
+      	
+      $output .= '<div class="user-grid-pic mentorsearch-results-div3">';
+      $output .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentor', 'title' => 'Mentor', 'width'=>'100%'));
+      $output .= '</div>';
+      $mentor_details = '<span><a class="mentor-name" href="/mentor/'. $element['mid'] .'/profile">' . $element['first_name'] . ' ' . $element['last_name'] . '</a></span>';
+      if($element['mentor_type'] == 'student') {
+      	$mentor_details .= '<div class="user-list-school">'.$element['school_attending'] . ', class of ' . $element['year_of_school'] . ' - <em>' . $element['edu_qualification'] . '</em></div>';
+      } else {
+      	$mentor_details .= '<div class="user-list-school">'.$element['last_school_attended']. ', class of ' .$element['year_of_school'] . '</div>';
+      }
+      if($element['subcategory_name'])
+      	$mentor_details .= '<div class="user-list-address">'.$element['subcategory_name'] . '</div>';
+      $mentor_details .= '<div class="user-list-address">'.$element['city'] . ', '. $element['state'] . '</div>';
+      $mentor_details .= '<div class="mentorsearch-results-div7">';
+      $mentor_details .= '<div class="mentorsearch-results-div4"><a href="/user/' . $element['mid'] . '">' . 
+      							theme('fivestar_static', array('rating' => $rating['average'], 'stars' => 5, 'tag' => 'vote',
+		   							'widget' => array( 'name' => 'oxygen', 'css' => $path . '/widgets/oxygen/oxygen.css' ))) . '</a></div>';
+     /* $about_me = $element['about_me'];
+      if(strlen($about_me) > 130) {
+      	$about_me = substr($about_me, 0, 125) . '...';
+      }
+      
+      if(!empty($about_me))	 {			
+      	$mentor_details .= '<div class="user-description" style="float:left; margin-left:10px; width:650px">"'.$about_me . '"</div>';
+      }*/
+      $mentor_details .= '</div>';
+      
+      //drupal_set_message('<pre>'.print_r($element,true).'</pre>');
+      $output .= '<div class="mentorsearch-results-div5">' . $mentor_details . '</div>';
+      if(isset($_SESSION['user']->uid)) {
+          if($element['connection_id'] == 0) {
+	      	$output .= '<div id="mentee-message-cover' . $temp . '" class="mentorsearch-results-div6"><div class="form-submit button small round steel_blue" id="connectmentor'.$element['mid'] .'" mentorid=' . $element['mid']  . ' volunteer="' . $element['volunteer']  . '" subscription="' . $element['engagement_model_with_mentee']  . '"type="button">Connect</div></div>';
+		  } else {
+		  	if($element['connection_status'] == 'Confirmed') {
+		      $output .= '<div id="mentee-message-cover' . $temp . '" class="mentorsearch-results-div6"><button class="form-submit button small round steel_blue" onclick="location.href=\'/messages/new/' . $element['mid'] . '\'" id="editprofile" type="button">Message</button></div>';
+		    } else if ($element['connection_status'] == 'Pending') {
+		    	$output .= '<div id="mentee-message-cover' . $temp . '" class="mentorsearch-results-div6 form-submit button small round steel_blue" >Connection Request Pending</div>';
+		    } else if($element['connection_status'] == 'Payment Pending') {
+		      	$output .= '<div id="mentee-message-cover' . $temp . '" class="mentee-button-div" style="margin: 1%;">
+		      			<a href="/mentee/connection/?mentor_id=' . $element['mid']  . '&subscription=' . $element['alias'].'&volunteer=' . $element['volunteer']  .'"  class="button small round steel_blue pay_button" >Pay</a>
+		      					</div>';
+		    }
+		  }
+      }
+      $output .= '</div>';
+  }  
+
+  $output .= '</div>';
+  
+  $output .= '<script type="text/javascript">
+  				function showButton(id) {
+					document.getElementById("mentee-message-cover" + id).style.visibility = "visible";
+					document.getElementById("mentee-message-cover" + id).style.display = "inline-block";					
+  				}
+  				function hideButton(id) {
+					document.getElementById("mentee-message-cover" + id).style.visibility = "hidden";
+  				}	
+				(function ($) {
+  					$("[id^=connectmentor]").click(function(){
+  							var $mentor_id = $(this).attr("mentorid");
+  							var $subscription = $(this).attr("subscription");
+  							var $volunteer = $(this).attr("volunteer");
+  							if($volunteer == "1"){
+  								$("#subscriptionWindow").find(".views-row-first").find(".views-field-display-price").find("span").text("$0.00");
+  								$("#subscriptionWindow").find(".views-row-last").find(".views-field-display-price").find("span").text("$0.00");
+							}else{
+  								$("#subscriptionWindow").find(".views-row-first").find(".views-field-display-price").find("span").text("$100.00");
+  								$("#subscriptionWindow").find(".views-row-last").find(".views-field-display-price").find("span").text("$500.00");
+							}
+  							if($subscription == "On Demand 1 hr"){
+  								$("#subscriptionWindow").find(".views-row-last").hide();
+                   			}else if($subscription == "3 Month"){
+  								$("#subscriptionWindow").find(".views-row-first").hide();
+                   			}else{
+  								$("#subscriptionWindow").find(".views-row-last").show();
+  								$("#subscriptionWindow").find(".views-row-first").show();
+                   			}
+  							$("#threemonthBuyButton").attr("href","/mentee/"+$mentor_id+"/connect/3month");
+							$("#ondemandBuyButton").attr("href","/mentee/"+$mentor_id+"/connect/ondemand");
+							$("#subscriptionWindow").fadeIn(1000);
+  						});  
+  					$("h1").hide();
+				var itemId;
+				var mesageId;
+					for(var i=1; i<100; i++) {
+						itemId = "#user-list-item" + i;
+						mesageId = "#mentee-message-cover" + i;
+						$(mesageId).hide();
+						$(itemId).mouseover( function () { 
+						
+					        $(mesageId).show();
+							//$(".mentee-message-cover").visibility = "visible";
+					    });
+					    $(itemId).mouseout( function () { 
+					        $(mesageId).hide();
+					    });
+					 }
+				})(jQuery);
+	
+			</script>';
+  return $output;
+}
+
+
+function mentorsearchresult_form($form, &$form_state) {
+	
+	//$value_field_study = $_GET['field_study'];
+	//$value_field_spec = $_GET['field_spec'];
+	
+	$query_string = "SELECT m.mid, m.first_name, m.last_name, e.name FROM {mentor} m,  {education_qualification} e, {specialization_subcategory} s where e.eid = m.degree_id and s.scid = m.fos_sub_id ";
+	if(isset($_REQUEST['mentorType'])) {
+		if(!empty($_REQUEST['mentorType'])) {
+			$value_mentorType = $_GET['mentorType'];
+			if($value_mentorType == 1) {
+				$value_mentorType = 'Professional';	
+			} else {
+				$value_mentorType = 'Student';		
+			}
+			$query_string = $query_string." and m.mentor_type = '". $value_mentorType."'";
+		}	
+	}
+	
+	if(isset($_REQUEST['school'])) {
+		if(!empty($_REQUEST['school'])) {
+			$value_school = $_GET['school'];
+			$query_string = $query_string." and (m.last_school_attended = '". $value_school."' or m.school_attending = '". $value_school."')";
+		}		
+	}
+	
+	if(isset($_REQUEST['degree'])) {
+		if(!empty($_REQUEST['degree'])) {
+			$value_degree = $_GET['degree'];
+			$query_string = $query_string." and e.eid = '". $value_degree."'";
+		}		
+	}
+	
+	if(isset($_REQUEST['field_spec'])) {
+		if(!empty($_REQUEST['field_spec'])) {
+			$value_field_spec = $_GET['field_spec'];
+			$value = '';
+			foreach($value_field_spec as $key=>$element) {
+				$value = $element;	
+			}
+			$query_string = $query_string." and s.scid = '". $value."'";
+		}		
+	}
+	
+	$result = db_query($query_string);
+ 
+  	$header = array
+  	(
+    	'name' => t('Name'),
+    	'educational_qualification' => t('Educational Qualification'),
+  	);
+  	$options = array();
+  	foreach($result as $record)
+  	{
+    	$options[$record->mid] =array
+    	(
+      		'name' => $record->first_name,
+      		'educational_qualification' => $record->name, 
+   		);
+  	}
+  	$form = array();
+  	$form['table'] = array
+  	(
+    	'#type' => 'tableselect',
+    	'#header' => $header,
+    	'#options' => $options,
+    	'#empty' => t('No users found'),
+    	'#multiple' => FALSE,
+  	);
+ 	 $form['pager'] = array('#value' => theme('pager'));
+  return $form;
+}
+

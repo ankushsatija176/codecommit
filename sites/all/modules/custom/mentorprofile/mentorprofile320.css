@@ -1,0 +1,109 @@
+#mentorprofile-form label {
+  float:left;
+  width:190px;
+  text-align:right;
+  padding-right:10px;
+}
+#mentorprofile-form textarea, #mentorprofile-form .form-text {
+  width:300px;
+}
+
+#mentorprofile-form .description, #mentorprofile-form .grippie, #mentorprofile-form .form-submit {
+  margin-left:0px !important;
+  width:200px !important;
+}
+
+#mentorprofile-mentor-type-form label {
+  float:left;
+  width:190px;
+  text-align:right;
+  padding-right:10px;
+}
+#mentorprofile-mentor-type-form textarea, #mentorprofile-mentor-type-form .form-text {
+  width:300px;
+}
+
+#mentorprofile-mentor-type-form .description, #mentorprofile-mentor-type-form .grippie, #mentorprofile-mentor-type-form .form-submit {
+  margin-left:200px;
+  width:300px;
+}
+
+#mentorprofile-skill-set-form label {
+  float:left;
+  width:190px;
+  text-align:right;
+  padding-right:10px;
+}
+#mentorprofile-skill-set-form textarea, #mentorprofile-skill-set-form .form-text {
+  width:300px;
+}
+
+#mentorprofile-skill-set-form .description, #mentorprofile-skill-set-form .grippie, #mentorprofile-skill-set-form .form-submit {
+  margin-left:200px;
+  width:300px;
+}
+
+#mentorprofile-general-form label {
+  float:left;
+  width:190px;
+  text-align:right;
+  padding-right:10px;
+}
+#mentorprofile-general-form textarea, #mentorprofile-general-form .form-text {
+  width:300px;
+}
+
+#mentorprofile-general-form .description, #mentorprofile-general-form .grippie, #mentorprofile-general-form .form-submit {
+  margin-left:200px;
+  width:300px;
+}
+
+.mentor-profile-blocks-heading1 { width: 100%; color: #2672AE; padding: 5px; font-size: 20px; font-weight: bold; border-radius: 2px; border-bottom: 1px solid rgb(0, 0, 255);}
+.mentor-profile-blocks-heading2 { width: 100%; overflow: hidden;min-height: 500px; }
+
+.mentor-profile-usr-pic1 { margin-right:10px; float: left; border: 1px solid #c0c0c0; border-radius:5px; width: 70px !important; height: 70px !important; }
+.mentor-profile-usr-pic1 img {  min-height: 70px !important;     min-width: 70px !important;  }
+.mentor-profile-usr-pic2 { margin-bottom: 10px; width: 100%;float: left; background-color: rgb(227, 227, 252);color: #444141; }
+.mentor-profile-usr-pic3 { float: left;  margin: 1%; width: 97% !important; }
+.mentor-profile-usr-pic4 { text-align: center; min-height: 8px !important;max-width: 100%; box-shadow: 2px 2px 2px 2px rgb(204, 204, 204); border-radius: 5px; }
+.mentor-profile-usr-pic5 { color: rgb(243, 243, 246); font-size: 10px !important; background-color: rgba(0, 0, 0, 0.48); position: absolute; z-index: 999999;text-align: center; padding: 1%; top: 45px !important; width: 12%; left: 1.5%; }
+.mentor-profile-usr-pic6 { padding: 2% 10% !important; color: #FE7D00; font-size: 14px; margin-left: 25%; }
+.mentor-profile-usr-pic7 { border-bottom: 2px solid; height: 5%; }
+.mentor-profile-usr-pic8 { width: 100%; background-color: rgba(134, 176, 240, 0.19); overflow: hidden; padding: 2% }
+.mentor-profile-usr-pic9 { margin-left: 40px; }
+
+
+.mentor-profile-con-div1 { margin-top:10px; }
+.mentor-profile-con-div2 { float:left; width: 60%; font-size: 12px; color: black; }
+.mentor-profile-con-div3 { margin-left: 15px; }
+.mentor-profile-con-div4 { margin-top:10px; }
+.mentor-profile-con-div5 { float:left; }
+.mentor-profile-con-div6 { float:left; margin-left: 15px; }
+
+.mentor-profile-details-div1 { float:left; width:500px }
+
+.mentor-profile-button-div1 { float:right; visibility:visible }
+
+.mentor-profile-tab-header1 { width: 80%; font-size: 14pt; }
+.mentor-profile-tab-header2 { width: 100%; overflow: hidden; margin: 10px 10px 0 20px; }
+.mentor-profile-tab-header3 { width: 100%; overflow: hidden; margin-bottom: 15px }
+
+.mentor-profile-user-details1 { width: 100% !important; padding: 1px 1px 1px 1px !important; font-size:20pt; font-family:verdana; float: left; text-align: center; }
+.mentor-profile-user-details2 { font-family: sans-serif; font-weight: 100; font-size: 14px; }
+.mentor-profile-user-details3 { font-weight: bold; font-size: 16px; }
+
+.mentor-profile-button-div1 { margin-left: 30px !important; }
+.mentor-profile-button-div2 { width: 15%; padding: 1%; float: left; }
+
+.mentor-profile-tab-heading1 { float: left; width: 100%; margin-top: 2%; font-size: 12px !important}
+.mentor-profile-tab-div1 { width: 100%; overflow: hidden; background-color: white; color: #444141; border-top: 1px solid black;  }
+.mentor-profile-tab-div2 { width: 100%; float: left; }
+.mentor-profile-tab-div3 { display:none; } 
+
+.accept_button { padding: 0% 10% !important; margin: 5% 0%; }
+.decline_button { padding: 0% 10%!important; margin: 5% 0%; }
+
+
+
+
+

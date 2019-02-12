@@ -1,0 +1,25 @@
+#mentorsearch-form .form-text {
+  width:200px;
+  font-weight:bold; height:40%; border:1px solid #514B4B; 
+}
+
+
+
+.mentorsearch-form-heading1 { width: 100%; overflow: hidden; padding-left: 13px; }
+.mentorsearch-form-heading2 { width: 100%; overflow: hidden; padding-left: 13px; padding-top: 5px; }
+
+.mentorsearch-form-element-div1 { padding: 0% 45%; } 
+.mentorsearch-form-element-div2 { float: left; } 
+.mentorsearch-form-element-div3 { width: 100% } 
+.mentorsearch-form-element-div4 { min-width: 15%; float: left; padding-top:5px; } 
+.mentorsearch-form-element-div5 { float: left; width: 70%;height: 30px;overflow: hidden; } 
+.mentorsearch-form-element-div6 { float: left; width: 70%;overflow: hidden; } 
+.mentorsearch-form-element-div7 { float: left; min-width: 15%;} 
+.mentorsearch-form-element-div8 { padding-top: 1%;  min-width: 60%;}
+.mentorsearch-form-element-div9 { min-width: 100%;} 
+
+.mentorsearch-filter-heading1 { padding: 10px 0px; font-size: 14px;background-color: #E3E3F8; }
+.mentorsearch-filter-heading2 { color: black; padding: 2%;font-size: 16px; }
+.mentorsearch-filter-heading3 { color: black !important; padding-top: 10px; padding-bottom: 10px; font-size: 14px;padding-left: 8px; }
+
+.mentorsearch-filter-div1 { padding-top: 1%; border-top: 1px solid black; }

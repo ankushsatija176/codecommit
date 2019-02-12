@@ -1,0 +1,65 @@
+fieldset#edit-filter {
+    padding-bottom: 5px;
+}
+
+fieldset#edit-filter div.form-actions {
+    margin: 0;
+    padding: 2% 8%;
+    
+}
+
+form#privatemsg-filter-form div.form-item {
+    float: left;
+    margin-right: 5px;
+}
+
+fieldset#edit-filter div.form-item label {
+    float: left;
+    margin-right: 10px;
+    width: 150px;
+    text-align: center;
+    padding-top: 5px;
+}
+
+fieldset#edit-filter div.form-item {
+    clear: both;
+}
+
+div#privatemsg-filter-tags a, span.privatemsg-filter-tags-label {
+    padding-right: 10px;
+}
+
+div#privatemsg-filter-tags {
+    margin-bottom: 15px;
+}
+
+div.privatemsg-message-participants {
+    clear:both;
+}
+span.fieldset-legend {
+	background-color: blue !important;
+	border-radius: 5px;
+}
+a.fieldset-title{
+	color: white;
+}
+div.form-type-textfield{
+	padding: 2px;
+}
+label{
+	color: black !important;
+}
+fieldset.form-wrapper{
+	background-color: rgba(224, 225, 251, 0.78);
+	border-radius: 5px !important;
+	margin: 5%;
+}
+div#privatemsg-list-title
+{
+	width: 100%;
+color: #FF7F39;
+padding: 5px;
+font-size: 16px;
+border-radius: 2px;
+border-bottom: 1px solid #00F;
+}

@@ -1,0 +1,642 @@
+<?php
+/**
+ * @file
+ * A module that create a new page for a link
+ */
+function faqs_menu() {
+	$items ['faqs'] = array (
+			
+			// 'title' => 'Frequently Asked Questions',
+			'page callback' => 'faqs_page',
+			'access callback' => TRUE 
+	);
+	
+	return $items;
+}
+function faqs_page() {
+	$mentor_guide_node = node_load(493);
+	$mentor_guide_node_view = node_view($mentor_guide_node);
+	$mentor_guide_node_view_renderer = drupal_render($mentor_guide_node_view);
+	
+	$mentee_guide_node = node_load(494);
+	$mentee_guide_node_view = node_view($mentee_guide_node);
+	$mentee_guide_node_view_renderer = drupal_render($mentee_guide_node_view);
+
+	$engagement_document_node = node_load(3513);
+	$engagement_document_node_view = node_view($engagement_document_node);
+	$engagement_document_node_view_renderer = drupal_render($engagement_document_node_view);
+	
+	
+	$html = '<h3 style="background-color: rgba(98, 139, 240, 0.72); color: white; font-weight: bold; height: 50px; margin: 0px; text-align: center; border-radius: 10px;">Frequently Asked Questions</h3>';
+	$html .= '
+<div style="width: 100%; overflow: hidden;">
+	<div style="background-color: rgb(223, 234, 250);">
+		<div name="general-arrow" style="position: relative; overflow: hidden; background-color: rgba(80, 80, 252, 0.75);">
+			<img id="general-image" style="position: relative; width: 3%;  float: left;max-height: 20px;max-width: 20px; margin-top: 7px; ! important; height: 20px;  " src="/sites/all/modules/custom/faqs/menu-drop-bg-2.png" height="19" width="19">
+			<h1 style="position: relative; width: 97%;  float: left;color: white;margin: 0;">General</h1> 
+		</div>
+		<div id="generalqa">
+			<div id="general-q1" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>Who should use SkoolMentor?</b>
+				</p>
+			</div>
+			<div id="general-a1" class = "faqs-answer">
+				<p>
+				SkoolMentor is an excellent resource for High School Freshmen, Sophomores, Juniors and Seniors.<br/>
+				Even Eighth graders have connected with our mentors and learnt  about what to expect in High school from them.<br/>
+				High School Freshmen, Sophomores and Juniors connect with our mentors to learn how to navigate High School successfully. For example, High school students get personalized information about:<br/>
+				- Science Fair projects<br/>
+				- What AP course load to take<br/>
+				- How to prepare for SAT/ACT<br/>
+				- What activities to pursue to showcase passion for a particular subject<br/>
+				- What shadow opportunities/internships to avail<br/>
+				- What scholarship opportunities to avail<br/>
+				- Study skills<br/>
+				- time management skills<br/>
+				- What mistakes the college student mentors made when they were in High School so the High School students can avoid them<br/>
+				- campus life at the college the mentor is at, whether the college is a good fit for the High school student<br/>
+				- So much more<br/><br/>
+				High School Seniors connect with our mentors mainly for college admissions related activities such as preparing college lists, filling in the college applications, scholarship applications, writing winning essays and being able to stand out in the college applications.<br/><br/>
+				By building a positive relationship with our mentors starting when they are in their Freshman or Sophomore years at High School, High school students have a friend in college and a role model to look up to. They feel prepared and confident about themselves which is the first step towards a successful college outcome. Who knows - the mentor could some day help your student even in college or help them get a job! SkoolMentor gives High school students an opportunity to build positive relationships - a skill that could help them beyond High School.<br/><br/>
+				We have mentors who have recently graduated from college but continue to help their mentees because they are committed to their mentees\' success.<br/>
+				</p>
+			</div>
+			<div id="general-q2" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>How exactly does SkoolMentor work with respect to connecting mentors and mentees?</b>
+				</p>
+			</div>
+			<div id="general-a2" class = "faqs-answer">
+				<p>
+				a. Mentees search for mentors.<br/><br/>
+				b. Once they choose a mentor, they can click the "connect" button next to the mentee name.<br/><br/>
+				c. A pop-up will appear asking for whether you want to connect for 3 months or for 1 hour or 30 minutes of mentoring.<br/><br/>
+				d. Mentees choose one of the three options shown in step "c" and then the connection request is sent to the mentor. In the mentee\'s connections tab, the connection state is set to <b>\'Pending\'</b>.<br/><br/>
+				e. Now the mentee has to wait for the mentor to accept or decline the connection request. This could take a few days though we expect most mentors to be prompt in responding.<br/><br/>
+				f. If the mentor accepts the connection, then the mentor\'s and mentee\'s connection status changes to <b>\'Payment Pending\'</b>. At this point the mentee/parent needs to make the payment for the connection using a credit card.<br/><br/>
+				g. Once the payment is made, the mentor and mentee can message each other. The mentee should check the mentor\'s schedule on the mentor profile and try to set up meeting times around that schedule. For the on-demand 1 hour or 30 minutes mentoring, the mentor and mentee have up to 3 weeks to have the actual meeting. After 3 weeks the connection will automatically reset and they will not be able to message each other through the platform.<br/><br/>
+				<br/>Mentors can "invite" mentees to connect to them. Mentors may do this when they have reason to believe that they could really help those mentees based on the details mentioned in the mentee profiles.<br/>
+				If a mentee receives an "invite" from a mentor , then the mentee should review that mentor\'s profile. If it looks like a good match, then the mentee needs to follow steps "b-g" above in order to connect to that mentor.<br/><br/>If a mentor is a "volunteer" mentor, then the step "f" above is not needed. The mentor and mentee will be able to message each other when the mentor accepts the connection. There are no payments required to be made for "volunteer" mentor connections.<br/><br/>All notifications (for example when  a mentor accepts a connection or when a mentee/parent makes the payment) are visible on your account on SkoolMentor.com and an email is also sent to the relevant parties (mentor, mentee or both).
+				';
+	$html .= print_r($engagement_document_node_view_renderer,true);
+	$html .= '</p>
+			</div>
+			<div id="general-q3" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>What are the costs involved?</b>
+				</p>
+			</div>
+			<div id="general-a3" class = "faqs-answer">
+				<p>
+				Mentors sign up for free.<br/>
+				For mentees, currently we are offering three plans or engagement models to connect with mentors. These are:<br/>
+				<b>a. 3 month</b><br/>
+				Mentees can connect with non-volunteer mentors for 3 months at the price of $325 per mentor (for the entire 3 month duration).<br/>
+				<b>b. 1 hour on demand mentoring</b><br/>
+				Mentees can connect with non-volunteer mentors for just 1 hour at the price of $85 per mentor.<br/>
+				<b>c. 30 minutes on demand mentoring</b><br/>
+				Mentees can connect with non-volunteer mentors for just 30 minutes at the price of $50 per mentor.<br/>
+				<br/>We will retain a small portion of the proceeds for the operation and maintenance of the website. The balance will be disbursed to the mentors.<br/>
+				<br/>Mentees can connect with volunteer mentors for free for the 3 month as well as the 1 hour/30 minutes On Demand mentoring models<br/>
+				The above mentioned costs are subject to change anytime. Discounts may apply in certain circumstances.<br/>
+				Please read further about engagement models in this FAQ.
+				</p>
+			</div>
+			<div id="general-q4" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>Can I use my Facebook account for SkoolMentor login?</b>
+				</p>
+			</div>
+			<div id="general-a4" class = "faqs-answer">
+				<p>
+				Yes. After registration through your Facebook account, please ensure that you fill out all the fields in your profile so that it is complete. <br/>
+				The details you provide in your profile determine whether you would be a suitable mentor for a particular mentee and vice versa. So please ensure that your profile is complete. <br/>
+				<br/>After you save your profile by clicking "SAVE", we will send an activation email to your College/Work Email Address.
+				<br/>The activation email from "SkoolMentor" should arrive in your mailbox within a couple of minutes of clicking the "SAVE" button on your profile. Please click on the link in that email to activate your account. <br/>
+				<br/>If you do not see the activation email in your inbox within 2 minutes then please check your SPAM/Junk folders for the same.<br/>
+				<br/>If you do not find the activation email in your inbox/spam/junk folders then please contact us at support@skoolmentor.com and we will activate your account for you.<br/>
+				<br/>If you are a mentor and if you do not have a Work or a College Email Address, then please do not sign up till you have a valid college/work email address.
+				</p>
+			</div>
+			<div id="general-q5" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>Can I use my LinkedIn account for SkoolMentor login?</b>
+				</p>
+			</div>
+			<div id="general-a5" class = "faqs-answer">
+				<p>
+				Yes. After registration through your LinkedIn account, please ensure that you fill out all the fields in your profile so that it is complete. <br/>
+				The details you provide in your profile determine whether you would be a suitable mentor for a particular mentee and vice versa. So please ensure that your profile is complete.<br/>
+				<br/>After you save your profile by clicking "SAVE", we will send an activation email to your College/Work Email Address.
+				<br/>The activation email from "SkoolMentor" should arrive in your mailbox within a couple of minutes of clicking the "SAVE" button on your profile. Please click on the link in that email to activate your account. <br/>
+				<br/>If you do not see the activation email in your inbox within 2 minutes then please check your SPAM/Junk folders for the same.<br/>
+				<br/>If you do not find the activation email in your inbox/spam/junk folders then please contact us at support@skoolmentor.com and we will activate your account for you.<br/>
+				<br/>If you are a mentor and if you do not have a Work or a College Email Address, then please do not sign up till you have a valid college/work email address.
+				</p>
+			</div>
+			<div id="general-q6" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>What is the format of dates in emails from SkoolMentor?</b>
+				</p>
+			</div>
+			<div id="general-a6" class = "faqs-answer">
+				<p>
+				All dates are in the format MM/DD/YY.
+				</p>
+			</div>
+			<div id="general-q7" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>Why am I not receiving any emails from SkoolMentor?</b>
+				</p>
+			</div>
+			<div id="general-a7" class = "faqs-answer">
+				<p>
+				Please check your SPAM folder. Make sure to mark any emails from SkoolMentor as <b>Not Spam</b>.
+				</p>
+			</div>
+			<div id="general-q8" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>Can I  reply to a message sent by a mentor/mentee from my personal email?</b>
+				</p>
+			</div>
+			<div id="general-a8" class = "faqs-answer">
+				<p>
+				No, currently you can only reply to a message via our portal
+				</p>
+			</div>
+			<div id="general-q9" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>How do I submit a blog entry?</b>
+				</p>
+			</div>
+			<div id="general-a9" class = "faqs-answer">
+				<p>
+				Just log into your account on SkoolMentor.com, click "BLOGS" and submit your entry.
+				</p>
+			</div>
+			<div id="general-q10" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>I already had the on-demand 1 hour/30 minutes mentoring session. I am still getting reminder emails from SkoolMentor to schedule a meeting time. What should I do?</b>
+				</p>
+			</div>
+			<div id="general-a10" class = "faqs-answer">
+				<p>
+				Once the mentee/parent pays for the 1 hour/30 minutes on demand mentoring, we give the mentor and mentee up to 3 weeks from the date the payment was made, to have the actual meeting. If you get done with your mentoring session earlier, you may continue to get reminder emails till the 3 week period is over. You can ignore those emails. Or the mentee should provide his/her feedback on the mentoring session on SkoolMentor.com and then "reset" the connection. The link to reset the connection is present in the reminder emails. Once the connection is reset, the reminder emails will stop.
+				</p>
+			</div>
+			<div id="general-q11" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>I created an account but did not receive an activation email. What should I do?</b>
+				</p>
+			</div>
+			<div id="general-a11" class = "faqs-answer">
+				<p>
+					For the standard sign up, you can log into your account and resend the activation email to yourself.<br/>
+					<br/>Typically you should receive the activation email from "SkoolMentor" within a couple of minutes of clicking "create new account" (If using Standard sign up) OR clicking "Save"  after completing your profile (if using Facebook or LinkedIn for signing up).<br/>
+					<br/>If you do not see the activation email in your inbox, then please check your SPAM/junk folder for the activation email from "SkoolMentor" and make sure to mark it as "not junk" or "not spam".<br/>
+					<br/>If you cannot find the activation mail in your inbox/spam/junk folders and if you have signed up using  Facebook or LinkedIn please email us at support@skoolmentor.com so we can activate your account for you.
+				</p>
+			</div>
+			<div id="general-q12" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>What do you mean by “Mentoring Period”?</b>
+				</p>
+			</div>
+			<div id="general-a12" class = "faqs-answer">
+				<p>
+					For the on demand 1 hour/30 minutes mentoring, the mentoring period ends after 3 weeks from the date of connection establishment/payment by the mentee. This is to give the mentor and mentee enough time to schedule their 1 hour or 30 minute meeting.<br/>
+					For the 3 month mentoring the mentoring period ends after 3 months from the date of connection establishment/payment by the mentee.<br/>
+				</p>
+			</div>
+			<div id="general-q13" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>How are mentors recruited?</b>
+				</p>
+			</div>
+			<div id="general-a13" class = "faqs-answer">
+				<p>
+					1. Mentors from different colleges apply  by sending a cover letter and their resume to <a href="mailto:careers@skoolmentor.com">careers@skoolmentor.com</a> using their college email address. If they have been referred by another user, they mention that user\'s name.<br/>
+					2. The shortlisted candidates are invited for a phone interview.<br/>
+					3. After the phone interview, the selected candidates are then invited to sign up as mentors on SkoolMentor.com. They are explained the expectations as mentors and any questions/concerns they have are addressed.<br/>
+				</p>
+			</div>
+		</div></br>
+		<div name="mentor-arrow" style="position: relative; overflow: hidden; background-color: rgba(80, 80, 252, 0.75);">
+			<img id="mentor-image" style="position: relative; width: 3%;  float: left;max-height: 20px;max-width: 20px; margin-top: 7px; ! important; height: 20px;  " src="/sites/all/modules/custom/faqs/menu-drop-bg.png" height="19" width="19">
+			<h1 style="position: relative; width: 97%;  float: left;color: white;margin: 0;">Mentors</h1> 
+		</div>
+		<div id="mentorqa">
+			<div id="mentor-q1" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>What exactly is expected of me as a mentor?</b>
+				</p>
+			</div>
+			<div id="mentor-a1" class = "faqs-answer">
+				<p>
+					&emsp;Your mentee picked you  because he/she values something about who you are and what you have accomplished based on your profile. <br/>
+					&emsp;Please help/guide your mentee based on your own experience and your unique perspective on the college admissions process. Your mentee might be unsure of himself/herself - perhaps you too were in a <br/>
+					&emsp;Similar situation when you were in High School. How did you overcome that or deal with it?  Your mentee would appreciate such guidance. Also guidance around any specific queries your mentee might have would be very helpful. <br/>
+					&emsp;The goal is to  get to know each other and for you to be able to provide adequate information and guidance to your mentee so that he/she is confident to move forward with respect to the college admissions process and beyond.<br/>
+					&emsp;Here is a short guide for mentors  that should help you prepare for the role of an effective mentor. In order to get the conversation started with your mentees, we have included some sample questions that you could ask your mentees. <br/>
+					';
+	$html .= print_r($mentor_guide_node_view_renderer,true);
+	$html .= '</p>
+			</div>
+			<div id="mentor-q2" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>How much time do I need to commit?</b>
+				</p>
+			</div>
+			<div id="mentor-a2" class = "faqs-answer">
+				<p>
+				Mentors have 3 options in terms of the time commitment towards their mentees. These are:<br/>
+				&emsp;	a. The 3 month engagement model and<br/>
+				&emsp;	b. The  Pay-as-you-go or the 1 hour  on demand engagement model<br/>
+				&emsp;	c. The  Pay-as-you-go or the 30 minutes on demand engagement model<br/><br/>
+				&emsp;For the 3 month mentoring engagement model , a total time commitment of about 1.5-2 hours per month for 3 months should suffice.
+				This includes the time spent communicating over email or on skype or by any other means. 
+				This time could be split up into smaller slots for more frequent interactions. 
+				Eg: a 25-30 minute skype or google hangout session per week for 3 months could be scheduled. With the 3 month model the goal
+				is to get to know each other and for you to be able to provide adequate information and guidance to your mentee so that he/she
+				is confident to move forward with respect to the college admissions process and beyond.<br/>
+				
+				&emsp;For the pay-as-you-go or the 1 hour/30 minutes on demand engagement model - the total commitment time is 1 hour/30 minutes for one meeting only. 
+				The goal here is again to provide guidance, encouragement and information to help your mentee move forward with the college admissions process and beyond.
+				
+				</p>
+			</div>
+			<div id="mentor-q3" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>Do I need to have in person meetings with my mentee?</b>
+				</p>
+			</div>
+			<div id="mentor-a3" class = "faqs-answer">
+				<p>
+				We do not recommend in-person meetings for safety reasons.  <br/>
+				You could meet over Skype or Google Hangouts or other such virtual meeting places.
+				</p>
+			</div>
+			<div id="mentor-q4" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>I dont know whether I should choose the  3 month engagement model or the 1 hour/30 minutes on demand model . Can you help me decide?
+					</b>
+				</p>
+			</div>
+			<div id="mentor-a4" class = "faqs-answer">
+				<p>
+				&emsp;The 3 month engagement model allows you to remain connected to your mentee for 3 months. This will give you enough time to really get to know your mentee and for him/her to get to know you. This in turn will help you tailor your advice in a manner that is most effective for your mentee.<br/>
+				&emsp;Some mentees may want to connect with you with very specific questions and for them the 1 hour/30 minutes engagement model may suffice.<br/>
+				&emsp;For College Student mentors, we encourage you to sign up for "All of the above" - which includes the "3 month" as well as the "On demand 1 hour" and "On demand 30 minutes" engagement models. This would allow mentees to connect with you with either engagement models.<br/>
+				&emsp;If you are a Professional and if  you believe your professional commitments will not allow you to commit for 3 months, then the 1 hour/30 minutes engagement model is for you. Else you too could choose "All of the above" as your engagement model.
+				</p>
+			</div>
+					
+			<div id="mentor-q5" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>What/who  is a volunteer ?</b>
+				</p>
+			</div>
+			<div id="mentor-a5" class = "faqs-answer">
+				<p>
+					&emsp;A volunteer mentor  is one who is not paid for his/her mentoring services. Typically we find many Professionals like to volunteer their time for mentoring and do not want any form of remuneration or compensation.
+				</p>
+			</div>
+			<div id="mentor-q6" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>Is my contact information encrypted?</b>
+				</p>
+			</div>
+			<div id="mentor-a6" class = "faqs-answer">
+				<p>
+					Yes
+				</p>
+			</div>
+			
+			<div id="mentor-q7" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>How do I schedule meetings with my mentees?</b>
+				</p>
+			</div>
+			<div id="mentor-a7" class = "faqs-answer">
+				<p>
+					Please use SkoolMentor\'s messaging mechanism to set up a suitable date/time for the meetings. You may use the messaging platform to exchange phone numbers or skype ids as well or check your mentee\'s profile for his/her contact details so that you can continue the discussion over phone or skype as well. <br/>
+					&emsp;We currently do not support integration with calendars. Therefore we encourage you to publish your availability schedule on your profile. Your mentees could then plan meetings around your availability schedule instead of sending messages back and forth trying to come up with mutually convenient dates/times for the meetings.
+				</p>
+			</div>
+			<div id="mentor-q8" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>When will I be paid for my services?</b>
+				</p>
+			</div>
+			<div id="mentor-a8" class = "faqs-answer">
+				<p>
+					Mentors will get paid after the end of their mentoring period .
+				</p>
+			</div>
+			<div id="mentor-q9" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>How will I get paid?</b>
+				</p>
+			</div>
+			<div id="mentor-a9" class = "faqs-answer">
+				<p>
+					At the end of your mentoring period, you will receive a message from SkoolMentor asking for your mailing address. Once you send us your mailing address, we will mail a check to you. We plan to add the facility to allow for automatic payments to your bank account later.<br/>
+					&emsp;Mentoring period - for the on demand 1 hour/30 minutes mentoring, the mentoring period ends after 3 weeks from the date of connection establishment/payment by the mentee<br/>
+					&emsp;For the 3 month mentoring the mentoring period ends after 3 months from the date of connection establishment/payment by the mentee.<br/>
+					<br/>This is assuming the mentoring session(s) has happened. If  the mentoring session did not actually take place, the payment will not be made.
+				</p>
+			</div>
+			<div id="mentor-q10" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>I lost my check. Can a "stop payment" be done?</b>
+				</p>
+			</div>
+			<div id="mentor-a10" class = "faqs-answer">
+				<p>
+					Yes, if you let us know right away we can try and do a stop payment. However our bank charges a fee for stop payment. Currently the fee is $31. The bank also does not guarantee that the payment would be stopped. You will be paid the amount due minus the fee for the stop payment and any other fee.
+				</p>
+			</div>
+			<div id="mentor-q11" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">
+					<b>Is there any paperwork/formalities to be completed by the mentors?</b>
+				</p>
+			</div>
+			<div id="mentor-a11" class = "faqs-answer">
+				<p>
+					When mentors sign up or interns are recruited, they will be asked to fill out a W-9 form. The W-9 form is used to collect information such as your name, address and social security number. This information is necessary for us to comply with the IRS requirement that we issue you a form 1099 once your annual earnings exceed $600.
+				</p>
+			</div>
+		</div></br>
+		<div name="mentee-arrow" style="position: relative; overflow: hidden; background-color: rgba(80, 80, 252, 0.75);">
+			<img id="mentee-image" style="position: relative; width: 3%;  float: left;max-height: 20px;max-width: 20px; margin-top: 7px; ! important; height: 20px; " src="/sites/all/modules/custom/faqs/menu-drop-bg.png" height="19" width="19">
+			<h1 style="position: relative; width: 97%;  float: left;color: white;margin: 0;">Mentees</h1> 
+		</div>
+		<div id= "menteeqa" style = "margin-left: 10px;">
+			<div id="mentee-q1" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">  
+					<b>What should I do to make the session useful?</b>
+				</p>
+			</div>
+			<div id="mentee-a1" class = "faqs-answer">
+				<p> 
+					&emsp;We understand that High School students are very busy and often stressed about the College Admissions Process.
+					Please remember that your mentors from College or mentors who are Professionals are often even more busy than you !
+					So respect their time and use the time you have to interact with them wisely. <br/>
+
+					&emsp;Ask questions, share information or any concerns . You dont have to be shy or embarrassed if you dont yet know what you want to do in College.
+					Sharing your thoughts may help create a more meaningful bond between you and your mentor that will help you conquer some of your concerns and
+					enable you to move forward with the college admissions process with greater confidence.</br>
+					&emsp;Here is a short guide for mentees that should help you get the most value from your mentoring sessions.In order to help get the conversation started with your mentors, we have included some sample questions that you could ask your mentors.<br/>
+					';
+	$html .= print_r($mentee_guide_node_view_renderer,true);
+	$html .= '</p>
+			</div>
+			<!--<div id="mentee-q2" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">  
+					<b>Is my credit card information stored on your site?
+					</b>
+				</p>
+			</div>
+			<div id="mentee-a2" class = "faqs-answer">
+				<p> 
+					No. We use a third party to handle payments . We  do not store any credit card information on our site.
+				</p>
+			</div>-->
+			<div id="mentee-q3" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">  
+					<b>Is my password encrypted?</b>
+				</p>
+			</div>
+			<div id="mentee-a3" class = "faqs-answer">
+				<p> 
+					Yes.
+				</p>
+			</div>
+			<div id="mentee-q4" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">  
+					<b>Do I need to schedule the meetings  with my mentors myself?
+					</b>
+				</p>
+			</div>
+			<div id="mentee-a4" class = "faqs-answer">
+				<p> 
+					&emsp;Yes. Please use SkoolMentor\'s messaging mechanism to set up a suitable date/time for the meetings. You may use the messaging platform to exchange phone numbers or skype ids as well or check your mentor\'s profile for his/her contact details so that you can continue the discussion over phone or skype as well.<br/>
+					&emsp;Many mentors post their availability schedule in their profiles. Please take a look at that and try work around your mentor\'s schedule to set up the meeting time.<br/>
+					&emsp;We currently do not support integration with calendars .
+				</p>
+			</div>
+			<div id="mentee-q5" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">  
+					<b>How much time do I get to spend with my mentor?
+					</b>
+				</p>
+			</div>
+			<div id="mentee-a5" class = "faqs-answer">
+				<p> 
+					&emsp;For the 3 month mentoring engagement model , a total time commitment of about 1.5-2 hours per month for 3 months should suffice. This includes the time spent communicating over email or on skype or by any other means. This time could be split up into smaller slots for more frequent interactions. Eg: a 25-30 minute skype or google hangout session per week for 3 months could be scheduled.
+					With the 3 month model the goal is to get to know each other and for you to be able to get adequate information and guidance from your mentor so that you feel confident to move forward with respect to the college admissions process and beyond.<br/>
+
+					&emsp;For the  pay-as-you-go or 1 hour/30 minutes on demand mentoring model - the total commitment time is 1 hour/30 minutes for one meeting only. 
+					The goal here is again to get the guidance, support and information from your mentor to help you move forward with the college admissions process and beyond.
+				</p>
+			</div>
+			<div id="mentee-q6" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">  
+					<b>What if my mentor is not working out?
+					</b>
+				</p>
+			</div>
+			<div id="mentee-a6" class = "faqs-answer">
+				<p> 
+					&emsp;Let us know within 30 days by emailing us at <a href="mailto:support@SkoolMentor.com">support@SkoolMentor.com</a> and, if another mentor matching your requirements is available, we will assign him or her to you at no extra charge. If another mentor is not available right away then we can discuss other options with you. <br/>
+					&emsp;If the second mentor still does not work out then we apologize in advance for our service not meeting your expectations.
+				</p>
+			</div>
+			<div id="mentee-q7" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">  
+					<b>Can I interview my mentor before hiring?
+					</b>
+				</p>
+			</div>
+			<div id="mentee-a7" class = "faqs-answer">
+				<p> 
+					&emsp;While at this point we cannot support mentor interviews prior to hiring we want to assure you that we make it a priority to get the best mentors available through our service .  You will also have an opportunity to base your decisions on mentor reviews available on skoolmentor.com. However if after a few meetings with your mentor you are not satisfied please let us know within 30 days and we will assign another mentor to you at no extra charge if  a mentor who matches  your requirements is available.<br/>
+				</p>
+			</div>
+			<div id="mentee-q8" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">  
+					<b>I received an "invite" from a mentor. What should I do?
+					</b>
+				</p>
+			</div>
+			<div id="mentee-a8" class = "faqs-answer">
+				<p> 
+					&emsp;1.Refer to the question "How exactly does SkoolMentor work with respect to connecting mentors and mentees?" in the General section of the FAQ.<br/>
+					<br/>Mentors may "invite"  mentees when they have reason to believe that they could really help those mentees based on the details mentioned in the mentee profiles.<br/>
+					If a mentee receives an "invite" from a mentor , then the mentee should review that mentor\'s profile. If it looks like a good match, then the mentee needs to follow steps "b-g" in "1" above.<br/>
+				</p>
+			</div>
+			<div id="mentee-q9" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">  
+					<b>How do I write a review for my mentor?
+					</b>
+				</p>
+			</div>
+			<div id="mentee-a9" class = "faqs-answer">
+				<p> 
+					To write a review follow the steps below:<br/>
+					&emsp;a. Search for your mentor or click on his/her picture on the home page.<br/>
+					&emsp;b. You will be taken to the mentor profile.<br/>
+					&emsp;c. In the mentor profile, under the mentor\'s photo, you can see the link with the text "Write a Review".<br/>
+					&emsp;d. Click on "Write a Review".<br/>
+					&emsp;e. Now start writing the review.<br/>
+					&emsp;f. Make sure to click on the stars to give a star rating to your mentor.<br/>
+				</p>
+			</div>
+			<div id="mentee-q10" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">  
+					<b>Will my profile be visible on the SkoolMentor.com website??
+					</b>
+				</p>
+			</div>
+			<div id="mentee-a10" class = "faqs-answer">
+				<p> 
+					No, your profile is not visible to the general public. Only mentors and that too mentors who are logged into SkoolMentor.com can see your partial  profile and that too if they run a "search"  on mentees.  We allow logged in mentors to search mentee profiles so they can "invite" certain mentees to connect to them if their mentoring interests match.<br/>
+				</p>
+			</div>
+			<div id="mentee-q11" class = "faqs-question">
+				<p>
+					<img src="/sites/all/modules/custom/faqs/add.png" width="15px">  
+					<b>I want to schedule a new on demand session with my mentor. I am still connected from my previous session. How do I re-connect with my mentor for a new session?
+					</b>
+				</p>
+			</div>
+			<div id="mentee-a11" class = "faqs-answer">
+				<p> 
+					Once the mentor and mentee are connected, we allow them 3 weeks to schedule their actual meeting. After 3 weeks the connection is automatically reset. If you have your meeting before the 3 week period is over and you would like to connect again for a new session then you need to first reset the original connection and issue a new connection request to your mentor. Here are the steps to follow.<br/><br/>a. You should be receiving reminder emails from SkoolMentor (check your spam folder incase you cannot find the reminder emails in your inbox). In the reminder emails, there is a link to reset the connection. Make sure you open the correct reminder email - the one for the mentor you wish to re-connect with.<br/>b. Click on the reset connection link in the reminder email.<br/>c. Now, send a new connection request to the mentor.<br/>d. The rest of the process is as usual.<br/>
+				</p>
+			</div>
+		</div>
+	</div>
+</div>
+				
+			<script type="text/javascript">
+					(function ($) {
+						$("div[id^=mentor-a]").hide();
+						$("div[id^=mentee-a]").hide();
+						$("div[id^=general-a]").hide();
+						$("#menteeqa").hide();
+						$("#mentorqa").hide();
+						if($("#howItWorksDiv").is(":visible")){
+								$("#howItWorksDiv").slideToggle(50);
+								$("#howItWorksButton").toggleClass("bbg");
+							}
+						if($("#login-box").is(":visible")){
+								$("#login-box").slideToggle(50);
+								$("#signInForSkoolMentor").toggleClass("bbg");
+						}
+						$("#faqsButton").toggleClass("bbg");
+						$("div[name^=mentor-arrow]").click(function() {
+							
+							//Fade in the Popup and add close button
+							
+							$("#mentorqa").slideToggle(50);
+							if($("#mentor-image").attr("src") == "/sites/all/modules/custom/faqs/menu-drop-bg-2.png"){
+								$("#mentor-image").attr("src","/sites/all/modules/custom/faqs/menu-drop-bg.png");
+							}else{
+								$("#mentor-image").attr("src","/sites/all/modules/custom/faqs/menu-drop-bg-2.png");
+							}
+							return false;
+						});
+						$("div[name^=mentee-arrow]").click(function() {
+							
+							//Fade in the Popup and add close button
+							
+							$("#menteeqa").slideToggle(50);
+							if($("#mentee-image").attr("src") == "/sites/all/modules/custom/faqs/menu-drop-bg-2.png"){
+								$("#mentee-image").attr("src","/sites/all/modules/custom/faqs/menu-drop-bg.png");
+							}else{
+								$("#mentee-image").attr("src","/sites/all/modules/custom/faqs/menu-drop-bg-2.png");
+							}
+							return false;
+						});
+						$("div[name^=general-arrow]").click(function() {
+							
+							//Fade in the Popup and add close button
+							
+							$("#generalqa").slideToggle(50);
+							if($("#general-image").attr("src") == "/sites/all/modules/custom/faqs/menu-drop-bg-2.png"){
+								$("#general-image").attr("src","/sites/all/modules/custom/faqs/menu-drop-bg.png");
+							}else{
+								$("#general-image").attr("src","/sites/all/modules/custom/faqs/menu-drop-bg-2.png");
+							}
+							return false;
+						});
+						$("div[id^=mentor-q]").click(function() {
+							
+							//Fade in the Popup and add close button
+							var qId = this.getAttribute("id");
+							var aId = "#"+qId.replace("-q","-a");
+							$(aId).slideToggle(50);
+			
+							return false;
+						});
+						$("div[id^=mentee-q]").click(function() {
+							
+							//Fade in the Popup and add close button
+							var qId = this.getAttribute("id");
+							var aId = "#"+qId.replace("-q","-a");
+							$(aId).slideToggle(50);
+							
+							return false;
+						});
+						$("div[id^=general-q]").click(function() {
+							
+							//Fade in the Popup and add close button
+							var qId = this.getAttribute("id");
+							var aId = "#"+qId.replace("-q","-a");
+							$(aId).slideToggle(50);
+			
+							return false;
+						});
+					})(jQuery);
+				</script>  
+			
+			';
+	return ($html);
+}

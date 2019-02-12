@@ -1,0 +1,9 @@
+name = Mentor
+description = "Allows users to create employees."
+package = mentor
+core = 7.x
+files[] = mentor.install
+
+stylesheets[(min-width: 961px)][] = mentor.css
+stylesheets[(min-width: 768px) and (max-width: 960px)][] = mentor768.css
+stylesheets[(max-width: 767px)][] = mentor320.css

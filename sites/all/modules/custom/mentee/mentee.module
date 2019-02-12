@@ -1,0 +1,910 @@
+<?php
+function mentee_menu() {
+  $items['mentee/%/create'] = array(
+    'title' => 'Create Mentee',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentee_form', 1),
+    'access callback' => TRUE,
+  );
+  
+  $items['mentee/editprofile'] = array(
+    'title' => 'Edit',
+    'page callback' => 'mentee_edit',
+    //'page arguments' => array('mentee_edit'),
+    'access callback' => TRUE,
+    //'access arguments' => array(1),
+    //'type' => MENU_LOCAL_TASK,
+    //'file' => 'user.pages.inc',
+  );
+  
+  $items['mentee/%mentee/edit'] = array(
+    'title' => 'Edit',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentee_profile_form', 1),
+    'access callback' => TRUE,
+    //'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'mentee.pages.inc',
+  );
+  
+  $items['mentee/updateskill'] = array(
+    'title' => 'Edit',
+    'page callback' => 'mentee_update',
+    //'page arguments' => array('mentor_edit'),
+    'access callback' => TRUE,
+    //'access arguments' => array(1),
+    //'type' => MENU_LOCAL_TASK,
+    'file' => 'user.pages.inc',
+  );
+  
+  $items['mentee/%mentee/updateskills'] = array(
+    'title' => 'Edit',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentee_update_skill', 1),
+    'access callback' => TRUE,
+    //'access arguments' => array(1),
+    //'type' => MENU_LOCAL_TASK,
+    'file' => 'mentee.pages.inc',
+  );
+  
+    $items['menteefirstname/autocomplete'] = array(
+      'title' => 'Autocomplete for first name',
+      'page callback' => '_menteefirstname_autocomplete',
+      //'access arguments' => array('use autocomplete'),  //or whatever permission makes sense
+      //'type' => MENU_CALLBACK
+      'access callback' => TRUE,
+  );
+  
+  $items['menteelastname/autocomplete'] = array(
+      'title' => 'Autocomplete for last name',
+      'page callback' => '_menteelastname_autocomplete',
+      //'access arguments' => array('use autocomplete'),  //or whatever permission makes sense
+      //'type' => MENU_CALLBACK
+      'access callback' => TRUE,
+  );
+  
+  $items['menteeschool/autocomplete'] = array(
+      'title' => 'Autocomplete for mentor school name',
+      'page callback' => '_menteeschool_autocomplete',
+      //'access arguments' => array('use autocomplete'),  //or whatever permission makes sense
+      //'type' => MENU_CALLBACK
+      'access callback' => TRUE,
+  );
+  
+  return $items;
+}
+
+function _menteefirstname_autocomplete($string) {
+  $matches = array();
+  $result = db_select('mentee', 'm')
+    ->fields('m', array('first_name'))
+    ->condition('first_name', '%' . db_like($string) . '%', 'LIKE')
+    ->execute();
+  
+  foreach ($result as $row) {
+    $matches[$row->first_name] = check_plain($row->first_name);
+  }
+  drupal_json_output($matches);
+}
+
+function _menteelastname_autocomplete($string) {
+  $matches = array();
+  $result = db_select('mentee', 'm')
+    ->fields('m', array('last_name'))
+    ->condition('last_name', '%' . db_like($string) . '%', 'LIKE')
+    ->execute();
+  
+  foreach ($result as $row) {
+    $matches[$row->last_name] = check_plain($row->last_name);
+  }
+  drupal_json_output($matches);
+}
+
+function _menteeschool_autocomplete($string) {
+  $matches = array();
+  $result = db_select('mentee', 'm')
+    ->fields('m', array('school_name'))
+    ->condition('school_name', '%' . db_like($string) . '%', 'LIKE')
+    ->execute();
+  
+  foreach ($result as $row) {
+    $matches[$row->school_name] = check_plain($row->school_name);
+  }
+  drupal_json_output($matches);
+}
+
+
+function mentee_edit() {
+	$uid = $_SESSION['user']->uid;
+	drupal_goto('mentee/' . $uid . '/edit');
+}
+
+function mentee_update() {
+	$uid = $_SESSION['user']->uid;
+	drupal_goto('mentee/' . $uid . '/updateskills');
+}
+
+function mentee_load($uid, $reset = FALSE) {
+  $users = mentee_load_multiple(array($uid), array(), $reset);
+  return reset($users);
+}
+
+function mentee_load_multiple($uids = array(), $conditions = array(), $reset = FALSE) {
+  $user = entity_load('user', $uids, $conditions, $reset);
+    
+	return $user;
+}
+
+/**
+ * Menu callback.
+ */
+function mentee_page() {
+  return drupal_get_form('mentee_form');
+}
+
+function mentee_form($form, &$form_state, $uid) {
+      
+  //drupal_add_css(drupal_get_path('module', 'customer_survey') . '/css/customer_survey.css');
+  if (!isset($form_state['stage'])) {
+  	$form_state['stage'] = 'basic_info';
+  	$form_state['uid'] = $uid;
+  }
+  
+  $form = array();
+  //$form['#user'] = $_SESSION['user'];
+  $form = mentee_get_header($form, $form_state);
+ 
+  switch ($form_state['stage']) {
+     
+    case 'basic_info':
+      return mentee_basic_info_form($form, $form_state);
+     break;  
+  
+    case 'educational_info': 
+      return mentee_educational_form($form, $form_state);  
+     break;
+     
+    case 'mentorship_details': 
+      return mentorship_details_form($form, $form_state);  
+     break;
+  
+    default:
+      return mentee_basic_info_form($form, $form_state);
+     break; 
+     
+  }
+   
+  return $form;
+     
+}
+
+function mentee_basic_info_form($form, &$form_state) {
+   
+  $values = isset($form_state['multistep_values']['basic_info']) ? $form_state['multistep_values']['basic_info'] : array();
+  $form['basic_info']['basicInformation'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Basic Information'),
+  );
+  
+  $form['basic_info']['basicInformation']['fname'] = array(
+    '#type' => 'textfield',
+    '#title' => t('First Name'),
+    '#maxlength' => 255,
+    //'#description' => t('First name of the user.'),
+    '#required' => TRUE,
+    '#default_value' => isset($values['fname']) ? $values['fname'] : NULL,
+  );
+  
+  $form['basic_info']['basicInformation']['lname'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Last name'),
+    '#maxlength' => 255,
+    //'#description' => t('Last name of the user.'),
+    '#required' => FALSE,
+    '#default_value' => isset($values['lname']) ? $values['lname'] : NULL,
+  );
+  
+  $form['basic_info']['basicInformation']['bday'] = array(
+    '#type' => 'date',
+    '#title' => t('Date of birth'),
+    //'#description' => t('Birth day of the user.'),
+    '#required' => TRUE,
+    '#default_value' => isset($values['bday']) ? $values['bday'] : time(),
+  );
+  $form['basicInformation']['parent_mail'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Parent E-mail address'),
+    //'#maxlength' => EMAIL_MAX_LENGTH,
+    //'#description' => t('A valid e-mail address. All e-mails from the system will be sent to this address. The e-mail address is not made public and will only be used if you wish to receive a new password or wish to receive certain news or notifications by e-mail.'),
+    '#required' => TRUE,
+    '#default_value' => (!$register ? $account->parent_mail : ''),
+    '#size' => 20,
+  );
+  
+  $form['basic_info']['basicInformation']['gender'] = array(
+    '#title' => t('Gender'),
+    '#type' => 'select',
+    //'#description' => 'Select the gender.',
+    '#required' => TRUE,
+    '#options' => array(t('M'), t('F')),
+    '#default_value' => isset($values['gender']) ? $values['gender'] : NULL,
+  );
+  
+  $form['basic_info']['basicInformation']['zcode'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Zip code'),
+    //'#description' => t('Zip code of the user.'),
+    '#required' => TRUE,
+    '#default_value' => isset($values['zcode']) ? $values['zcode'] : NULL,
+  );
+  
+  $form['basic_info']['basicInformation']['mobile'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Mobile'),
+    '#default_value' => isset($values['mobile']) ? $values['mobile'] : NULL,
+  );
+  
+  $form['basic_info']['basicInformation']['skype_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Skype ID'),
+    '#default_value' => isset($values['skype_id']) ? $values['skype_id'] : NULL,
+  );
+   
+  $form['next'] = array(
+    '#type' => 'submit',
+    '#value' => t('Next')
+  );
+     
+  return $form;
+ }
+ 
+ 
+ function mentee_educational_form($form, &$form_state) {
+   
+  $values = isset($form_state['multistep_values']['educational_info']) ? $form_state['multistep_values']['educational_info'] : array();
+  $form['educational_info']['educationalInformation'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Education Information'),
+  );
+  
+  $form['educational_info']['educationalInformation']['school_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('School Name'),
+    '#maxlength' => 255,
+    //'#description' => t('Name of your school'),
+    '#required' => TRUE,
+    '#default_value' => isset($values['school_name']) ? $values['school_name'] : NULL,
+  );
+  
+  $form['educational_info']['educationalInformation']['city'] = array(
+    '#type' => 'textfield',
+    '#title' => t('City'),
+    '#maxlength' => 255,
+    //'#description' => t('City where the school is located'),
+    '#required' => FALSE,
+    '#default_value' => isset($values['city']) ? $values['city'] : NULL,
+  );
+  
+  $form['educational_info']['educationalInformation']['state'] = array(
+    '#type' => 'textfield',
+    '#title' => t('State'),
+    '#maxlength' => 255,
+    //'#description' => t('State where the school is located'),
+    '#required' => FALSE,
+    '#default_value' => isset($values['state']) ? $values['state'] : NULL,
+  );
+  
+  $form['educational_info']['educationalInformation']['yearOfSchool'] = array(
+    '#type' => 'select',
+    '#title' => t('Year of High School graduation'),
+    //'#description' => t('Year when School attended.'),
+    '#required' => TRUE,
+    '#options' => array(t(date('Y', time())), t(date('Y', strtotime('+1 year'))), t(date('Y', strtotime('+2 years'))), t(date('Y', strtotime('+3 years'))), t(date('Y', strtotime('+4 years')))),
+    '#default_value' => isset($values['yearOfSchool']) ? $values['yearOfSchool'] : '',
+  );
+  
+  $form['back'] = array(
+    '#type' => 'submit',
+    '#value' => t('Back')
+  );
+   
+  $form['next'] = array(
+    '#type' => 'submit',
+    '#value' => t('Next')
+  );
+     
+  return $form;
+ }
+ 
+ function mentorship_details_form($form, &$form_state) {
+   
+  $values = isset($form_state['multistep_values']['mentorship_details']) ? $form_state['multistep_values']['mentorship_details'] : array();
+  
+  $form['mentorship_details']['details'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Mentorship request'),
+  );
+  
+  $entries = db_query("SELECT aid, name FROM {area_mentoring}");
+
+  $options = array();
+  foreach($entries as $record)
+  {
+    $options[$record->aid] =$record->name;
+  }
+  
+   $form['mentorship_details']['details']['areaofmentoring'] = array(
+    '#title' => t('Area want mentoring in'),
+    '#type' => 'select',
+    //'#description' => 'Select the area you want to be mentored',
+    '#multiple' => TRUE,
+    '#required' => TRUE,
+    '#options' =>  $options ,
+    '#default_value' => isset($values['areaofmentoring']) ? $values['areaofmentoring'] : NULL,
+  );
+  
+  $entries = db_query("SELECT cid, name FROM {specialization_category}");
+
+  $options = array();
+  foreach($entries as $record)
+  {
+    $options[$record->cid] =$record->name;
+  }
+  
+  if(empty($values)) {
+  
+  	$value_field_of_study = isset($form_state['values']['fieldOfStudy']) ? $form_state['values']['fieldOfStudy'] : key($options);
+  } else {
+  	if(isset($form_state['values']['fieldOfStudy'])) {
+  		$value_field_of_study = $form_state['values']['fieldOfStudy'];	
+  	} else {
+  		$value_field_of_study = $values['fieldOfStudy'];
+  	} 
+  }
+  
+  $form['mentorship_details']['details']['fieldOfStudy'] = array(
+    '#type' => 'select',
+    '#title' => t('Field of Study'),
+    //'#description' => t('Field of study.'),
+    '#required' => FALSE,
+    '#options' => $options,
+    '#default_value' => $value_field_of_study,
+    '#ajax' => array(
+   'event' => 'change',
+        'callback' => 'mentee_ajax_callback',
+        'progress' => array(
+        'message' => '',
+      ),
+        'wrapper' => 'mentee_dropdown_specialization_replace',
+      ),
+      '#states' => array(
+      'visible' => array(
+        ':input[name="areaofmentoring"]' => array('value' => '1'),
+      ),
+    ),
+  );
+  
+  $form['mentorship_details']['details']['fieldOfSpecialization'] = array(
+    '#type' => 'select',
+    '#title' => t('Field of Specialization'),
+    //'#description' => t('Field of study you want to specialize in.'),
+    '#required' => FALSE,
+    '#multiple' => TRUE,
+    //'#options' => $options,
+    '#prefix' => '<div id="mentee_dropdown_specialization_replace">',
+    '#suffix' => '</div>',
+    '#options' => mentee_specialization_dropdown_options($value_field_of_study),
+    '#default_value' => isset($form_state['values']['fieldOfSpecialization']) ? $form_state['values']['fieldOfSpecialization'] : '',
+    '#states' => array(
+      'visible' => array(
+        ':input[name="areaofmentoring"]' => array('value' => '1'),
+      ),
+    ),
+  );
+  
+  /*$form['mentorship_details']['details']['req_title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Mentoring request title'),
+    '#maxlength' => 255,
+    //'#description' => t('Title of your request'),
+    '#default_value' => isset($values['req_title']) ? $values['req_title'] : NULL,
+  );*/
+  
+  $form['mentorship_details']['details']['mentoring_request'] = array(
+    '#type' => 'textarea',
+    '#title' => t('About me'),
+    //'#description' => t('Your mentoring request'),
+    '#default_value' => isset($values['mentoring_request']) ? $values['mentoring_request'] : NULL,
+  );
+  
+  /*$form['mentorship_details']['details']['hobby'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Hobbies'),
+    //'#description' => t('Your hobbies'),
+    '#default_value' => isset($values['hobby']) ? $values['hobby'] : NULL,
+  );*/
+  
+  $form['back'] = array(
+    '#type' => 'submit',
+    '#value' => t('Back')
+  );
+  
+  $form['next'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit')
+  );
+     
+  return $form;	
+  
+} 
+
+function mentee_ajax_callback($form, $form_state) {
+    return $form['mentorship_details']['details']['fieldOfSpecialization'];
+}
+
+function mentee_specialization_dropdown_options($key = '') {
+$entries = db_query("SELECT scid, name FROM {specialization_subcategory} WHERE specialization_category_id = $key");
+
+  $options = array();
+  foreach($entries as $record)
+  {
+    $options[$record->scid] =$record->name;
+  }
+  return $options;
+}
+
+function mentee_form_submit($form, &$form_state) {
+   
+  switch ($form_state['stage']) {
+     
+    case 'mentorship_details':
+      $form_state['multistep_values'][$form_state['stage']] = $form_state['values'];
+      if ($form_state['triggering_element']['#value'] != 'Back') {
+        mentee_personal_details_submit($form, $form_state);
+        $form_state['complete'] = TRUE;
+      }
+     break;
+  
+    default:
+      $form_state['multistep_values'][$form_state['stage']] = $form_state['values'];
+      $form_state['new_stage'] = mentee_move_to_next_stage($form, $form_state);
+     break;
+  
+  } 
+ 
+  if (isset($form_state['complete'])) drupal_goto('complete-page');   
+   
+  if ($form_state['triggering_element']['#value'] == 'Back') {
+    $form_state['new_stage'] = mentee_move_to_previous_stage($form, $form_state);
+  } 
+   
+  if (isset($form_state['multistep_values']['form_build_id'])) {
+    $form_state['values']['form_build_id'] = $form_state['multistep_values']['form_build_id'];
+  }
+  $form_state['multistep_values']['form_build_id'] = $form_state['values']['form_build_id'];
+  $form_state['stage'] = $form_state['new_stage'];
+  $form_state['rebuild'] = TRUE;
+}
+
+function mentee_personal_details_submit($form, &$form_state) {
+	$transaction = db_transaction();
+    try {
+	  $basic_info = $form_state['multistep_values']['basic_info'];
+	  $educational_info = $form_state['multistep_values']['educational_info'];
+	  $mentorship_details = $form_state['multistep_values']['mentorship_details'];
+	  
+	  $selected_aom = $mentorship_details['areaofmentoring'];
+	  $selected_spec = $mentorship_details['fieldOfSpecialization'];
+	  //entity_form_submit_build_entity('user', $account, $form, $form_state);  
+	  $specialization = '';
+		$entries = '';
+		$fos = $mentorship_details['fieldOfStudy']; 
+		if(! empty($selected_spec)) {
+			$query = "SELECT name FROM {specialization_subcategory} WHERE scid = ";
+			$max = count($selected_spec);
+			foreach($selected_spec as $key => $value) {
+				$query .= $key;
+				if($max > 1) {
+					$query .= " or scid = ";
+					$max = $max - 1;  	
+				}					
+			}			
+			$entries = db_query($query);	
+		} else {
+			$entries = db_query("SELECT name FROM {specialization_subcategory} WHERE specialization_category_id = $fos");		
+		}
+		foreach($entries as $record) {
+			$specialization .= $record->name . ', '; 	
+		}
+		$specialization = substr($specialization, 0, (strlen($specialization) - 2)); 
+		
+		$mentoring_area = ''; 
+		if(! empty($selected_aom)) {
+			$query = "SELECT name FROM {area_mentoring} WHERE aid = ";
+			$max = count($selected_aom);
+			foreach($selected_aom as $key => $value) {
+				$query .= $key;
+				if($max > 1) {
+					$query .= " or aid = ";
+					$max = $max - 1;  	
+				}
+					
+			}			
+			$entries = db_query($query);	
+		}
+		foreach($entries as $record) {
+			$mentoring_area .= $record->name . ', '; 	
+		}
+		$mentoring_area = substr($mentoring_area, 0, (strlen($mentoring_area) - 2)); 
+		
+		//$year_of_school_key = $educational_info['yearOfSchool'];
+		//$year_of_school_value = $form['educational_info']['educationalInformation']['yearOfSchool']['#options'][$year_of_school_key];
+		
+		$year_of_school_value = 2014 + $educational_info['yearOfSchool'];		
+					 
+		$birthDate = $basic_info['bday'];
+		$nid = db_insert('mentee')
+		->fields(array(
+		'mid' => $form_state['uid'],
+    'parent_mail' => $basic_info['parent_mail'],
+		'first_name' => $basic_info['fname'],
+		'last_name' => $basic_info['lname'],
+		'birthday' => $birthDate['day'],
+		'birthmonth' => $birthDate['month'],
+		'birthyear' => $birthDate['year'],
+		'gender' => $basic_info['gender'],
+		'zipcode' => $basic_info['zcode'],
+		'mobile' => $basic_info['mobile'],
+		'skype_id' => $basic_info['skype_id'],
+		'userid' => $form_state['uid'],
+		'school_name' => $educational_info['school_name'],
+		'state' => $educational_info['state'],
+		'city' => $educational_info['city'],
+		'year_of_school' => $year_of_school_value,
+		//'aom_id' => $mentorship_details['areaofmentoring'],
+		'fos_id' => $mentorship_details['fieldOfStudy'],
+		//'fos_sub_id' => $mentorship_details['fieldOfSpecialization'],
+		//'mentoring_request_title' => $mentorship_details['req_title'],
+		'mentoring_request' => $mentorship_details['mentoring_request'],
+		//'hobbies' => $mentorship_details['hobby'],
+		'specialization' => $specialization,
+		'area_of_mentoring' => $mentoring_area,
+		))
+		->execute();
+		
+		foreach($selected_aom as $key => $value) {
+			db_insert('mentee_aom')
+				->fields(array(
+					'mentee_id' => $form_state['uid'],
+					'aom_id' => $key,
+			))
+			->execute();			
+		}
+				
+		foreach($selected_spec as $key => $value) {
+			db_insert('mentee_specialization')
+				->fields(array(
+					'mentee_id' => $form_state['uid'],
+					'spec_id' => $key,
+			))
+			->execute();			
+		}
+		
+		$query = db_select('users', 'u'); 
+		$query->condition('u.uid', $form_state['uid'], '=');
+		$query->fields('u', array('picture'));
+		$result = $query->execute();
+		$picture = 0;
+		if(	$record = $result->fetchAssoc()) {
+			$picture = $record['picture'];
+		}
+		
+		$account = array();
+		$account['uid'] = $form_state['uid'];
+		$account['status'] = 1;
+		if($picture == 0) {
+			if($basic_info['gender'] == 0) {
+				$account['picture'] = 46;
+			} else {
+				$account['picture'] = 44;
+			}
+		}
+		$success = drupal_write_record('users', $account, 'uid');
+		
+		$query = db_select('user_activation', 'ua'); 
+		$query->condition('ua.uid', $form_state['uid'], '=');
+		$query->fields('ua', array('uid', 'activated'));
+		$result = $query->execute();	
+		
+		$activated;
+		if(	$record = $result->fetchAssoc()) {
+			$activated = $record['activated'];
+		}
+				
+		if($activated == 'N'){
+			drupal_set_message('The user, '.$basic_info['fname'] . (($basic_info['lname'] != 'Last name ') ? ' ' . $basic_info['lname'] : '') .', has been registered successfully, but your account has not yet been verified. Please click on the link sent to your email id to activate your account');
+			drupal_goto('node/1');
+	    } else {
+	    	drupal_set_message('The user, '.$basic_info['fname'] . ' ' . (($basic_info['lname'] != 'Last name ') ? ' ' . $basic_info['lname'] : '') .', has been registered successfully');
+	    	mentoringcommon_login_submit($form, $form_state);
+	    }
+		//drupal_goto('mentoring/login'); 
+	} catch (Exception $e) {
+	    $transaction->rollback();
+	    watchdog_exception('user', $e);
+	    throw $e;
+	}
+  
+}
+
+function mentee_get_header($form, &$form_state) {
+   
+  $form_state['stage'] = isset($form_state['stage']) ? $form_state['stage'] : 1;  
+     
+  $form_stages = array(
+    'basic_info' => 1,
+    'educational_info' => 2,
+    'mentorship_details' => 3,
+  ); 
+     
+  if (isset($form_stages[$form_state['stage']])) {
+   $current_step = $form_stages[$form_state['stage']]; 
+  }
+  else {
+   $current_step = 1;
+  }
+   
+  $stages = array(
+    1 => array('data' => '1. Basic Information'),
+    2 => array('data' => '2. Educational Information'),
+    3 => array('data' => '3. Mentorship Details'),
+  );
+   
+  //$stages[$current_step]['class'] = array('active');
+   
+  $stages_list = theme('item_list', array('items' => $stages));
+   
+  $form['header'] = array(
+    '#type' => 'fieldset',
+    '#title' => '',
+    '#value' => $stages_list,
+  );
+ 
+  return $form;
+   
+}
+
+
+function mentee_move_to_next_stage($form, &$form_state) {
+ 
+  switch ($form_state['stage']) {
+    case 'basic_info':
+      return 'educational_info';
+     break;
+ 
+    case 'educational_info':
+      return 'mentorship_details';
+     break;
+      
+  }
+ 
+}
+ 
+function mentee_move_to_previous_stage($form, &$form_state) {
+ 
+  switch ($form_state['stage']) {
+    case 'educational_info':
+      return 'basic_info';
+     break;
+ 
+    case 'mentorship_details':
+      return 'educational_info';
+     break;
+     
+    case 'general_details':
+      return 'academic_details';
+     break; 
+  }
+     
+}
+
+/**
+ * Implementation of hook_views_data().
+ */
+function mentee_views_data() {
+  $data = array(
+    // uc_recurring_users table
+    'mentee' => array(
+      // Define the table information.
+      'table' => array(
+        // Put all of these in a group in the UI.
+        'group' => 'Mentee',
+        // Declare this as a base table.
+        'base' => array(
+          // The primary key.
+          'field' => 'mid',
+          // UI title to choose from.
+          'title' => t('Mentee'),
+          'help' => t('Mentee specific information.'),
+        ),
+        // Define how this links up with other tables.
+        'join' => array(
+          // The core Users table is handy.
+          'users' => array(
+        	'left table' => 'users',
+            'left_field' => 'uid',
+            'field' => 'mid',
+          ),
+        ),
+      ),
+      ///// Define the fields. /////
+      'mid' => array(
+        // The title that appears in the UI.
+        'title' => t('User ID'),
+        // The help that appears in the UI.
+        'help' => t('User ID for a mentor.'),
+        // Information for displaying the field.
+        'field' => array(
+          'handler' => 'views_handler_field',
+          'click sortable' => TRUE,
+        ),
+        'relationship' => array(
+          'handler' => 'views_handler_relationship',
+          'base' => 'users',
+          'base field' => 'uid',
+        ),
+      ),
+      'parent_mail' => array(
+        // The title that appears in the UI.
+        'title' => t('Parent E-Mail Address'),
+        // The help that appears in the UI.
+        'help' => t('Parent Mail Address of the Mentee'),
+        // Information for displaying the field.
+        'field' => array(
+          'handler' => 'views_handler_field',
+          'click sortable' => TRUE,
+        ),
+      ),
+      'first_name' => array(
+        // The title that appears in the UI.
+        'title' => t('First Name'),
+        // The help that appears in the UI.
+        'help' => t('First name of the mentor'),
+        // Information for displaying the field.
+        'field' => array(
+          'handler' => 'views_handler_field',
+          'click sortable' => TRUE,
+        ),
+      ),
+      'last_name' => array(
+        'title' => t('Last Name'),
+        'help' => t('Last name of the mentor'),
+        'field' => array(
+          'handler' => 'views_handler_field',
+          'click sortable' => TRUE,
+        ),
+      ),
+      'state' => array(
+        'title' => t('State'),
+        'help' => t('State of the mentor'),
+        'field' => array(
+          'handler' => 'views_handler_field',
+          'click sortable' => TRUE,
+        ),
+      ),
+      'city' => array(
+        'title' => t('City'),
+        'help' => t('City of the mentor'),
+        'field' => array(
+          'handler' => 'views_handler_field',
+          'click sortable' => TRUE,
+        ),
+      ),
+      'area_of_mentoring' => array(
+        'title' => t('Area of mentoring'),
+        'help' => t('Area in which mentee wants mentoring'),
+        'field' => array(
+          'handler' => 'views_handler_field',
+          'click sortable' => TRUE,
+        ),
+        'sort' => array(
+          'handler' => 'views_handler_sort',
+        ),
+      ),
+      'specialization' => array(
+        'title' => t('Fields of Specialization'),
+        'help' => t('Specialization in which mentee wants mentoring'),
+        'field' => array(
+          'handler' => 'views_handler_field',
+          'click sortable' => TRUE,
+        ),
+        'sort' => array(
+          'handler' => 'views_handler_sort',
+        ),
+      ),
+      'school_name' => array(
+        'title' => t('School'),
+        'help' => t('School of mentee'),
+        'field' => array(
+          'handler' => 'views_handler_field',
+          'click sortable' => TRUE,
+        ),
+        'sort' => array(
+          'handler' => 'views_handler_sort',
+        ),
+      ),
+      'year_of_school' => array(
+        'title' => t('Year of school'),
+        'help' => t('Year of school'),
+        'field' => array(
+          'handler' => 'views_handler_field',
+          'click sortable' => TRUE,
+        ),
+        'sort' => array(
+          'handler' => 'views_handler_sort',
+        ),
+      ),
+    ), // End of uc_recurring_users table.
+  );
+
+  return $data;
+}
+function mentee_theme($existing, $type, $theme, $path) {
+	return array(
+			'mentee_edit_theme_form' => array(
+					'render element' => 'form',
+					'file'           => 'mentee.pages.inc',
+			),
+	);
+}
+
+function mentee_fields_load($mid) {
+  
+  $query = db_select('mentee', 'm');   
+	//$query->join('specialization_subcategory', 'ssc', 'ssc.scid = m.fos_id'); //JOIN node with users
+	$query->condition('m.mid', $mid,'=');	   
+	$query->fields('m');//SELECT the fields from user	
+	   //->fields('ssc');
+	$result = $query->execute();
+	
+	$account = new stdClass();
+	if(	$record = $result->fetchAssoc()) {
+		$mobile = $record['mobile'];
+		//if(isset($record['mobile']))
+		//	$mobile = decrypt($record['mobile'], ENCRYPTION_KEY);
+
+		$skype_id = $record['skype_id'];
+		//if(isset($record['skype_id']))
+		//	$skype_id = decrypt($record['skype_id'], ENCRYPTION_KEY);
+			
+		$account->mid = $record['mid'];
+    $account->parent_mail = $record['parent_mail'];
+	    $account->first_name = $record['first_name'];
+	    $account->last_name = $record['last_name'];
+	    $account->gender = $record['gender'];
+	    $account->zipcode = $record['zipcode'];
+	    $account->mobile = $mobile;
+	    $account->skype_id = $skype_id;
+	    $account->userid = $account->uid;
+		$account->school_name = $record['school_name'];
+		$account->state = $record['state'];
+	    $account->country = $record['country'];
+		$account->city = $record['city'];
+		$account->birthday = $record['birthday'];
+		$account->birthmonth = $record['birthmonth'];
+		$account->birthyear = $record['birthyear'];
+		$account->yearOfSchool = $record['year_of_school'];
+		//$account->aom_id = $record['aom_id'];
+		$account->fos_id = $record['fos_id'];
+		//$account->fos_sub_id = $record['fos_sub_id'];
+		$account->mentoring_request_title = $record['mentoring_request_title'];
+		$account->mentoring_request = $record['mentoring_request'];
+	    $account->country_others = '';
+	    if($account->country != 'USA') {
+	    	$account->country_others = $record['country'];
+	    	$account->country = 'Others';
+	    }
+		//$account->hobbies = $record['hobbies'];
+	}
+	return $account;
+}

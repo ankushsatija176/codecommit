@@ -1,0 +1,23 @@
+.register-form-basic {width: 80%; overflow: hidden; padding-left: 8%;padding-top: 10px;}
+.register-form-basic2 {width: 80%; overflow: hidden; padding-left: 10%;padding-top: 10px;}
+.register-form-block-heading1 {padding-top: 30px; padding-bottom: 10px; font-size: 14px;background-color: #E3E3F8;}
+.register-form-block-heading2 {color: black; font-size: 14px; background-color: rgb(245, 253, 255); margin-top: 5%; padding: 2%; width: 96%;border-top: 2px solid black;}
+.register-form-heading1 { width: 100%;margin: 1%; }
+.register-form-heading2 { font-weight: bold; width: 55%;float: left;text-align: center;font-size: 14px; color: black; padding-top: 5%; }
+.register-form-heading3 { float: right;width: 40%;text-align: center;color: black;margin-top: 4%; margin-right: 2%; }
+.register-form-edu-heading { width: 80%; background-color: white; margin: 2%; padding: 2%; } 
+.register-form-element-div1 { float: center; margin-bottom: 5px; width: 100%;}
+.register-form-element-div2 { width: 100%; }
+.register-form-element-div3 { float: left;width: 100%; }
+.register-form-element-div4 { float: left; overflow: auto; height: 100px;width: 100% }
+.register-form-element-div5 { float: left; background-color: white; border-radius: 3px; border: 1px solid black; width: 95%; padding: 1%; margin: 1%;}
+.register-form-element-div6 { margin-left: 2.5%; }
+.register-form-element-div7 { margin-left: 10%; }
+
+
+.form-text ,.form-textarea { font-weight: bold; height: 40%; border: 1px solid rgb(81, 75, 75);}
+
+.form-select { height: 40%;max-width: 90%;}
+.menteeButton { padding: 5px !important; }
+#edit-pic-ajax-wrapper .form-submit,#mentee-register-form .form-submit{ margin: 10px !important; }
+#edit-professional .form-type-textfield,#edit-professional .form-type-select,#edit-student .form-type-textfield,#edit-student .form-type-select { margin: 10px !important; display: block !important; }

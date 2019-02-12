@@ -1,0 +1,9 @@
+name = Mentee
+description = "Allows users to register as mentee."
+package = mentee
+core = 7.x
+files[] = mentee.install
+
+stylesheets[(min-width: 961px)][] = mentee.css
+stylesheets[(min-width: 768px) and (max-width: 960px)][] = mentee768.css
+stylesheets[(max-width: 767px)][] = mentee320.css

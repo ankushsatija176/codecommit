@@ -1,0 +1,214 @@
+<?php
+
+function new_mentees_view_block_info() {
+	// Create an array that will hold our blocks
+	$blocks = array();
+	 
+	// Create a key in our $blocks array that
+	// defines our block. Note that the key in
+	// this array can be anything. For this
+	// tutorial, we use 'tellafriend_form'.
+	$blocks['new_mentees_view_form'] = array(
+	// 'info' is what you will see when viewing the blocks admin page.
+	// Note that we use the t() (translate) function which lets drupal
+	// translate any text passed in if needed.
+	'info' => t('New Mentees'),
+	// 'cache' how this block will be cached
+	'cache' => DRUPAL_CACHE_GLOBAL,
+	);
+	 
+	// Note, if you wanted to define multiple blocks, you
+	// could simply define more blocks just like above.
+	 
+	// Finally, we return the $blocks array.
+	return $blocks;
+}
+
+function new_mentees_view_block_view($delta = '') {
+	// Create an array that will be returned as our block
+	$block = array();
+	 
+	// Since hook_block_view is called for every block,
+	// Drupal passes in $delta (the key of the blocks defined
+	// in hook_block_info. In our case, we're checking for
+	// $delta to be 'tellafriend_form'.
+	switch($delta) {
+	case 'new_mentees_view_form':
+	// Since this $delta matches our case, we'll define
+	// the subject and contents.
+	 
+	// 'subject' can be blank ('') or anything you wish to define.
+	$block['subject'] = t('New Mentees');
+	 
+	// 'content' are just that, the contents of the block.
+	// In our case, we will be showing a form.
+	// We use drupal_get_form() to return a drupal-built form.
+	// Note that the parameter passed to drupal_get_form is the name
+	// of the function we will build below to define our form.
+	// This can be any function name we define below.
+	$block['content'] = drupal_get_form('new_mentees_view_form');
+	break;
+	}
+	 
+	// Finally, we return the $block array.
+	return $block;
+}
+
+function new_mentees_view_form($form, &$form_state) {
+	$query = db_select('mentee', 'm');   
+	$query->leftjoin('user_activation', 'ua', 'ua.uid = m.mid');
+	$query->join('users', 'u', 'u.uid = m.mid');
+    $query->leftJoin('specialization_category', 'sc', 'sc.cid = m.fos_id');
+	//$query->join('mentor_specialization', 'ms', 'ms.mentor_id = m.mid');
+	//$query->join('specialization_subcategory', 'ssc', 'ssc.scid = ms.type');
+	//$query->join('education_qualification', 'e', 'e.eid = m.degree_id');
+	$query->fields('m')
+		->fields('sc', array('name'))
+		//->fields('ssc', array('name'))
+		->fields('u', array('picture'));
+	$query->addField('sc', 'name', 'category_name');
+	$query->condition('ua.first_login', 1, '!=');
+	$query->condition('ua.activated', 'Y', '=');
+	//$query->addField('ssc', 'name', 'subcategory_name');
+	//$query->addField('e', 'name', 'degree');
+	$query->orderBy("u.created", "DESC");
+	
+	$result = $query->execute();
+	$rows = array();   
+	foreach ($result as $mentee) {
+	    $rows[$mentee->mid] = array(
+	    	'last_name' => $mentee->last_name,
+	    	'mid' => $mentee->mid,
+	    	'picture' => $mentee->picture,
+	    	'first_name' => $mentee->first_name,
+	    	'gender' => $mentee->gender,
+	    	'mentee_type' => $mentee->mentee_type,
+	    	'school_name' => $mentee->school_name,
+	    	'college_name' => $mentee->college_name,
+	    	'area_mentoring' => $mentee->area_of_mentoring,
+	    	'subcategory_name' => $mentee->specialization,
+	    	'state' => $mentee->state,
+	    	'city'=> $mentee->city,
+	    );
+	}
+	
+	$form['new_mentees'] = array(
+	    '#type'   => 'container',    
+	    //'#attributes' => array('class' => array('container-inline')),
+	    '#weight' => -10,
+	    '#theme' => 'new_mentees_slider_view',	    
+  	);
+  	
+  	$form['new_mentees']['mentees'] = array(
+	    '#type' => 'item',
+	    '#title' => t(''),
+	    '#markup' => $rows,
+	  );
+	  return $form;
+}
+
+function new_mentees_view_theme() {
+
+  return array(
+    
+    'new_mentees_slider_view' => array(
+      'render element' => 'form'
+    ),
+  );
+}
+
+function theme_new_mentees_slider_view($variables) {
+
+  /*drupal_add_css(drupal_get_path('module', 'new_mentors_view') . '/css/slider_img.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  //drupal_add_css(drupal_get_path('module', 'new_mentors_view') . '/jquery.simplyscroll.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  //drupal_add_js(drupal_get_path('module', 'new_mentors_view') . '/jquery.simplyscroll.js');	
+  $form = $variables['form'];
+  $output ='<div class="heading-bar span12" style="margin-top:20px"><header style="width: 120px;">New Mentees</header></div>';
+  $output .= '<div id="mentee_scroller" class="touchScroller" style="border-top: 1pt solid rgba(12, 15, 24, 0.1);">';
+  $temp = 0;
+  
+  foreach ($form as $key => $element) {
+	// Set which elements to render in the table.
+    $allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+    // Make sure this is an element and it's of a type listed above.
+    
+    if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {    
+        if($element['#type'] == 'item') {       
+	      $rows = $element['#markup'];
+	      if(empty($rows)) {
+		  	$output .= 'No recommendation for mentors</div>';
+		  	return $output;
+		  }
+	      unset($form[$key]['#markup']);
+		  foreach ($rows as $key => $element) {
+			   	 $temp = $temp + 1;
+			   	 $picture;
+				  if(!empty($element['picture'])) {
+				  	$picture = file_load($element['picture']);
+				  } else {
+				  	if($element['gender'] == 0) {
+			    		$picture = file_load(46);
+			    	} else {
+			    		$picture = file_load(44);
+			    	}
+				  }
+			      //$rendered = drupal_render($element);
+			      $style = variable_get('user_picture_style', '');
+			      
+			      $output .= '<div>';
+			      $output .= '<div class="profile-pic-wrapper" style="float:left;position:relative;margin:5px 5px 5px 5px"; >';
+			      $output .= '<div style="margin:3px 3px 3px 3px">';
+			      $output .= '<div class="profile-pic">';
+			      $output .= '<div class="picture-wrapper">';
+			      $output .= '<span class="bookmarked-icon"></span>';
+			      $profile_link = "mentee/". $element['mid'] ."/profile";
+			      $output .= '<a href="'. $profile_link .'"><div class="bookmark-IE7"></div><div class="">';
+			      $output .= '<div class="picture picture-no-frame large">';
+			      $output .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentee', 'title' => 'Mentee')).'<span></span>';
+			      $output .= '</div>';
+			      $output .= '</div></a>';
+			      if(!empty($element['last_name'])){
+			      	$element['last_name'] = ($element['last_name'] != '') ? $element['last_name'][0].'.' : '';
+			      }
+			      $output .= '</div></div>';
+			      $output .= '<div class="profile-pic-school" style="font-weight: bold;" >'.$element['first_name'].' '.$element['last_name'].'</div>';
+			      if($element['mentee_type'] == 'highschool'){
+			      	$output .= '<div class="profile-pic-school">'.$element['school_name'].'</div>';
+			      } else if($element['mentee_type'] == 'transfer'){
+			      	$output .= '<div class="profile-pic-school">'.$element['college_name'].'</div>';
+			      }
+			      $output .= '<div class ="profile-review">';
+			      
+			      $output .= '</div>';
+			      $output .= '</div></div></div>';
+			      
+			   
+		  } 
+		}
+      }
+    } 
+
+  $output .= '</div>';
+  $output .= '<script type="text/javascript">	
+		(function ($) {
+			$("div#mentee_scroller").smoothDivScroll({
+				visibleHotSpotBackgrounds: "always",
+    			hotSpotScrollingStep: 5
+			});
+		})(jQuery);
+	
+	</script>';*/
+  //$output .= drupal_render_children($form);
+  /*$output .= '<script type="text/javascript">
+  	(function ($){
+  		$("#block-new-mentees-view-new-mentees-view-form").hide();
+  	})(jQuery);
+
+  	</script>';*/
+	$output ='<div class="heading-bar span12" style="margin-top:20px"><header style="width: 204px;">Meet Some Of Our Users</header></div>';
+	$output .= '<div id="mentee_scroller" class="touchScroller" style="border-top: 1pt solid rgba(12, 15, 24, 0.1); padding-top: 10px; text-align:center;">';
+	$output .= '<iframe id="youtubeFrame" width="560" height="275" align="center" src="https://www.youtube.com/embed/Nerj470H6p8?rel=0" frameborder="0" allowfullscreen style="width: 48%; float: left;"></iframe>';
+	$output .= '<iframe id="youtubeFrame" width="560" height="275" align="center" src="https://www.youtube.com/embed/6MR57EvYJl4?rel=0" frameborder="0" allowfullscreen style="width: 48%; padding-left: 10px; float: right;"></iframe>';
+	$output .= '</div>';
+	return $output;
+}

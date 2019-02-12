@@ -1,0 +1,752 @@
+<?php
+function mentor_menu() {
+  $items['mentor/create1'] = array(
+    'title' => 'Create Mentor',
+    'page callback' => 'mentor_page',
+    'access callback' => TRUE,
+  );
+  
+  $items['mentor/%mentor/edit11'] = array(
+    'title' => 'Edit',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentor_profile_form', 1),
+    'access callback' => TRUE,
+    //'access arguments' => array(1),
+    //'type' => MENU_LOCAL_TASK,
+    //'file' => 'user.pages.inc',
+  );
+  
+  $items['mentor/%mentor/view1'] = array(
+    'title' => 'View',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mentor_profile_form', 1),
+    'access callback' => TRUE,
+    //'access arguments' => array(1),
+    //'type' => MENU_LOCAL_TASK,
+    //'file' => 'user.pages.inc',
+  );
+  return $items;
+}
+
+function mentor_load($uid, $reset = FALSE) {
+  $users = mentor_load_multiple(array($uid), array(), $reset);
+  return reset($users);
+}
+
+function mentor_load_multiple($uids = array(), $conditions = array(), $reset = FALSE) {
+  $user = entity_load('user', $uids, $conditions, $reset);
+  //$conditions = array('userid'=>$uids);
+  //$mentorProfile = db_select('mentor', 'm')
+  //	->fields('m')
+  //	->condition('userid', $uids,'=')
+  //  ->execute()
+  //  ->fetchAssoc();
+  //drupal_set_message($mentorProfile['id']);
+  //$user['first_name'] => $mentorProfile['first_name'];
+    
+	return $user;
+}
+
+function mentor_profile_form($form, &$form_state, $account, $category = 'account') {
+  global $user;
+  
+  $query = db_select('mentor', 'm');   
+	$query->join('specialization_subcategory', 'ssc', 'ssc.id = m.fos_id'); //JOIN node with users
+	$query->condition('m.userid', $account->uid,'=');	   
+	$query->fields('m')//SELECT the fields from user	
+	   ->fields('ssc');
+	$result = $query->execute();
+	
+	$mentor = array();
+	if(	$record = $result->fetchAssoc()) {
+	    $account->first_name = $record['first_name'];
+	    $account->last_name = $record['last_name'];
+	    $account->gender = $record['gender'];
+	    $account->zipcode = $record['zipcode'];
+	    $account->mentor_type = $record['mentor_type'];
+	    $account->employer = $record['employer'];
+	    $account->title = $record['title'];
+	    $account->years_of_exp = $record['years_of_exp'];
+	    $account->linkedInProfile = $record['linkedInProfile'];
+	    $account->last_school_attended = $record['last_school_attended'];
+	    //$account->fieldOfStudy = $record['name'];
+	    $account->school_attending = $record['school_attending'];
+	    $account->hobbies = $record['hobbies'];
+	    $account->mentoring_motivation = $record['mentoring_motivation'];
+	}
+	
+
+  // During initial form build, add the entity to the form state for use during
+  // form building and processing. During a rebuild, use what is in the form
+  // state.
+  if (!isset($form_state['user'])) {
+    $form_state['user'] = $account;
+  }
+  else {
+    $account = $form_state['user'];
+  }
+
+  // @todo Legacy support. Modules are encouraged to access the entity using
+  //   $form_state. Remove in Drupal 8.
+  $form['#user'] = $account;
+  $form['#user_category'] = $category;
+
+  if ($category == 'account') {
+    mentor_form($form, $form_state);
+    // Attach field widgets.
+    $langcode = entity_language('user', $account);
+    field_attach_form('user', $account, $form, $form_state, $langcode);
+  }
+
+  $form['actions'] = array('#type' => 'actions');
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+  if ($category == 'account') {
+    $form['actions']['cancel'] = array(
+      '#type' => 'submit',
+      '#value' => t('Cancel account'),
+      '#submit' => array('user_edit_cancel_submit'),
+      '#access' => $account->uid > 1 && (($account->uid == $user->uid && user_access('cancel account')) || user_access('administer users')),
+    );
+  }
+
+  //$form['#validate'][] = 'user_profile_form_validate';
+  // Add the final user profile form submit handler.
+  $form['#submit'][] = 'mentor_profile_form_submit';
+
+  return $form;
+}
+
+/**
+ * Form builder; the mentor registration form.
+ * @ingroup forms
+ * @see mentor_form()
+ */
+function mentor_register_form($form, &$form_state) {
+  global $mentor;
+
+  $form['#user'] = drupal_anonymous_user();
+  $form['#user_category'] = 'register';
+
+  $form['#attached']['library'][] = array('system', 'jquery.cookie');
+  $form['#attributes']['class'][] = 'user-info-from-cookie';
+
+  // Start with the default user account fields.
+  mentor_form($form, $form_state);
+
+  // Attach field widgets, and hide the ones where the 'user_register_form'
+  // setting is not on.
+  $langcode = entity_language('mentor', $form['#user']);
+  field_attach_form('mentor', $form['#user'], $form, $form_state, $langcode);
+  //foreach (field_info_instances('mentee', 'mentee') as $field_name => $instance) {
+    //if (empty($instance['settings']['mentee_register_form'])) {
+      //$form[$field_name]['#access'] = FALSE;
+    //}
+  //}
+
+  //$form['actions'] = array('#type' => 'actions');
+  //$form['actions']['submit'] = array(
+  //  '#type' => 'submit',
+  //  '#value' => t('Create new account'),
+  //);
+
+  //$form['#validate'][] = 'user_register_validate';
+  // Add the final user registration form submit handler.
+  //$form['#submit'][] = 'user_register_submit';
+
+  return $form;
+}
+
+/**
+ * Returns form render array.
+ */
+function mentor_form(&$form, &$form_state) {
+
+   global $user;
+   $account = $form['#user'];
+   $register = ($form['#user']->uid > 0 ? FALSE : TRUE);
+
+	// Account information.
+  $form['account'] = array(
+    '#type'   => 'container',
+    '#weight' => -10,
+  );
+  // Only show name field on registration form or user can change own username.
+  $form['account']['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Username'),
+    '#maxlength' => USERNAME_MAX_LENGTH,
+    '#description' => t('Spaces are allowed; punctuation is not allowed except for periods, hyphens, apostrophes, and underscores.'),
+    '#required' => TRUE,
+    '#attributes' => array('class' => array('username')),
+    '#default_value' => (!$register ? $account->name : ''),
+    //'#access' => ($register || ($user->uid == $account->uid && user_access('change own username')) || $admin),
+    '#weight' => -10,
+  );
+
+  $form['account']['mail'] = array(
+    '#type' => 'textfield',
+    '#title' => t('E-mail address'),
+    '#maxlength' => EMAIL_MAX_LENGTH,
+    '#description' => t('A valid e-mail address. All e-mails from the system will be sent to this address. The e-mail address is not made public and will only be used if you wish to receive a new password or wish to receive certain news or notifications by e-mail.'),
+    '#required' => TRUE,
+    '#default_value' => (!$register ? $account->mail : ''),
+  );
+
+  // Display password field only for existing users or when user is allowed to
+  // assign a password during registration.
+  if (!$register) {
+    $form['account']['pass'] = array(
+      '#type' => 'password_confirm',
+      '#size' => 25,
+      '#description' => t('To change the current user password, enter the new password in both fields.'),
+    );
+    // To skip the current password field, the user must have logged in via a
+    // one-time link and have the token in the URL.
+    $pass_reset = isset($_SESSION['pass_reset_' . $account->uid]) && isset($_GET['pass-reset-token']) && ($_GET['pass-reset-token'] == $_SESSION['pass_reset_' . $account->uid]);
+    $protected_values = array();
+    $current_pass_description = '';
+    // The user may only change their own password without their current
+    // password if they logged in via a one-time login link.
+    if (!$pass_reset) {
+      $protected_values['mail'] = $form['account']['mail']['#title'];
+      $protected_values['pass'] = t('Password');
+      $request_new = l(t('Request new password'), 'user/password', array('attributes' => array('title' => t('Request new password via e-mail.'))));
+      $current_pass_description = t('Enter your current password to change the %mail or %pass. !request_new.', array('%mail' => $protected_values['mail'], '%pass' => $protected_values['pass'], '!request_new' => $request_new));
+    }
+    // The user must enter their current password to change to a new one.
+    if ($user->uid == $account->uid) {
+      $form['account']['current_pass_required_values'] = array(
+        '#type' => 'value',
+        '#value' => $protected_values,
+      );
+      $form['account']['current_pass'] = array(
+        '#type' => 'password',
+        '#title' => t('Current password'),
+        '#size' => 25,
+        '#access' => !empty($protected_values),
+        '#description' => $current_pass_description,
+        '#weight' => -5,
+        '#attributes' => array('autocomplete' => 'off'),
+      );
+      $form['#validate'][] = 'user_validate_current_pass';
+    }
+  }
+  else {
+    $form['account']['pass'] = array(
+      '#type' => 'password_confirm',
+      '#size' => 25,
+      '#description' => t('Provide a password for the new account in both fields.'),
+      '#required' => TRUE,
+    );
+  }
+  
+   $form['account']['first_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('First Name'),
+    '#maxlength' => 255,
+    '#description' => t('First name of the user.'),
+    '#required' => TRUE,
+    '#default_value' => (!$register ? $account->first_name : ''),
+    //'#attributes' => array('class' => array('username')),
+    //'#access' => ($register || ($user->uid == $account->uid && user_access('change own username')) || $admin),
+    //'#weight' => -10,
+  );
+  
+  $form['account']['last_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Last name'),
+    '#maxlength' => 255,
+    '#description' => t('Last name of the user.'),
+    '#required' => FALSE,
+    //'#attributes' => array('class' => array('username')),
+    '#default_value' => (!$register ? $account->last_name : ''),
+    //'#access' => ($register || ($user->uid == $account->uid && user_access('change own username')) || $admin),
+    //'#weight' => -10,
+  );
+  
+  $form['account']['bday'] = array(
+    '#type' => 'date',
+    '#title' => t('Birthday'),
+    '#description' => t('Birth day of the user.'),
+    '#required' => TRUE,
+  );
+  
+  $form['account']['gender'] = array(
+    '#title' => t('Gender'),
+    '#type' => 'select',
+    '#description' => 'Select the gender.',
+    '#default_value' => (!$register ? $account->gender : ''),
+    '#required' => TRUE,
+    '#options' => array(t('M'), t('F')),
+  );
+  
+  $form['account']['zipcode'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Zip code'),
+    '#description' => t('Zip code of the user.'),
+    '#default_value' => (!$register ? $account->zipcode : ''),
+    '#required' => TRUE,
+  );
+ 
+  $form['account']['mentor_type'] = array(
+    '#type' => 'radios',
+    '#options' => array(
+      'professional' => t('Professional'),
+      'student' => t('Student'),
+    ),
+    '#default_value' =>  (!$register ? $account->mentor_type : ''),
+    '#title' => t('What type of mentor are you?'),
+  );
+  
+  $form['account']['professional'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Professional Information'),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="mentor_type"]' => array('value' => 'professional'),
+      ),
+    ),
+  );
+  
+  $form['account']['professional']['employer'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Employer'),
+    '#maxlength' => 255,
+    '#description' => t('Current Employer'),
+    '#default_value' => (!$register ? $account->employer : ''),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="mentor_type"]' => array('value' => 'professional'),
+      ),
+    ),
+  );
+  
+  $form['account']['professional']['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Job Title'),
+    '#maxlength' => 255,
+    '#description' => t('Job Titile'),
+    '#default_value' => (!$register ? $account->title : ''),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="mentor_type"]' => array('value' => 'professional'),
+      ),
+    ),
+  );
+  
+  $form['account']['professional']['years_of_exp'] = array(
+    '#title' => t('Yrs. Of Experience'),
+    '#type' => 'select',
+    '#description' => 'Select the years of experience.',
+    '#default_value' => (!$register ? $account->years_of_exp : ''),
+    '#options' => array(t('1'), t('2'),t('3'), t('4')),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="mentor_type"]' => array('value' => 'professional'),
+      ),
+    ),
+  );
+  
+  $form['account']['professional']['linkedInProfile'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Linkedin Profile'),
+    '#maxlength' => 255,
+    '#description' => t('Your Linkedin Profile'),
+    '#default_value' => (!$register ? $account->linkedInProfile : ''),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="mentor_type"]' => array('value' => 'professional'),
+      ),
+    ),
+  );
+  
+  $form['account']['professional']['last_school_attended'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Last School Attended'),
+    '#maxlength' => 255,
+    '#description' => t('Last School you Attended'),
+    '#default_value' => (!$register ? $account->last_school_attended : ''),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="mentor_type"]' => array('value' => 'professional'),
+      ),
+    ),
+  );
+  
+  $entries = db_query("SELECT id, name FROM {specialization_subcategory}");//field_of_study_load(); 
+
+  $options = array();
+  foreach($entries as $record)
+  {
+    $options[$record->id] =$record->name;
+  }
+  
+  $form['account']['fieldOfStudy'] = array(
+    '#type' => 'select',
+    '#title' => t('Field of Study'),
+    '#description' => t('Field of study you are specialized in.'),
+    '#required' => FALSE,
+    '#options' => $options,//array(t('Applied Sciences'), t('Business')),
+  );
+  
+  $form['account']['student'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Student Information'),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="mentor_type"]' => array('value' => 'student'),
+      ),
+    ),
+  );
+  
+  $form['account']['student']['school_attending'] = array(
+    '#type' => 'textfield',
+    '#title' => t('School Attending'),
+    '#maxlength' => 255,
+    '#description' => t('School Attending'),
+    '#default_value' => (!$register ? $account->school_attending : ''),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="mentor_type"]' => array('value' => 'student'),
+      ),
+    ),
+  );
+  
+  $form['account']['mentoring_motivation'] = array(
+    '#type' => 'textarea',
+    '#title' => t('What motivates you to be a mentor?'),
+    '#description' => t('Your motivation to be a mentor'),
+    '#default_value' => (!$register ? $account->mentoring_motivation : ''),
+  );
+  
+  $form['account']['hobbies'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Hobbies'),
+    '#description' => t('Your hobbies'),
+    '#default_value' => (!$register ? $account->hobbies : ''),
+  );
+  
+  $form['account']['pic'] = array(
+  	'#type' => 'managed_file',
+  	'#title' => t('Upload an image'),
+  	'#description' => t('Allowed extensions: gif png jpg jpeg'),
+  	'#upload_validators' => array(
+    	'file_validate_extensions' => array('gif png jpg jpeg'),
+    	// Pass the maximum file size in bytes
+    	'file_validate_size' => array(1 * 1024 * 1024),
+  	),
+  	'#theme' => 'mentor_thumb_upload',
+  	'#upload_location' => 'public://pictures/',
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Register',
+  );
+  $form['#submit'][] = 'mentor_form_submit';
+  return $form;
+}
+
+function mentor_theme($existing, $type, $theme, $path) {
+	return array(
+    'mentor_thumb_upload' => array(
+        'render element' => 'element',
+        'file'           => 'mentor.module',
+));
+}
+
+function theme_mentor_thumb_upload($variables) {
+
+    $element = $variables['element'];
+    if (isset($element['#file']->uri)) {
+        $output = '<div id="edit-logo-ajax-wrapper"><div class="form-item form-type-managed-file form-item-logo"><span class="file">';
+        $output .= '<img height="50px" src="' . file_create_url($element['#file']->uri) . '" />';
+        $output .= '</span><input type="submit" id="edit-' . $element['#name'] . '-remove-button" name="' . $element['#name'] . '_remove_button" value="Remove" class="form-submit ajax-processed">';
+        $output .= '<input type="hidden" name="' . $element['#name'] . '[fid]" value="' . $element['#file']->fid . '">';
+
+        return $output;
+    }
+}
+
+function mentor_form_submit($form, &$form_state) {
+	 $account = $form['#user'];
+  entity_form_submit_build_entity('user', $account, $form, $form_state);  
+  
+  // Populate $edit with the properties of $account, which have been edited on
+  // this form by taking over all values, which appear in the form values too.
+  $edit = array_intersect_key((array) $account, $form_state['values']);
+  $account->picture = $form_state['values']['pic'];
+  $account->status = 1;
+  $account = mentor_save($account, $edit);   
+    
+}
+
+function mentor_save($account, $edit = array(), $category = 'account') {
+  $transaction = db_transaction();
+  try {
+    if (!empty($edit['pass'])) {
+      // Allow alternate password hashing schemes.
+      require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
+      $edit['pass'] = user_hash_password(trim($edit['pass']));
+      // Abort if the hashing failed and returned FALSE.
+      if (!$edit['pass']) {
+        return FALSE;
+      }
+    }
+    else {
+      // Avoid overwriting an existing password with a blank password.
+      unset($edit['pass']);
+    }
+    if (isset($edit['mail'])) {
+      $edit['mail'] = trim($edit['mail']);
+    }
+
+    // Load the stored entity, if any.
+    if (!empty($account->uid) && !isset($account->original)) {
+      $account->original = entity_load_unchanged('user', $account->uid);
+    }
+
+    if (empty($account)) {
+      $account = new stdClass();
+    }
+    if (!isset($account->is_new)) {
+      $account->is_new = empty($account->uid);
+    }
+    // Prepopulate $edit['data'] with the current value of $account->data.
+    // Modules can add to or remove from this array in hook_user_presave().
+    if (!empty($account->data)) {
+      $edit['data'] = !empty($edit['data']) ? array_merge($account->data, $edit['data']) : $account->data;
+    }
+
+    // Invoke hook_user_presave() for all modules.
+    user_module_invoke('presave', $edit, $account, $category);
+
+    // Invoke presave operations of Field Attach API and Entity API. Those APIs
+    // require a fully-fledged and updated entity object. Therefore, we need to
+    // copy any new property values of $edit into it.
+    foreach ($edit as $key => $value) {
+      $account->$key = $value;
+    }
+    field_attach_presave('user', $account);
+    module_invoke_all('entity_presave', $account, 'user');
+
+    if (is_object($account) && !$account->is_new) {
+      // Process picture uploads.
+      
+
+      // Do not allow 'uid' to be changed.
+      $account->uid = $account->original->uid;
+      // Save changes to the user table.
+      $success = drupal_write_record('users', $account, 'uid');
+      if ($success === FALSE) {
+        // The query failed - better to abort the save than risk further
+        // data loss.
+        return FALSE;
+      }  
+      
+
+      // Reload user roles if provided.
+      if ($account->roles != $account->original->roles) {
+        db_delete('users_roles')
+          ->condition('uid', $account->uid)
+          ->execute();
+
+        $query = db_insert('users_roles')->fields(array('uid', 'rid'));
+        foreach (array_keys($account->roles) as $rid) {
+          if (!in_array($rid, array(DRUPAL_ANONYMOUS_RID, DRUPAL_AUTHENTICATED_RID))) {
+            $query->values(array(
+              'uid' => $account->uid,
+              'rid' => $rid,
+            ));
+          }
+        }
+        $query->execute();
+      }
+
+      // Delete a blocked user's sessions to kick them if they are online.
+      if ($account->original->status != $account->status && $account->status == 0) {
+        drupal_session_destroy_uid($account->uid);
+      }
+
+      // If the password changed, delete all open sessions and recreate
+      // the current one.
+      if ($account->pass != $account->original->pass) {
+        drupal_session_destroy_uid($account->uid);
+        if ($account->uid == $GLOBALS['user']->uid) {
+          drupal_session_regenerate();
+        }
+      }
+
+      // Save Field data.
+      field_attach_update('user', $account);
+
+      // Send emails after we have the new user object.
+      if ($account->status != $account->original->status) {
+        // The user's status is changing; conditionally send notification email.
+        $op = $account->status == 1 ? 'status_activated' : 'status_blocked';
+        _user_mail_notify($op, $account);
+      }
+
+      // Update $edit with any interim changes to $account.
+      foreach ($account as $key => $value) {
+        if (!property_exists($account->original, $key) || $value !== $account->original->$key) {
+          $edit[$key] = $value;
+        }
+      }
+      user_module_invoke('update', $edit, $account, $category);
+      module_invoke_all('entity_update', $account, 'user');
+    }
+    else {
+      // Allow 'uid' to be set by the caller. There is no danger of writing an
+      // existing user as drupal_write_record will do an INSERT.
+      if (empty($account->uid)) {
+        $account->uid = db_next_id(db_query('SELECT MAX(uid) FROM {users}')->fetchField());
+      }
+      // Allow 'created' to be set by the caller.
+      if (!isset($account->created)) {
+        $account->created = REQUEST_TIME;
+      }
+      $success = drupal_write_record('users', $account);
+      if ($success === FALSE) {
+        // On a failed INSERT some other existing user's uid may be returned.
+        // We must abort to avoid overwriting their account.
+        return FALSE;
+      }
+
+      // Make sure $account is properly initialized.
+      $account->roles[DRUPAL_AUTHENTICATED_RID] = 'authenticated user';
+
+      field_attach_insert('user', $account);
+      $edit = (array) $account;
+      user_module_invoke('insert', $edit, $account, $category);
+      module_invoke_all('entity_insert', $account, 'user');
+
+      // Save user roles.
+      if (count($account->roles) > 1) {
+        $query = db_insert('users_roles')->fields(array('uid', 'rid'));
+        foreach (array_keys($account->roles) as $rid) {
+          if (!in_array($rid, array(DRUPAL_ANONYMOUS_RID, DRUPAL_AUTHENTICATED_RID))) {
+            $query->values(array(
+              'uid' => $account->uid,
+              'rid' => $rid,
+            ));
+          }
+        }
+        $query->execute();
+      }
+    }
+    // Clear internal properties.
+    unset($account->is_new);
+    unset($account->original);
+    // Clear the static loading cache.
+    entity_get_controller('user')->resetCache(array($account->uid));
+    
+    $query = db_select('role', 'r');   
+	
+	$query->condition('r.name', 'mentor','=');	   
+	$query->fields('r');
+	$result = $query->execute();
+	
+	
+	$roleId;
+    foreach($result as $record)
+    {
+      $roleId =$record->rid;
+    }
+	
+	$query = db_insert('users_roles')->fields(array('uid'=>$account->uid, 'rid'=>$roleId))->execute();
+    
+    $birthDate = $account->bday;
+    $success = drupal_write_record('mentor', $account);
+    drupal_set_message($success);
+
+    return $account;
+  }
+  catch (Exception $e) {
+    $transaction->rollback();
+    watchdog_exception('user', $e);
+    throw $e;
+  }
+}
+
+function mentor_profile_form_submit($form, &$form_state) {
+  $account = $form_state['user'];
+  $category = $form['#user_category'];
+  // Remove unneeded values.
+  form_state_values_clean($form_state);
+
+  // Before updating the account entity, keep an unchanged copy for use with
+  // user_save() later. This is necessary for modules implementing the user
+  // hooks to be able to react on changes by comparing the values of $account
+  // and $edit.
+  $account_unchanged = clone $account;
+
+  entity_form_submit_build_entity('user', $account, $form, $form_state);
+
+  // Populate $edit with the properties of $account, which have been edited on
+  // this form by taking over all values, which appear in the form values too.
+  $edit = array_intersect_key((array) $account, $form_state['values']);
+
+  user_save($account_unchanged, $edit, $category);
+  $form_state['values']['uid'] = $account->uid;
+
+  if ($category == 'account' && !empty($edit['pass'])) {
+    // Remove the password reset tag since a new password was saved.
+    unset($_SESSION['pass_reset_'. $account->uid]);
+  }
+  // Clear the page cache because pages can contain usernames and/or profile information:
+  cache_clear_all();
+
+  drupal_set_message(t('The changes have been saved.'));
+}
+
+function field_of_study_load($entry = array()) {
+
+   $query = db_select('field_of_specialization')
+   ->fields('field_of_specialization', array('field_name'))
+  ->execute() -> fetchAll();
+   return $query;
+}
+
+function mentor_permission() {
+  return array(
+    'access new link' => array(
+      'title' => t('Access new link'),
+      'description' => t('The description of the permission'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_user_view().
+ */
+function mentor_user_view($account) {
+  $account->content['user_picture'] = array(
+    '#markup' => theme('user_picture', array('account' => $account)),
+    '#weight' => -10,
+  );
+  if (!isset($account->content['summary'])) {
+    $account->content['summary'] = array();
+  }
+  $account->content['summary'] += array(
+    '#type' => 'user_profile_category',
+    '#attributes' => array('class' => array('user-member')),
+    '#weight' => 5,
+    '#title' => t('History'),
+  );
+  $account->content['summary']['member_for'] = array(
+    '#type' => 'user_profile_item',
+    '#title' => t('Member for'),
+    '#markup' => format_interval(REQUEST_TIME - $account->created),
+  );
+}
+
+/**
+ * Menu callback.
+ */
+function mentor_page() {
+  return drupal_get_form('mentor_register_form');
+}

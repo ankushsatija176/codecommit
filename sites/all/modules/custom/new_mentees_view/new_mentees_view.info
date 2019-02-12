@@ -1,0 +1,4 @@
+name = New Mentees View
+description = "View for newly join mentees"
+package = new_mentees_view
+core = 7.x

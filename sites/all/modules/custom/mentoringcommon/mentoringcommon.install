@@ -1,0 +1,1199 @@
+<?php
+function mentoringcommon_schema() {
+	$schema['specialization_category'] = array(
+    	'description' => t('Stores information about field of study'),
+			'fields' => array(
+				'cid' => array(
+					'type' => 'serial',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("Primary key: A unique ID for each field of study."),
+				),
+				'name' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'description' => t("The name of field of study"),
+				),
+			),
+			'primary key' => array('cid'),
+  );
+  
+  $schema['specialization_subcategory'] = array(
+     'description' => t('Stores information about field of specialization'),
+			'fields' => array(
+				'scid' => array(
+					'type' => 'serial',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("Primary key: A unique ID for each field of specialization."),
+				),
+				'name' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'description' => t("The name of field of specialization"),
+				),
+				'specialization_category_id' => array(
+					'type' => 'int',
+					'not null' => TRUE,
+					'description' => t('The parent id  from the table field_of_study'),
+				),
+			),
+			'primary key' => array('scid'),
+			'foreign keys' => array(
+		         'fk_specialization_category' => array('table' => 'specialization_category', 'columns' => array('specialization_category_id' => 'id'))
+			),
+  );
+  
+  
+  $schema['education_qualification'] = array(
+     'description' => t('Stores information about education qualification'),
+			'fields' => array(
+				'eid' => array(
+					'type' => 'serial',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("Primary key: A unique ID for each education qualification"),
+				),
+				'name' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'description' => t("The name of education qualification"),
+				),
+			),
+			'primary key' => array('eid'),
+  );
+  
+   $schema['subscription'] = array(
+     'description' => t('Stores information about engagement model for mentors'),
+			'fields' => array(
+				'sid' => array(
+					'type' => 'serial',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("Primary key: A unique ID for each subscription"),
+				),
+				'alias' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'description' => t("The alias of subscription"),
+				),
+				'subscription_name' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'description' => t("The name of subscription"),
+				),
+			),
+			'primary key' => array('sid'),
+  );
+  
+  $schema['area_mentoring'] = array(
+     'description' => t('Stores information about area of mentoring'),
+			'fields' => array(
+				'aid' => array(
+					'type' => 'serial',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("Primary key: A unique ID for each area of mentoring"),
+				),
+				'name' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'description' => t("The name of area of mentoring"),
+				),
+			),
+			'primary key' => array('aid'),
+  );
+  
+  $schema['connections'] = array(
+     'description' => t('Stores mentor-mentee connections'),
+			'fields' => array(
+				'cid' => array(
+					'type' => 'serial',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("Primary key: A unique ID for each education qualification"),
+				),
+				'mentor_id' => array(
+					'type' => 'int',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("Id of mentor"),
+				),
+				'mentee_id' => array(
+					'type' => 'int',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("Id of mentee"),
+				),
+				'status' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'description' => t("Status of connection request"),
+				),
+				'token' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'description' => t("Unique token to identify mentor-mentee connection"),
+				),
+				'requestor_type' => array(
+					'type' => 'char',
+					'not null' => TRUE,
+					'description' => t("Requestor of the request"),
+				),
+				'subscription_id' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'description' => t("Primary key of subscription table"),
+				),
+			),
+			'primary key' => array('cid'),
+  );
+  
+  
+  $schema['user_activation'] = array(
+     'description' => t('Stores information about user activation'),
+			'fields' => array(
+				'uid' => array(
+					'type' => 'int',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("Primary key: A unique ID for each user activation"),
+				),
+				'activation_code' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'description' => t("The activation code for user"),
+				),
+				'activated' => array(
+					'type' => 'char',
+					'not null' => TRUE,
+					'description' => t("Activation status of user"),
+				),
+			),
+			'primary key' => array('uid'),
+  );
+  
+    $schema['city'] = array(
+     'description' => t('Stores City'),
+			'fields' => array(
+				'cityid' => array(
+					'type' => 'serial',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("Primary key: A unique ID for each city"),
+				),
+				'name' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'description' => t("The name of city"),
+				),
+			),
+			'primary key' => array('cityid'),
+  );
+  
+  $schema['state'] = array(
+     'description' => t('Stores State'),
+			'fields' => array(
+				'stateid' => array(
+					'type' => 'serial',
+					'unsigned' => TRUE,
+					'not null' => TRUE,
+					'description' => t("Primary key: A unique ID for each state"),
+				),
+				'name' => array(
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'description' => t("The name of state"),
+				),
+			),
+			'primary key' => array('stateid'),
+  );
+  
+  return $schema;
+}
+
+function insertCategoryAndSubCategory() {
+	$categoryid = db_insert('specialization_category')
+  ->fields(array(
+    'name' => 'Applied Sciences',
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Advertising',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Architecture',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Communications',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Counseling',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Health Science',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Hospitality Management',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Journalism',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Justice Studies',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Kinesiology',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Library & Information Science',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Nursing',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Nutritional Science',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Occupational Therapy',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Public Relations',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Recreation',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Social Work',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Other',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();  
+  
+  $categoryid = db_insert('specialization_category')
+  ->fields(array(
+    'name' => 'Business',
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Accounting',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Finance',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Human Resource Management',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'International Business',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Management',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Management Information Systems',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Marketing',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Other',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $categoryid = db_insert('specialization_category')
+  ->fields(array(
+    'name' => 'Education',
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Child and Adolescent Development',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Communicative Disorders & Sciences',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Child and Adolescent Development',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Counselor Education',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Educational Leadership',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Elementary Education',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Instructional Technology',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Secondary Education',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Special Education',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Other',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $categoryid = db_insert('specialization_category')
+  ->fields(array(
+    'name' => 'Engineering',
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Aerospace Engineering',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Bioengineering',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Chemical Engineering',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Civil Engineering',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Computer Engineering',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Computer Science',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Electrical Engineering',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'General Engineering',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Industrial & Systems Engineering',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Materials Engineering',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Mechanical Engineering',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $categoryid = db_insert('specialization_category')
+  ->fields(array(
+    'name' => 'Humanities and the Arts',
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Art History',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Creative Arts',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'English',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Graphics Design',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Humanities',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Liberal Studies',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Linguistics',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Music',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Philosophy',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Chinese',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'French',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Italian',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Japanese',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'German',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Other Foreign Language',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Interior Design',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Classical Studies',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Studio Art',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Theatre and Dance',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Spanish',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Other',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $categoryid = db_insert('specialization_category')
+  ->fields(array(
+    'name' => 'Science',
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Biochemistry',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Biological Sciences',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Chemistry',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Geology',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Marine Biology',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Mathematics',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Meteorology',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Microbiology',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Neuroscience',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Physics',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Physiology',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Statistics',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Others',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $categoryid = db_insert('specialization_category')
+  ->fields(array(
+    'name' => 'Social Science',
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'African-American Studies',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Anthropology',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Asian American Studies',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Behavioral Science',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Communication Studies',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'East Asian Studies',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Economics',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Environmental Studies',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Geography',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'History',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'International Relations',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Mexican-American Studies',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Native American Studies',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Political Science',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Psychology',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Public Policy',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Religious Studies',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Russian, East European Studies',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Social Science',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Sociology',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Urban Studies',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Women\'s Studies',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $subcategoryid = db_insert('specialization_subcategory')
+  ->fields(array(
+    'name' => 'Other',
+    'specialization_category_id' => $categoryid,
+  ))
+  ->execute();
+  
+  $categoryid = db_insert('specialization_category')
+  ->fields(array(
+    'name' => 'Other',
+  ))
+  ->execute();
+  
+}
+
+function insertEducationQualification() {
+	db_insert('education_qualification')
+  ->fields(array(
+    'name' => 'Degree',
+  ))
+  ->execute();
+  
+  db_insert('education_qualification')
+  ->fields(array(
+    'name' => 'Certificate',
+  ))
+  ->execute();
+  
+  db_insert('education_qualification')
+  ->fields(array(
+    'name' => 'Associates',
+  ))
+  ->execute();
+  
+  db_insert('education_qualification')
+  ->fields(array(
+    'name' => 'Bachelors',
+  ))
+  ->execute();
+  
+  db_insert('education_qualification')
+  ->fields(array(
+    'name' => 'Masters',
+  ))
+  ->execute();
+  
+  db_insert('education_qualification')
+  ->fields(array(
+    'name' => 'PHD',
+  ))
+  ->execute();
+  
+  db_insert('education_qualification')
+  ->fields(array(
+    'name' => 'MD',
+  ))
+  ->execute();
+  
+  db_insert('education_qualification')
+  ->fields(array(
+    'name' => 'JD',
+  ))
+  ->execute();
+  
+  db_insert('education_qualification')
+  ->fields(array(
+    'name' => 'MBA',
+  ))
+  ->execute();	
+}
+
+function insertAreaOfMentoring() {
+  db_insert('area_mentoring')
+  ->fields(array(
+    'name' => 'College major and activities advising',
+  ))
+  ->execute();
+  
+  db_insert('area_mentoring')
+  ->fields(array(
+    'name' => 'Finances',
+  ))
+  ->execute();
+  
+  db_insert('area_mentoring')
+  ->fields(array(
+    'name' => 'College Application',
+  ))
+  ->execute();
+  
+  db_insert('area_mentoring')
+  ->fields(array(
+    'name' => 'College Essay',
+  ))
+  ->execute();
+  
+  db_insert('area_mentoring')
+  ->fields(array(
+    'name' => 'Interviews',
+  ))
+  ->execute();
+  
+  db_insert('area_mentoring')
+  ->fields(array(
+    'name' => 'Time management/Study Skills',
+  ))
+  ->execute();
+} 
+
+function insertCity() {
+	db_insert('city')
+  ->fields(array(
+    'name' => 'San Jose',
+  ))
+  ->execute();
+  
+  db_insert('city')
+  ->fields(array(
+    'name' => 'Sunnyvale',
+  ))
+  ->execute();
+  
+  db_insert('city')
+  ->fields(array(
+    'name' => 'Newyork',
+  ))
+  ->execute();
+  
+  db_insert('city')
+  ->fields(array(
+    'name' => 'Chicago',
+  ))
+  ->execute();
+}
+
+function insertState() {
+	db_insert('state')
+  ->fields(array(
+    'name' => 'California',
+  ))
+  ->execute();
+  
+  db_insert('state')
+  ->fields(array(
+    'name' => 'Colorado',
+  ))
+  ->execute();
+  
+  db_insert('state')
+  ->fields(array(
+    'name' => 'Connecticut',
+  ))
+  ->execute();
+  
+  db_insert('state')
+  ->fields(array(
+    'name' => 'Delaware',
+  ))
+  ->execute();
+  
+  db_insert('state')
+  ->fields(array(
+    'name' => 'District of Columbia',
+  ))
+  ->execute();
+  
+  db_insert('state')
+  ->fields(array(
+    'name' => 'Florida',
+  ))
+  ->execute();
+  
+  db_insert('state')
+  ->fields(array(
+    'name' => 'Georgia',
+  ))
+  ->execute();
+  
+  db_insert('state')
+  ->fields(array(
+    'name' => 'Illinois',
+  ))
+  ->execute();
+  
+  db_insert('state')
+  ->fields(array(
+    'name' => 'Massachusetts',
+  ))
+  ->execute();
+  
+  db_insert('state')
+  ->fields(array(
+    'name' => 'Michigan',
+  ))
+  ->execute();
+  
+  db_insert('state')
+  ->fields(array(
+    'name' => 'Texas',
+  ))
+  ->execute();
+}
+
+function mentoringcommon_install() {
+  insertCategoryAndSubCategory();
+  insertEducationQualification();
+  insertAreaOfMentoring();
+  insertCity();
+  insertState();
+}

@@ -1,0 +1,23 @@
+#edit-quicksearch .form-item {
+	color: rgb(171, 166, 166);
+	width: 80%;
+	font-weight: bold;
+ }
+#edit-quicksearch .qsdc {
+	float: left;
+	padding: 2px 2px 2px 2px;
+	width: 17%;
+	text-align: center;
+}
+#edit-quicksearch .form-submit{
+	margin-top: 4px !important;
+	overflow: hidden;
+	float:left;
+	width: 10%;
+}
+#edit-quicksearch select{
+	width: 70%;
+}
+#edit-quicksearch input{
+	width: 75%;
+}

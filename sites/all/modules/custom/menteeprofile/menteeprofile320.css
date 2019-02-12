@@ -1,0 +1,91 @@
+#menteeprofile-form label {
+  float:left;
+  width:190px;
+  text-align:right;
+  padding-right:10px;
+}
+#menteeprofile-form textarea, #menteeprofile-form .form-text {
+  width:300px;
+}
+
+#menteeprofile-form .description, #menteeprofile-form .grippie{
+  margin-left: 200px;
+  width:300px;
+}
+#menteeprofile-form .form-submit {
+  margin-left: 0px !important;
+  width:80% !important;
+}
+#tab-container
+{
+   float: left;
+   margin: 50px 0 0 0;
+   width: 126px;
+}
+#tab-container ul
+{
+   list-style: none;
+   text-align: center;
+}
+#tab-container ul li
+{
+   border-top: 1px solid #666;
+   border-right: 1px solid #666;
+   border-bottom: 1px solid #666;
+   border-left: 8px solid #666;
+   background-color: #ddd;
+   margin: 8px 0;
+}
+#tab-container ul li a,
+#tab-container ul li a:visited
+{
+   text-decoration: none;
+   color: #666;
+   display: block;
+   padding: 15px 5px;
+}
+#tab-container ul li:hover
+{
+   border-left: 8px solid #333;
+}
+#tab-container ul li a:hover
+{
+   color: #000;
+}
+#tab-container ul li.selected
+{
+   border-right: none;
+   background-color: #fff;
+   border-left: 8px solid #006699;
+}
+.mentee-profile-details-tab1 { width: 100%; overflow: hidden; background-color: white; color: #444141; border-top: 1px solid black; }
+.mentee-profile-details-tab2 { width: 100%; float: left; }
+.mentee-profile-block1 { margin-top: 2%; }
+.mentee-profile-block2 { text-align: center; padding:1%; width: 98% !important;font-size:20pt; font-family:verdana;  float: left; }
+.mentee-profile-block3 { font-family: sans-serif; font-weight: 100; font-size: 14px; }
+.mentee-profile-submit1 { padding-left: 15%; width: 90%;  float: left; padding-top: 1%; }
+.mentee-profile-usr-pic1 { color: rgb(243, 243, 246); font-size: 14px; background-color: rgba(0, 0, 0, 0.48); position: absolute; z-index: 999999; text-align: center;padding: 1%; top: 140px; width: 11%; left: 2%; }
+.mentee-profile-usr-pic2 { margin-bottom: 20px; width: 100%;float: left; background-color: rgb(227, 227, 252);color: #444141; }
+.mentee-profile-usr-pic3 { min-height: 150px; float: left; max-width: 95% !important; margin: 1%; box-shadow: 2px 2px 2px 2px rgb(204, 204, 204); border-radius: 5px; text-align: center; width: 100%;}
+.mentee-profile-block-div1 { float: left; }
+.mentee-profile-block-div2 { width: 100%; overflow: hidden; margin: 10px 10px 0 20px; }
+.mentee-profile-block-div3 { width: 80%; font-size: 14pt; }
+.mentee-profile-block-div4 { width: 100%; overflow: hidden; margin-bottom: 15px }
+
+.mentee-nrc-heading1 { width: 100%; color: rgb(255, 127, 57); padding: 5px; font-size: 16px; border-radius: 2px; border-bottom: 1px solid rgb(0, 0, 255); }
+.mentee-nrc-heading2 { width: 100%; overflow: hidden;min-height: 500px; }
+.mentee-nrc-usr-pic1 { margin-right: 10px; float: left; width: 70px !important; height: 70px !important; }
+.mentee-nrc-usr-pic1 img {  min-height: 70px !important;     min-width: 70px !important;  }
+.mentee-nrc-usr-pic2 { width: 100%; background-color: #ffffff; overflow: hidden; padding: 2%; }
+.mentee-nrc-usr-pic3 {float:left; margin-left:10px; width:450px }
+.mentee-button-div { float: right; }
+.mentee-details-div1 { float: left; width: 60%; color: black; font-size: 12px; }
+.mentee-details-div2 {  font-weight: bold; font-size: 16px; }
+.mentee-details-div3 {  float: left; color: black; width: 65%; }
+.mentee-connect-div1 { float: left;padding : 2% }
+.mentee-connect-div2 { padding: 10%; background-color: rgb(254, 125, 0); color: white; border: 1px none; border-radius: 5px ! important; }
+.mentee-notification-div { float: left;  width: 60%; font-size: 12px; }
+
+
+
+

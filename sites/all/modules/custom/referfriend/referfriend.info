@@ -1,0 +1,4 @@
+name = Refer a friend
+description = "Allows users to send invitation to friends to join the site"
+package = referfriend
+core = 7.x

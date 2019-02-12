@@ -1,0 +1,365 @@
+<?php
+
+function quick_search_block_info() {
+	// Create an array that will hold our blocks
+	$blocks = array();
+	 
+	// Create a key in our $blocks array that
+	// defines our block. Note that the key in
+	// this array can be anything. For this
+	// tutorial, we use 'tellafriend_form'.
+	$blocks['quick_search_form'] = array(
+	// 'info' is what you will see when viewing the blocks admin page.
+	// Note that we use the t() (translate) function which lets drupal
+	// translate any text passed in if needed.
+	'info' => t('Quick Search'),
+	// 'cache' how this block will be cached
+	'cache' => DRUPAL_CACHE_GLOBAL,
+	);
+	 
+	// Note, if you wanted to define multiple blocks, you
+	// could simply define more blocks just like above.
+	 
+	// Finally, we return the $blocks array.
+	return $blocks;
+}
+
+function quick_search_block_view($delta = '') {
+	// Create an array that will be returned as our block
+	$block = array();
+	 
+	// Since hook_block_view is called for every block,
+	// Drupal passes in $delta (the key of the blocks defined
+	// in hook_block_info. In our case, we're checking for
+	// $delta to be 'tellafriend_form'.
+	switch($delta) {
+	case 'quick_search_form':
+	// Since this $delta matches our case, we'll define
+	// the subject and contents.
+	 
+	// 'subject' can be blank ('') or anything you wish to define.
+	$block['subject'] = t('Find mentors or mentees in your area');
+	 
+	// 'content' are just that, the contents of the block.
+	// In our case, we will be showing a form.
+	// We use drupal_get_form() to return a drupal-built form.
+	// Note that the parameter passed to drupal_get_form is the name
+	// of the function we will build below to define our form.
+	// This can be any function name we define below.
+	$block['content'] = drupal_get_form('quick_search_form');
+	break;
+	}
+	 
+	// Finally, we return the $block array.
+	return $block;
+}
+
+/**
+ * Returns form render array.
+ */
+function quick_search_form($form, &$form_state) {
+  $state_options = array(
+  '' => t('--- Select ---'),
+  'California' => t('California'),
+  'Colorado' => t('Colorado'),
+  'Connecticut' => t('Connecticut'),
+  'Delaware' => t('Delaware'),
+  'District of Columbia' => t('District of Columbia'),
+  'Florida' => t('Florida'),
+  'Georgia' => t('Georgia'),
+  'Illinois' => t('Illinois'),
+  'Massachusetts' => t('Massachusetts'),
+  'Michigan' => t('Michigan'),
+  'Texas' => t('Texas'),
+);
+  $form['quicksearch'] = array(
+	    '#type'   => 'container',    
+	    '#weight' => -10,
+	    //'#attributes' => array('class' => array('container-inline')),
+	    '#theme' => 'quick_search_theme_form',
+  	);
+  
+  $form['quicksearch']['city'] = array(
+	    '#type' => 'textfield',
+	    '#title' => 'City',
+  		'#maxlength' => 255,
+	    '#default_value' => isset($_REQUEST['city']) ? (!empty($_REQUEST['city'])?$_REQUEST['city']:NULL) : NULL,
+	    //'#autocomplete_path' => 'cities/autocomplete',
+  		'#size' => 27,
+  	);
+  
+  $form['quicksearch']['state'] = array(
+	    '#type' => 'textfield',
+	    '#title' => 'State',
+  		'#maxlength' => 255,
+	    '#default_value' => isset($_REQUEST['state']) ? (!empty($_REQUEST['state'])?$_REQUEST['state']:NULL) : NULL,
+	    '#autocomplete_path' => 'states/autocomplete',
+  		'#size' => 27,
+  	);
+  	
+  $form['quicksearch']['study'] = array(
+	    '#type' => 'textfield',
+	    '#title' => 'Major',
+  		'#maxlength' => 255,
+	    '#default_value' => isset($_REQUEST['field_of_study']) ? (!empty($_REQUEST['field_of_study'])?$_REQUEST['field_of_study']:NULL) : NULL,
+	    //'#autocomplete_path' => 'study/autocomplete',
+  		'#size' => 27,
+  	);	
+  $form['quicksearch']['keyword'] = array(
+  		'#type' => 'textfield',
+  		'#title' => 'Keyword',
+  		'#maxlength' => 255,
+  		'#default_value' => isset($_REQUEST['keyword']) ? (!empty($_REQUEST['keyword'])?$_REQUEST['keyword']:NULL) : NULL,
+  		//'#autocomplete_path' => 'study/autocomplete',
+  		'#size' => 27,
+  );
+	
+  /*$form['quicksearch']['state'] = array(
+    '#title' => t('State'),
+    '#type' => 'select',
+    '#description' => 'Select the state.',
+    '#options' => $state_options,
+  );
+  $city_options = array(
+  '' => t('--- Select ---'),
+  'San Jose' => t('San Jose'),
+  'Sunnyvale' => t('Sunnyvale'),
+  'Newyork' => t('Newyork'),
+  'Chicago' => t('Chicago'),
+  );
+  $form['quicksearch']['city'] = array(
+    '#title' => t('City'),
+    '#type' => 'select',
+    '#description' => 'Select the city.',
+    '#options' => $city_options,  
+  );*/
+  $form['quicksearch']['type'] = array(
+    //'#title' => t('Type'),
+    '#type' => 'select',
+    '#required' => TRUE,
+    //'#description' => 'Select the type.',
+    '#default_value' => 1, //(strpos(current_path(),'mentor/') !== false) ? 1 :2 ,
+	'#options' => array( t('--Type--'),t('Mentor')),
+  );
+
+  $form['quicksearch']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Search',
+  );
+  
+  $form['#attached']['css'] = array(
+    drupal_get_path('module', 'quick_search') . '/quick_search.css',
+  );
+  return $form;
+  
+  return $form;
+}
+
+/*function quick_search_theme($existing, $type, $theme, $path) {
+	return array(
+    'quick_search_thumb_upload' => array(
+        'render element' => 'element',
+        'file'           => 'quick_search.module',
+));
+}*/
+
+function quick_search_theme() {
+
+  return array(
+    'quick_search_theme_form' => array(
+      'render element' => 'form'
+    )
+  );
+}
+
+function theme_quick_search_thumb_upload($variables) {
+
+    $element = $variables['element'];
+	//drupal_set_message('i am here');
+    if (isset($element['#file']->uri)) {
+        $output = '<div id="edit-logo-ajax-wrapper"><div class="form-item form-type-managed-file form-item-logo"><span class="file">';
+        $output .= '<img height="50px" src="' . file_create_url($element['#file']->uri) . '" />';
+        $output .= '</span><input type="submit" id="edit-' . $element['#name'] . '-remove-button" name="' . $element['#name'] . '_remove_button" value="Remove" class="form-submit ajax-processed">';
+        $output .= '<input type="hidden" name="' . $element['#name'] . '[fid]" value="' . $element['#file']->fid . '">';
+
+        return $output;
+    }
+}
+
+function theme_quick_search_theme_form($variables) {
+	$output='';
+	$submit_rendered = '';
+	$region_component = '';
+	$form = $variables['form'];
+	$city_component = '';
+	$state_component = '';
+	$study_component = '';
+	$type_component = '';
+	$keyword_component = '';
+	foreach ($form as $key => $element) {
+		$allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+		if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+			if($element['#type'] == 'submit') {
+      			$submit_rendered = drupal_render($element);
+      			//$submit_rendered = $submit_rendered.'</div>'; 
+      		}
+      		if($key == 'city') {
+      			$city_component .= '<div class="qsdc container-inline">';
+      			//$city_component .= '<div style="float:left; padding-top:12px;">';
+      			$city_component .= '<label for="edit-city">City:</label>';
+      			//$city_component .= '</div>';
+      			//$city_component .= '<div style="float:left;">';
+      			$city_component .= drupal_render($element);
+      			//$city_component .= '</div>';
+      			$city_component .= '</div>'; 	
+      		}
+      		if($key == 'state') {
+      			$state_component .= '<div  class="qsdc container-inline">';
+      			//$state_component .= '<div style="float: left; padding-top:12px;">';
+      			$state_component .= '<label for="edit-state">State:</label>';
+      			//$state_component .= '</div>';
+      			//$state_component .= '<div style="float: left; ">';
+      			$state_component .= drupal_render($element);
+      //			$state_component .= '</div>';
+      			$state_component .= '</div>'; 	
+      		}
+      		if($key == 'study') {
+      			$study_component .= '<div class="qsdc container-inline">';
+      			//$study_component .= '<div style="float: left; padding-top:12px;">';
+      			$study_component .= '<label for="edit-state">Major:</label>';
+      			//$study_component .= '</div>';
+      			//$study_component .= '<div style="float: left; ">';
+      			$study_component .= drupal_render($element);
+      			//$study_component .= '</div>';
+      			$study_component .= '</div>'; 	
+      		}
+      		if($key == 'type') {
+      			$type_component .= '<div class="qsdc container-inline">';
+      			//$type_component .= '<div style="float: left; padding-top:12px;">';
+      			$type_component .= '<label for="edit-state">Search:</label>';
+      			//$type_component .= '</div>';
+      			//$type_component .= '<div style="float: left; padding-top:9px; padding-left:5px">';
+      			$type_component .= drupal_render($element);
+      			//$type_component .= '</div>';
+      			$type_component .= '</div>'; 	
+      		}
+      		if($key == 'keyword') {
+      			$keyword_component .= '<div class="qsdc container-inline">';
+      			//$type_component .= '<div style="float: left; padding-top:12px;">';
+      			$keyword_component .= '<label for="edit-keyword">Keyword:</label>';
+      			$keyword_component .= drupal_render($element);
+      			$keyword_component .= '<span>
+      					<div class="tooltip" style="display: inline;font-weight: normal;">
+      					<img  style="max-width: 20px; vertical-align: middle;" src="/sites/all/themes/simplecorp/images/question.png" />
+						<span> If any keyword is entered then </br>"City" </br> "State" </br> "Major/Specialization" </br>fields will be ignored in the search</br> And only keyword will be considered.</br> For Example, University names can be searched like Stanford.
+      					</br>				
+						</span>
+      					</div>
+      					</span>';
+      			//$type_component .= '</div>';
+      			//$type_component .= '<div style="float: left; padding-top:9px; padding-left:5px">';
+      			//$type_component .= '</div>';
+      			$keyword_component .= '</div>';
+      		}
+		}
+	}
+	//$city_component .= '</div>';
+	//$state_component .= '</div>';
+	//$study_component .= '</div>';
+	//$type_component .= '</div>';
+	$region_component .= $city_component.$state_component;
+    //$region_component .= '<div style="width: 100%; overflow: hidden;border-bottom: 1px solid #408080; padding-top: 15px; padding-bottom: 15px;"></div>';
+	$output = '<div style="overflow: hidden;height: auto; width: auto; background-color:#9dcedf; border: 1px solid #c0c0c0; border-radius:4px;  padding-bottom: 8px;">';
+	$output .= '<div class="container-inline" style = "width: 100%; padding-top: 8px; padding-bottom: 8px; font-size: 14px;padding-left: 8px;">';
+	$output .= $region_component.$study_component.$keyword_component.$type_component.$submit_rendered;
+	$output .= '</div></div>';
+	$output .= '<script type="text/javascript">
+		(function ($) {
+			$("label").hide();
+			$("input[id^=edit-keyword]").each(function(){
+					$(this).change(function(){
+						$keyword = $(this).val();
+						if($keyword == "" || $keyword == "Keyword "){
+							$("#edit-city").removeAttr("disabled");
+							$("#edit-state").removeAttr("disabled");
+							$("#edit-study").removeAttr("disabled");
+						}else{
+							$("#edit-city").attr("disabled", "disabled");
+							$("#edit-state").attr("disabled", "disabled");
+							$("#edit-study").attr("disabled", "disabled");
+						}
+					});
+			});
+			$(".form-text").each(function(){
+								var formId = $(this).closest("form").attr("id");
+								if(formId == "quick-search-form"){
+								var titleText = $(this).siblings("label").text();
+								if(!$(this).val()){
+									$(this).val(titleText) ;
+									$(this).css("color","#ABA6A6");
+							    }else if($(this).val() == titleText){
+									$(this).css("color","#ABA6A6");
+							    }
+								$(this).keydown(function(){
+									if(this.value == titleText) {
+							            this.value = "";
+							            $(this).css("color","black");
+									}
+							    });
+	
+							    $(this).blur(function(){
+							    	if(this.value == "") {
+							            this.value = titleText;
+							            $(this).css("color","#ABA6A6");
+									}
+							    });
+								}
+							});
+		})(jQuery);
+	
+	</script>';
+	return $output;
+}
+
+function quick_search_form_submit($form, &$form_state) {
+	$path = '';
+	$search_type = $form_state['values']['type'];
+	$city = ($form_state['values']['city']== "City ") ? '' : $form_state['values']['city'];
+	$state = ($form_state['values']['state'] == "State ") ? '' : $form_state['values']['state'];
+	$study = ($form_state['values']['study'] == "Major ") ? '' : $form_state['values']['study'];
+	$keyword = ($form_state['values']['keyword'] == "Keyword ") ? '' : $form_state['values']['keyword'];
+	
+	if($search_type == 1)
+		$path =  'mentor/searchResult';
+	else if($search_type == 2)
+		$path = 'mentee/searchResult';
+	if(isset($form_state['values']['keyword']) && $form_state['values']['keyword'] != 'Keyword ') {
+		$form_state1['redirect'] = array(
+	  		 $path,
+	  		 array(
+	    		'query' => array(
+	    			'keyword' =>  $form_state['values']['keyword'],
+	    		),
+	    	),
+	    );
+	} else {
+		$form_state1['redirect'] = array(
+			$path,
+			array(
+				'query' => array(
+				  'state' => $state,
+				  'city' => $city,
+				  'field_of_study' => $study,
+			   ),
+			 ),
+		);
+	}
+ return drupal_redirect_form($form_state1);	
+}
+
+/**
+ * Menu callback.
+ */
+//function employee_page() {
+//  return drupal_get_form('employee_form');
+//}

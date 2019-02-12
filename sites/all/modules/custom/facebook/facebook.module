@@ -1,0 +1,129 @@
+<?php
+
+/*function facebook_permission()
+{
+ return array(
+   'edit my settings' => array(
+     'title' => t('Edit My Settings'), 
+     'description' => t('Edit My Custom Settings Page'),
+  ),
+ );
+}*/
+
+session_start();
+
+function facebook_init(){
+  include_once('Facebook/autoload.php');
+}
+
+function facebook_menu() {
+  $items = array();
+
+  $items['fb/login'] = array( 
+    //'page callback' => 'facebook_login', 
+    'page callback' => 'facebook_login', 
+    //'page arguments' => array('facebook_callback'),
+    'access callback' => 'facebook_auth_token_access',
+    'access arguments' => array(2),
+  );
+
+  $items['fb/callback'] = array(
+    'page callback' => 'facebook_callback',
+    'access callback' => TRUE,
+    'file' => 'facebookcallback.php',
+  );
+
+  return $items;
+}
+
+function facebook_auth_token_access($account) {
+//if user is not logged in then only it should allow to use login function
+  if (user_is_anonymous()) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+function facebook_login(){
+	
+	global $base_url;
+
+  $action = $_REQUEST['type'];
+  //drupal_set_message($action);
+  if($action === 'register') {
+    lists_session("facebook_signin_request_type", 'false');
+    $_SESSION['action'] = 'register';
+  } else if($action === 'login'){
+    lists_session("facebook_signin_request_type", 'true');
+    $_SESSION['action'] = 'login';
+  }
+  //Get sure library is loaded before doing anything.
+  facebook_init();
+  /*if (1) {
+    print_r("calling authenticated token function");
+    _authenticated_facebook_access_token($account);
+    //return;
+  }*/
+
+
+  $fb = new Facebook\Facebook([
+    'app_id' => '1385211868366241', // Replace {app-id} with your app id
+    'app_secret' => '46b6a3386c9dca617b94520807ffe007',
+    'default_graph_version' => 'v2.2',
+  ]);
+
+  $helper = $fb->getRedirectLoginHelper();
+
+  $permissions = ['email']; // Optional permissions
+ /*Code Added 27th Feb 2018*/
+ /*Commented code*/
+ // $loginUrl = $helper->getLoginUrl('http://sandbox.skoolmentor.com/fb/callback', $permissions); 
+  $loginUrl = $helper->getLoginUrl( $base_url.'/fb/callback', $permissions);
+  /*end: 27th Feb 2018*/
+ 
+
+  echo '<a href="' . htmlspecialchars($loginUrl) . '">Log in with Facebook!</a>';
+  //echo ''.htmlspecialchars($loginUrl);
+  drupal_goto($loginUrl);
+}
+
+/*function _authenticated_facebook_access_token($account) {
+  
+  global $user;
+
+  //Get sure library is loaded before doing anything.
+  facebook_init();
+  print_r("Entering function access token authenticated");
+  if ($account->uid < 1) {
+    $anon = TRUE;
+    //$back = 'login';
+  }
+  else {
+    $anon = FALSE;
+    //$back = 'token';
+  }
+  //print_r("action value = ". $action);
+  //Login or renewal request
+  if(1){
+    print_r("Entering login function");
+    $fb = new Facebook\Facebook([
+     'app_id' => '1705496109723360', // Replace {app-id} with your app id
+     'app_secret' => 'c34e3b45fbc92915e72df9cbe2f7fb93',
+     'default_graph_version' => 'v2.2',
+    ]);
+
+    $helper = $fb->getRedirectLoginHelper();
+
+    $permissions = ['email']; // Optional permissions
+    $loginUrl = $helper->getLoginUrl('http://localhost/skoolmentor/fb/callback', $permissions);
+
+    //echo '<a href="' . htmlspecialchars($loginUrl) . '">Log in with Facebook!</a>';
+    //echo ''.htmlspecialchars($loginUrl);
+    drupal_goto($loginUrl);
+    //$userData = facebook_callback();
+
+    
+    //db_select('facebook_token');
+
+    }    
+}*/

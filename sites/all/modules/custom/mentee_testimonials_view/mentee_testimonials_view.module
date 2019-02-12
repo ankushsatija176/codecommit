@@ -1,0 +1,278 @@
+<?php
+
+function mentee_testimonials_view_block_info() {
+	// Create an array that will hold our blocks
+	$blocks = array();
+	 
+	// Create a key in our $blocks array that
+	// defines our block. Note that the key in
+	// this array can be anything. For this
+	// tutorial, we use 'tellafriend_form'.
+	$blocks['mentee_testimonials_view_form'] = array(
+	// 'info' is what you will see when viewing the blocks admin page.
+	// Note that we use the t() (translate) function which lets drupal
+	// translate any text passed in if needed.
+	'info' => t('New Mentees'),
+	// 'cache' how this block will be cached
+	'cache' => DRUPAL_CACHE_GLOBAL,
+	);
+	 
+	// Note, if you wanted to define multiple blocks, you
+	// could simply define more blocks just like above.
+	 
+	// Finally, we return the $blocks array.
+	return $blocks;
+}
+
+function mentee_testimonials_view_block_view($delta = '') {
+	// Create an array that will be returned as our block
+	$block = array();
+	 
+	// Since hook_block_view is called for every block,
+	// Drupal passes in $delta (the key of the blocks defined
+	// in hook_block_info. In our case, we're checking for
+	// $delta to be 'tellafriend_form'.
+	switch($delta) {
+	case 'mentee_testimonials_view_form':
+	// Since this $delta matches our case, we'll define
+	// the subject and contents.
+	 
+	// 'subject' can be blank ('') or anything you wish to define.
+	$block['subject'] = t('Mentees testimonials');
+	 
+	// 'content' are just that, the contents of the block.
+	// In our case, we will be showing a form.
+	// We use drupal_get_form() to return a drupal-built form.
+	// Note that the parameter passed to drupal_get_form is the name
+	// of the function we will build below to define our form.
+	// This can be any function name we define below.
+	$block['content'] = drupal_get_form('mentee_testimonials_view_form');
+	break;
+	}
+	 
+	// Finally, we return the $block array.
+	return $block;
+}
+
+function mentee_testimonials_view_form($form, &$form_state) {
+	
+	
+	$form['mentee_testimonials'] = array(
+	    '#type'   => 'container',    
+	    //'#attributes' => array('class' => array('container-inline')),
+	    '#weight' => -10,
+	    '#theme' => 'mentee_testimonials_slider_view',	    
+  	);
+  	
+	return $form;
+}
+
+function mentee_testimonials_view_theme() {
+
+  return array(
+    
+    'mentee_testimonials_slider_view' => array(
+      'render element' => 'form'
+    ),
+  );
+}
+
+/*function mentee_testimonials_view_jqmulti_files() {
+   return array(
+    '/home/quickstart/websites/skoolmentor.com/sites/all/modules/custom/mentee_testimonials_view/jquery.bxslider.min.js',
+   );
+ }*/
+ 
+ function mentee_testimonials_view_js_alter(&$js) {
+  //$js['misc/jquery.js']['data'] = drupal_get_path('module', 'mentee_testimonials_view') . '/jquery-1.9.1.min.js';
+    if(drupal_is_front_page()){
+      $js['misc/jquery.js']['data'] = drupal_get_path('module', 'mentee_testimonials_view') . '/jquery-1.9.1.min.js';
+     }
+}
+
+function theme_mentee_testimonials_slider_view($variables) {
+
+  drupal_add_css(drupal_get_path('module', 'mentee_testimonials_view') . '/css/slider_testimonials.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  drupal_add_css(drupal_get_path('module', 'mentee_testimonials_view') . '/jquery.bxslider.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  drupal_add_js(drupal_get_path('module', 'mentee_testimonials_view') . '/jquery.bxslider.min.js');
+  $output ='<div>';
+  $output .= '<div class="t_span12"><h1 class="testimonial_header" style="padding:0 10% 0 10%;">What our mentees say about their mentors</h1>';
+  $output .= '<div id="bxslider" class="bxslider">';
+  //$output .= '<div id="scroller">';
+  $query = db_select('comment', 'c');
+  $query->join('node', 'n', 'n.nid = c.nid');
+  $query->join('mentor', 'mr', 'mr.mid = n.uid');
+  $query->join('mentee', 'm', 'm.mid = c.uid');
+  //$query->leftJoin('specialization_category', 'sc', 'sc.cid = m.fos_id');
+  //$query->join('specialization_subcategory', 'ssc', 'ssc.scid = m.fos_sub_id');
+  //$query->join('area_mentoring', 'aom', 'aom.aid = m.aom_id');
+  $query->join('users', 'u', 'u.uid = mr.mid');
+  $query->join('field_data_comment_body', 'fc', 'fc.entity_id = c.cid');
+  $query->condition('fc.bundle', 'comment_node_user_profile_comment','=');
+  $query->groupBy("mr.mid");
+  $query->orderBy("c.created", "DESC");
+  $query->fields('m')
+  //->fields('c')
+  ->fields('u', array('picture'))
+  ->fields('fc', array('comment_body_value'));
+  $query->addField('mr','mid', 'mrid');
+  $query->addField('mr', 'first_name', 'mfname');
+  $query->addField('mr', 'last_name','mlname');
+  $query->addField('mr', 'school_attending','school_attending');
+  $query->addField('mr', 'last_school_attended','last_school_attended');
+  $query->addField('c', 'cid','cid');
+  $query->range(0,8);
+  $result = $query->execute();
+  
+  
+  $mentee_array = array();
+  
+  foreach($result as $record) {
+  	$mentee = array();
+  	$mentee['mid'] = $record->mid;
+  	$mentee['picture'] = $record->picture;
+  	$mentee['first_name'] = $record->first_name;
+  	if($record->last_name != '')
+  		$mentee['last_name'] = $record->last_name[0].'.';
+  	else
+  		$mentee['last_name'] = '';
+  	$mentee['mentorid'] = $record->mrid;
+  	$mentee['mfname'] = $record->mfname;
+  	if($record->mlname != '')
+  		$mentee['mlname'] = $record->mlname[0].'.';
+  	else
+  		$mentee['mlname'] = '';
+  	$mentee['comment_body_value'] = filter_xss($record->comment_body_value);
+  	$mentee['last_school_attended'] = $record->last_school_attended;
+  	$mentee['school_attending'] = $record->school_attending;
+  	$mentee['school_name'] = $record->school_name;
+  	$mentee_array[$record->cid] = $mentee;
+  }
+  $form['connection']['mentee'] = array(
+  		'#type' => 'item',
+  		'#title' => t(''),
+  		'#markup' => $mentee_array,
+  );
+  $picture;
+  $style = variable_get('user_picture_style', '');
+  //$picture = file_load(30);
+  
+  $flag = 0;
+  
+  foreach ($mentee_array as $key => $element) {
+  	  //drupal_set_message('<pre>'.print_r($element,true).'</pre>');
+  	  if (strlen($element['comment_body_value']) > 130)
+  		$element['comment_body_value'] = substr($element['comment_body_value'], 0, 127) . '...';
+  	  $picture = file_load($element['picture']);
+	  if($flag == 0){
+		 	$output .= '<div class="inline-block"><div class="half_testimonial t_span6" style="float:left;">';
+	  }else{
+	  		$output .= '<div class="half_testimonial t_span6" style="float:left">';
+	  }
+	  $output .= '<div class="half_testimonial_image">
+	  <a href="/mentor/'.$element['mentorid'].'/profile">
+	  <div class="half_testimonial_photo_div">';
+	  //drupal_set_message('<pre>'.print_r($picture,true).'</pre>');
+  	  $output .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri,'alt' => $element['mfname'].' '.$element['mlname'], 'title' => $element['mfname'].' '.$element['mlname']));
+	   
+	  $output .= '</div></a>
+	  </div>
+	  <div class =" t_span4">
+	  <q class="half_testimonial_text"> "<a href="/user/'.$element['mentorid'].'">'.$element['comment_body_value'].'"</a> </q>
+	  <div class="t_span4 half_testimonial_meta">
+	  <strong>Mentee</strong>
+	  :'.$element['first_name'].' '.$element['last_name'];
+	  /*<a href="/mentee/'.$element['mid'].'/profile">'.$element['first_name'].' '.$element['last_name'].'</a>';*/
+	  /*if(!empty($element['last_school_attended'])){
+	  	$output .= ', '.$element['last_school_attended'].'';
+	  }else{
+	  	$output .= ', '.$element['school_attending'].'';
+	  }*/
+	  $output .= ', '.$element['school_name'].'';
+	  $output .= '</div></div>
+	  </div>';
+	  if($flag == 1){
+		  $output .= '</div>';
+		  $flag = 0;
+	  }else{
+	  	  $flag = 1;
+	  }
+	  
+  }
+  /*$output .= '<div class="inline-block"><div class="half_testimonial t_span6" style="float:left;">
+				<div class="half_testimonial_image">
+				<a href="/mentor/166/profile">
+				<div class="half_testimonial_photo_div">';
+  $output .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentee', 'title' => 'Mentee'));
+  $output .= '</div></a>
+				</div>
+				<q class="half_testimonial_text t_span4"> "Was knowledgeable and explained the subjects really well. She helped me understand everything and was very funny." </q>
+				<div class="t_span4 half_testimonial_meta">
+				<strong>Mentor</strong>
+				:
+				<a href="/mentor/166/profile">Aditya Sood</a>
+				, Harvard University
+				</div>
+				</div>';
+
+  $picture = file_load(46);				
+  $output .= '<div class="half_testimonial t_span6" style="margin-left:500px; margin-top:-130px">
+				<div class="half_testimonial_image">
+				<a href="/mentor/170/profile">
+				<div class="half_testimonial_photo_div">';
+  $output .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentee', 'title' => 'Mentee'));
+  $output .= '</div></a>
+				</div>
+				<q class="half_testimonial_text t_span4"> "Was knowledgeable and explained the subjects really well. She helped me understand everything and was very funny." </q>
+				<div class="t_span4 half_testimonial_meta">
+				<strong>Mentor</strong>
+				:
+				<a href="/mentor/170/profile">Rohit Jain</a>
+				, Harvard University
+				</div>
+				</div></div>';
+			
+  $output .= '<div class="inline-block"><div class="half_testimonial t_span6" style="float:left;">
+				<div class="half_testimonial_image">
+				<a href="/mentor/166/profile">
+				<div class="half_testimonial_photo_div">';
+  $output .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentee', 'title' => 'Mentee'));
+  $output .= '</div></a>
+				</div>
+				<q class="half_testimonial_text t_span4"> "Was knowledgeable and explained the subjects really well. She helped me understand everything and was very funny." </q>
+				<div class="t_span4 half_testimonial_meta">
+				<strong>Mentor</strong>
+				:
+				<a href="/mentor/166/profile">Aditya Sood</a>
+				, Harvard University
+				</div>
+				</div>';
+
+  $picture = file_load(46);				
+  $output .= '<div class="half_testimonial t_span6" style="float:left">
+				<div class="half_testimonial_image">
+				<a href="/mentor/170/profile">
+				<div class="half_testimonial_photo_div">';
+  $output .= theme('image_style', array('style_name' => $style, 'path' => $picture->uri, 'alt' => 'Mentee', 'title' => 'Mentee'));
+  $output .= '</div></a>
+				</div>
+				<q class="half_testimonial_text t_span4"> "Was knowledgeable and explained the subjects really well. She helped me understand everything and was very funny." </q>
+				<div class="t_span4 half_testimonial_meta">
+				<strong>Mentor</strong>
+				:
+				<a href="/mentor/170/profile">Rohit Jain</a>
+				, Harvard University
+				</div>
+				</div></div>';
+  
+  */
+  $output .= '</div></div></div>';
+  $output .= '<script type="text/javascript">	
+		(function ($) {
+			$(".bxslider").bxSlider();
+		})(jQuery);
+	
+	</script>';
+  //$output .= '<button style="position: relative; left: 800px; margin-bottom: 10px; background: none repeat scroll 0px center rgb(52, 87, 197); color: white;"> See more reviews</button>';
+  return $output;
+}

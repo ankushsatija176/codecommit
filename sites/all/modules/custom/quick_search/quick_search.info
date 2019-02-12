@@ -1,0 +1,8 @@
+name = Quick Search
+description = "Allows users to search for mentors/mentees quickly."
+package = quick_search
+core = 7.x
+
+stylesheets[(min-width: 961px)][] = quick_search.css
+stylesheets[(min-width: 768px) and (max-width: 960px)][] = quick_search768.css
+stylesheets[(max-width: 767px)][] = quick_search320.css

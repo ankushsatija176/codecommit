@@ -1,0 +1,295 @@
+<?php
+
+function referfriend_menu() {
+  $items['referfriend'] = array(
+    //'title' => 'Refer a friend',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('referfriend_form', 1),
+    'access callback' => 'referfriend_access',
+  );
+  
+  return $items;
+}
+	
+function referfriend_access() {
+	if(isset($_SESSION['user']) && isset($_SESSION['user']->uid)) {
+  		return TRUE;
+  	}
+  	return TRUE;
+}
+
+
+
+/**
+ * Menu callback.
+ */
+function referfriend_page() { 	
+  
+  return drupal_get_form('referfriend_form');
+  
+}
+
+function referfriend_form($form, &$form_state) {
+	$form['#token'] = FALSE;
+	drupal_add_css(drupal_get_path('module', 'referfriend') .'/referfriend_custom.css');
+	$user = array();
+	if(isset($_SESSION['user']->uid)) {
+		$role;
+		$query = db_select('users_roles', 'ur');
+		$query->join('role', 'r', 'ur.rid = r.rid');
+		$query->condition('ur.uid', $_SESSION['user']->uid,'=');
+		$query->fields('ur')
+		->fields('r', array('name'));
+		$result = $query->execute();
+		if(	$record = $result->fetchAssoc()) {
+			$role = $record['name'];
+		}
+	
+		if(substr( $role, 0, 6 ) === 'mentor') {
+			$query = db_select('mentor', 'm');
+		} else {
+			$query = db_select('mentee', 'm');
+		}
+		$query->join('users', 'u', 'u.uid = m.mid');
+		$query->condition('m.userid', $_SESSION['user']->uid,'=');
+		$query->fields('m')
+		->fields('u', array('mail'));
+		$result = $query->execute();
+		if(	$record = $result->fetchAssoc()) {
+			$user['email'] = $record['mail'];
+			$user['first_name'] = $record['first_name'];
+			$user['last_name'] = $record['last_name'];
+		}
+	}
+	$sender_name = $user['first_name'] . ' ' . $user['last_name'];
+	//print_r($sender_name);
+	$form = array();
+	$form['referfriend'] = array(
+			'#type'   => 'container',
+			'#weight' => -10,
+			'#theme' => 'referfriend_emailtheme_form',
+	);
+	$form['referfriend']['emails'] = array(
+	    '#type' => 'textarea',
+	    //'#title' => t('Email'),
+			'#resizable'=> FALSE,
+	    '#description' => t('this is test desc'),
+			'#default_value'=> t("To:"),
+	   '#rows'=>1,
+			'#attributes' => array('class' => 'rftextarea email-textarea'),
+	  );
+	//$form['referfriend']['emails']['#process'][]='process_emails';
+	  $form['referfriend']['subject'] = array(
+			'#type' => 'textfield',
+			'#default_value'=> t("Subject: ".$sender_name." has sent you a invite to join SkoolMentor"),
+			'#size'=>100,
+	);
+	$form['referfriend']['content'] = array(
+			'#type' => 'textarea',
+			'#default_value'=> t("Hi,
+
+I would like to invite you to check out SkoolMentor. Its Cool ! You can sign up to be a mentor or a mentee . 
+
+To become a member of skoolmentor, click the link below or paste it into the address bar of your browser.
+For Mentors:
+https://skoolmentor.com/mentor/register/
+For Mentees:
+https://skoolmentor.com/mentee/register/
+
+
+Regards
+".$sender_name.""),
+			'#resizable'=> FALSE,
+			//'#attributes' => array('class' => 'rftextarea'),
+		);
+	  $form['referfriend']['submit'] = array('#type' => 'submit', '#value' => t('Send Invitation'));
+	  
+	  //if (module_exists('contact_importer')) {
+	  	//contact_importer_bind_to_form($form, 'emails');
+	  //	print("coming");
+	 // }
+	return $form;
+}
+
+function referfriend_form_submit($form, &$form_state) {
+	$user = array();
+	if(isset($_SESSION['user']->uid)) {
+		$role;
+		$query = db_select('users_roles', 'ur'); 
+	    $query->join('role', 'r', 'ur.rid = r.rid'); 
+		$query->condition('ur.uid', $_SESSION['user']->uid,'=');	   
+		$query->fields('ur')
+			->fields('r', array('name'));
+		$result = $query->execute();
+		if(	$record = $result->fetchAssoc()) {
+			$role = $record['name'];
+		}
+		
+		if(substr( $role, 0, 6 ) === 'mentor') {
+			$query = db_select('mentor', 'm');
+		} else {
+			$query = db_select('mentee', 'm');
+		}
+	    $query->join('users', 'u', 'u.uid = m.mid'); 
+		$query->condition('m.userid', $_SESSION['user']->uid,'=');	   
+		$query->fields('m')
+			->fields('u', array('mail'));
+		$result = $query->execute();
+		if(	$record = $result->fetchAssoc()) {
+			$user['email'] = $record['mail'];
+			$user['first_name'] = $record['first_name'];
+	    	$user['last_name'] = ($record['last_name'] != '') ? $record['last_name'][0].'.' : '';
+		}
+		//drupal_set_message($form_state['values']['emails']);
+		
+		$emails = $form_state['values']['emails'];
+		if(!empty($emails) && $emails != "To:" ) {
+			$values = array();
+		    $values['sender_name'] = $user['first_name'] . ' ' . $user['last_name'];
+		  	$values['sender_mail'] = $user['email'];
+		    $values['sender_id'] = $_SESSION['user']->uid;
+		    $values['subject'] =str_replace("Subject: ","",$form_state['values']['subject']);
+		    $values['body'] = $form_state['values']['content'];
+			$email_list = explode("\n", $emails);
+			
+			foreach($email_list as $email_id) {
+				
+			  //$values['category'] = contact_load($values['cid']);
+			  drupal_mail('referfriend', 'referfriend_invite_mail', $email_id, language_default(), $values, 'administer@skoolmentor.com');
+			  drupal_set_message("Invitation has been sent to ". $email_id);
+			}
+		} else {
+			drupal_set_message("Please provide atleast one To: mail id.", "error");
+		}
+	}
+}
+
+function referfriend_mail($key, &$message, $params)
+{
+  // The key allows for a module to define multiple mails. This
+  // key needs to be the same as the first parameter in drupal_mail() above
+  //if($key == 'user_activation_mail')
+  switch ($key) {  
+  	case 'referfriend_invite_mail':
+	    $message['subject'] = $params['subject'];
+	    // Each element of the body array becomes a new line in the email.
+	    $message['body'][] = $params['body'];
+	    // Adding an empty string to the body array adds an extra line in the email
+	    break;
+  }
+}
+function referfriend_theme() {
+
+	return array(
+			'referfriend_emailtheme_form' => array(
+					'render element' => 'form'
+			),
+	);
+}
+
+
+function theme_referfriend_emailtheme_form($variables) {
+	$form = $variables['form'];
+	//print_r($form);
+	$submit_rendered = '';
+	$Submit_button = '';
+	foreach ($form as $key => $element) {
+		$allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+		if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+			if($key == 'emails') {
+      			$email_component .= drupal_render($element);
+      			$submit_rendered .= $email_component;
+      		}else if($key == 'subject') {
+      			//$subject_component .= '<div style="float: left; width:100%" class="container-inline">';
+      			//$subject_component .= '<div style="float: left; padding-top:5px;">';
+      			//$subject_component .= '<label for="edit-subject">Subject:</label>';
+      			//$subject_component .= '</div>';
+      			//$subject_component .= '<div style="float: left;">';
+      			$subject_component .= drupal_render($element);
+      			//$subject_component .= '</div>';
+      			//$subject_component .= '</div>';
+      			$submit_rendered .= $subject_component;
+      		}else if($key == 'content') {
+      			//$content_component .= '<div style="float: left; width:100%" class="container-inline">';
+      			//$content_component .= '<div style="float: left; padding-top:5px;">';
+      			//$content_component .= '<label >:</label>';
+      			//$content_component .= '</div>';
+      			//$content_component .= '<div style="float: left;">';
+      			$content_component .= drupal_render($element);
+      			//$content_component .= '</div>';
+      			//$content_component .= '</div>'; 	
+      			$submit_rendered .= $content_component;
+      		}else{
+			$submit_button .= drupal_render($element);
+      		}
+			//$submit_rendered = '<span style="padding-left:40px;">'.$submit_rendered.'</span>';
+		//}
+		}
+	}
+	$keyword_block = '<div style="width: 100%; overflow: hidden;">';
+
+	//$keyword_block .= '<div style="float: left; padding-top:5px;"><b>Keyword:&nbsp;</b></div>';
+	//$keyword_block .= '<div style="float: left; padding-top:5px;padding-left: 13px;"><label >Keyword<span  title="This field is required.">*</span></label></div>';
+	//$keyword_block .= '<div style="float: left;">' . $keyword_comp . '</div></div>';
+
+	$keyword_block .= '<div style="float: left;width: 100%; padding-bottom: 1%;">'.$submit_rendered.'</div>';
+	$keyword_block .= '</div></div><br>';
+	//$keyword_block .= '<div ><a href="/contact_importer" style="color: white; border-radius: 5px; background-color: orange; margin-left: 5px; padding: 10px; width: 17%;">Click to Import Your Contacts</a><br></div>';
+	$keyword_block .= '<br>';
+	$keyword_block .= '<div id="inviteFriendsActionDiv" style="padding-left:45%; margin-bottom: 10px" >'.$submit_button.'</div>';
+	
+	//$keyword_block .= '&nbsp;'. $keyword_comp . '</div></div>';
+	$output = '<div><div style="padding: 10px; color: black;  font-size: 16px;margin-bottom: 20px;"><div style="float:left">
+			<img style="height: 40px; width: 40px; margin-right: 5px;" src="sites/all/modules/custom/faqs/Envelope.png">
+			</div><div style="padding-top: 1%;">Invite Friends To Connect On SkoolMentor</div></div>
+			<div style="border: 1px solid #c0c0c0; border-radius: 10px;">
+			<div style = "border-top-left-radius:10px;border-top-right-radius:10px;  background-color: blue; color: white;padding-top: 10px; padding-bottom: 10px; padding-left: 5px; font-size: 14px;">
+			<b>Message</b>
+			</div>'.$keyword_block.'</div>';
+	$output .= '<div style="padding-top:25px;"></div>';
+	$output .= '<script type="text/javascript">
+		(function ($) {
+			$("#edit-content").each(function(){
+				$(this).css("border","1px solid #ffffff");
+				$(this).css("border-bottom-left-radius","10px");
+				$(this).css("border-bottom-right-radius","10px");
+					
+			});
+			$("#edit-subject").each(function(){
+				$(this).css("width","100%");
+				$(this).css("border-style","none none solid none");
+			});
+			$(".description").hide();
+			$("#edit-emails").each(function(){
+								if(this.value == "To:"){
+								this.value = "To:";
+								$(this).css("color","#cdcdcd");
+							    }
+							    $(this).css("font-weight","bold");
+								$(this).css("padding","1% 2%");	
+								$(this).css("border","1px solid #C0C0C0");
+								$(this).css("border-style","none none solid none");
+								$(this).addClass("textAreaForEmail")
+								$(this).keydown(function(){
+							        if(this.value == "To:") {
+							            this.value = "";
+							            $(this).css("color","black");
+									    $(this).css("font-weight","normal");
+									}
+							    });
+							 
+							    $(this).blur(function(){
+							        if(this.value == "") {
+							            this.value = "To:";
+							            $(this).css("color","#cdcdcd");
+									    $(this).css("font-weight","bold");
+									}
+							    });
+							});
+			
+			
+		})(jQuery);
+	
+	</script>';
+	return $output;
+}

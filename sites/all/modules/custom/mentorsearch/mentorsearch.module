@@ -1,0 +1,758 @@
+<?php
+function mentorsearch_menu() {
+	$items['mentor/search'] = array(
+    'title' => t('Search mentors'),
+  	'description' => t('Search Mentor'),
+  	'page callback' => 'mentorsearch_page',
+  	'access callback' => TRUE,
+  );
+  
+  return $items;
+}
+
+function mentorsearch_page() {
+	
+	$build = array();
+
+  
+  	//$build['form_one'] = drupal_get_form('mentorsearch_keyword_form');
+  	$build['form_two'] = drupal_get_form('mentorsearch_form');
+
+  	return $build;
+	 
+}
+
+function mentorsearch_keyword_form($form, &$form_state) {
+  
+  $form['keywordsearch'] = array(
+	    '#type'   => 'container',    
+	    '#weight' => -10,
+	    '#theme' => 'mentorsearch_keywordtheme_form',	    
+  	);
+  	
+  $form['keywordsearch']['keyword'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Keyword',
+    '#maxlength' => 255,
+    '#required' => TRUE,
+  );
+  $form['keywordsearch']['submit'] = array(
+	'#type' => 'submit',
+	'#value' => 'Go',
+  	);
+  	
+  $form['#attached']['css'] = array(
+    drupal_get_path('module', 'mentorsearch') . '/mentorsearch.css',
+  );
+  return $form;
+}
+
+/*function mentorsearch_theme() {
+  return array(
+    'mentorsearch_keywordtheme_form' => array(
+      'render element' => 'form'
+    ),
+  );
+}*/
+
+function mentorsearch_theme() {
+
+  return array(
+    'mentorsearch_keywordtheme_form' => array(
+      'render element' => 'form'
+    ),
+    'mentorsearch_filtertheme_form' => array(
+      'render element' => 'form'
+    ),
+  	'multicolumn_options' => array(
+  				'arguments' => array('element' => NULL),
+  		),
+  );
+}
+
+function theme_multicolumn_options($element) {
+	$element = $element[''];
+	// Initialize variables.
+	
+	$output = '';
+	$total_columns =   $element['#columns'] ;
+	$total_options =  count($element['#options']);
+	$options_per_column = ceil($total_options / $total_columns);
+	$keys = array_keys($element['#options']);
+	$type = checkbox;
+
+	// Start wrapper div.
+	$output .= '<div class="multicolumn-options-wrapper">';
+	$current_column = 1;
+	$current_option = 0;
+
+	while ($current_column <= $options_per_column) {
+		// Start column div.
+		$output .=  '<div class="multicolumn-options-column" style="width: ' . 100 . '%; float: left">';
+
+		// Keep looping through until the maximum options per column are reached,
+		// or you run out of options.
+		while ($current_option < $total_columns * $current_column &&
+				$current_option < $total_options) {
+					//drupal_set_message('<pre>'.print_r($element[$keys[$current_option]],true).'</pre>');
+					
+					// Output as either check or radio button depending on the element type.
+					//$output .= theme($type, $element[$keys[$current_option]]);
+					$output .= drupal_render($element[$keys[$current_option]]);
+					$current_option++;
+				}
+
+				// End column div.
+				$output .= '</div>';
+				$current_column++;
+	}
+
+	// End wrapper div.
+	$output .= '</div>';
+	$output .= '<div class="clear-block"></div>';
+
+	return $output;
+}
+
+function theme_mentorsearch_keywordtheme_form($variables) {
+	$output='';
+	$submit_rendered = '';
+	$form = $variables['form'];
+	$keyword_comp = '';
+    foreach ($form as $key => $element) {
+    	$allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+    	if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+    		if($element['#type'] == 'submit') {
+      			$submit_rendered = drupal_render($element);
+      			$submit_rendered = '<span style="padding-left:40px;">'.$submit_rendered.'</span>';
+      		}
+      		if($key == 'keyword') {
+      			$keyword_comp = drupal_render($element);
+      		}
+    	}
+    }
+    $keyword_block = '<div style="width: 100%; overflow: hidden;">';
+    
+    //$keyword_block .= '<div style="float: left; padding-top:5px;"><b>Keyword:&nbsp;</b></div>';
+    $keyword_block .= '<div style="float: left; padding-top:5px;padding-left: 13px;"><label for="edit-keyword">Keyword<span class="form-required" title="This field is required.">*</span></label></div>';
+    //$keyword_block .= '<div style="float: left;">' . $keyword_comp . '</div></div>';
+    
+    $keyword_block .= '<div style="float: left;">: &nbsp;<input type="text" id="edit-keyword" name="keyword" value="" size="60" maxlength="255" class="form-text required error" />'.$submit_rendered.'</div></div>';
+    //$keyword_block .= '&nbsp;'. $keyword_comp . '</div></div>';
+    $output = '<div style="border: 1px solid #c0c0c0;"><div style = "padding-top: 10px; padding-bottom: 10px; padding-left: 5px; font-size: 14px;"><b>Keyword Search</b></div>'.$keyword_block.'</div>';
+    $output .= '<div style="padding-top:25px;"></div>'; 
+    return $output;
+}
+
+function theme_mentorsearch_filtertheme_form($variables) {
+	$output='';
+	$submit_rendered = '';
+	$submit_rendered1 = '';
+	$form = $variables['form'];
+	$name_component = '<div class="mentorsearch-form-heading1">';
+	$region_component = '<div class="mentorsearch-form-heading2">';
+	$subscription_component = '<div class="mentorsearch-form-heading2">';
+    $areamentoring_component = '<div class="mentorsearch-form-heading2">';
+    $mentorType_deg_component = '';
+	//$school_component = '<div style="width: 100%; overflow: hidden; padding-top: 35px; padding-left: 13px;">';
+	$spec_component = '<div class="mentorsearch-form-heading2">';
+	foreach ($form as $key => $element) {
+    	$allowed_elements = array('textfield', 'textarea', 'radio', 'radios', 'checkbox', 'checkboxes', 'markup', 'submit', 'file', 'fieldset', 'item', 'date', 'select', 'hidden');
+    	if (is_array($form[$key]) && isset($element['#type']) && in_array($element['#type'], $allowed_elements)) {
+    		if($element['#type'] == 'submit' && $key == 'submit') {
+      			$submit_rendered = drupal_render($element);
+      			$submit_rendered = '<div style="  padding: 1% 45%;">'.$submit_rendered.'</div>'; 
+      		}
+      		if($element['#type'] == 'submit' && $key == 'filtersubmit') {
+      			$submit_rendered1 = drupal_render($element);
+      			$submit_rendered1 = '<div style=" text-align:center; padding: 0.5%;">'.$submit_rendered1.'</div>'; 
+      		}
+      		if($key == 'firstname') {
+      			$name_component .= '<div class="mentorsearch-form-element-div2 container-inline" >';
+      			$name_component .= 		'<div class="mentorsearch-form-element-div2">&nbsp;';
+      			$name_component .= 			drupal_render($element);
+      			$name_component .= 		'</div>';
+      			$name_component .= '</div>';
+      		}
+      		if($key == 'lastname') {
+      			$name_component .= '<div class="mentorsearch-form-element-div2 container-inline">';
+      			$name_component .= '<div class="mentorsearch-form-element-div2">&nbsp;';
+      			$name_component .= drupal_render($element);
+      			$name_component .= '</div>';
+      			$name_component .= '</div>';
+      		}
+      		if($key == 'city') {
+      			$region_component .= '<div class="mentorsearch-form-element-div2 container-inline">';
+      			$region_component .= '<div class="mentorsearch-form-element-div2">&nbsp;';
+      			$region_component .= drupal_render($element);
+      			$region_component .= '</div>';
+      			$region_component .= '</div>'; 	
+      		}
+      		if($key == 'state') {
+      			$region_component .= '<div class="mentorsearch-form-element-div2 container-inline">';
+      			$region_component .= '<div class="mentorsearch-form-element-div2">&nbsp;';
+      			$region_component .= drupal_render($element);
+      			$region_component .= '</div>';
+      			$region_component .= '</div>'; 	
+      		}
+      		if($key == 'mentorType') {
+      			$mentorType_deg_component .= '<div class="mentorsearch-form-element-div7 container-inline" style="margin-right: 20px;">';
+      			$mentorType_deg_component .= '<div class="mentorsearch-form-element-div7">&nbsp;';
+      			$mentorType_deg_component .= drupal_render($element);
+      			$mentorType_deg_component .= '</div>';
+      			$mentorType_deg_component .= '</div>';
+      		}
+      		if($key == 'degree') {
+      			$spec_component .= '<div class="mentorsearch-form-element-div2 mentorsearch-form-element-div3 container-inline">';
+      			$spec_component .= '<div class="mentorsearch-form-element-div4">';
+      			$spec_component .= '<label for="edit-degree">Qualifications:</label>';
+      			$spec_component .= '</div>';
+      			$spec_component .= '<div id= "degreeoverflowdiv" class="mentorsearch-form-element-div5">';
+      			$spec_component .= drupal_render($element);
+      			$spec_component .= '</div>';
+      			$spec_component .= '<a name="degreeoverflowdiv" class="show_more_results">More Filters</a>';
+      			$spec_component .= '</div>';
+      		}
+      		if($key == 'school') {
+      			$region_component .= '<div class="mentorsearch-form-element-div2 container-inline">';
+      			$region_component .= '<div class="mentorsearch-form-element-div2">&nbsp;';
+      			$region_component .= drupal_render($element);
+      			$region_component .= '</div>';
+      			$region_component .= '</div>';
+      		}
+          if($key == 'areaofmentoring') {
+            $areamentoring_component .= '<div class="mentorsearch-form-element-div2 mentorsearch-form-element-div3 container-inline">';
+            $areamentoring_component .= '<div class="mentorsearch-form-element-div4">';
+            $areamentoring_component .= '<label for="areaofmentoring">Area Need Mentoring In:</label>';
+            $areamentoring_component .= '</div>';
+            $areamentoring_component .= '<div id= "aomoverflowdiv" class="mentorsearch-form-element-div5">';
+            $areamentoring_component .= drupal_render($element);
+            $areamentoring_component .= '</div>';
+            $areamentoring_component .= '<a name="aomoverflowdiv" class="show_more_results">More Filters</a>';
+            $areamentoring_component .= '</div>';
+          }
+      		if($key == 'fieldOfStudy') {
+      			$spec_component .= '<div class="mentorsearch-form-element-div2 mentorsearch-form-element-div3 container-inline">';
+      			$spec_component .= '<div class="mentorsearch-form-element-div4">';
+      			$spec_component .= '<label for="edit-fieldOfStudy">Major:</label>';
+      			$spec_component .= '</div>';
+      			$spec_component .= '<div id= "fieldofstudyoverflowdiv" class="mentorsearch-form-element-div6">&nbsp;';
+      			 
+      		//	$spec_component .= '<div style="float: left; background-color: white; border-radius: 3px;width: 80%; padding-top: 1%; " >
+      			//		<div style="float: left; overflow: auto; height: 100px;width: 100%">&nbsp;';
+      			//$spec_component .= '<div class="my_checkboxes">';
+      			$spec_component .= drupal_render($element);
+      			//$spec_component .= '</div>';
+      			$spec_component .= '</div>';
+      			//$spec_component .= '<a name="fieldofstudyoverflowdiv" class="show_more_results">More Filters</a>';
+      			$spec_component .= '</div>';
+      			}
+      		if($key == 'fieldOfSpecialization') {
+      			$spec_component .= '<div id="fieldOfSpecializationCon" class="mentorsearch-form-element-div2 mentorsearch-form-element-div3 container-inline">';
+      			$spec_component .= '<div class="mentorsearch-form-element-div4">';
+      			$spec_component .= '<label for="edit-fieldOfSpecialization">Specialization:</label>';
+      			$spec_component .= '</div>';
+      			$spec_component .= '<div id= "fosoverflowdiv" class="mentorsearch-form-element-div5">';
+      			$spec_component .= '<div class="my_checkboxes">';
+   	     		$spec_component .= drupal_render($element);
+      			$spec_component .= '</div>';
+      			$spec_component .= '</div>';
+      			$spec_component .= '<a name="fosoverflowdiv" class="show_more_results">More Filters</a>';
+      			$spec_component .= '</div>';
+      		}
+      		if($key == 'engagement_model_with_mentee') {
+      			$subscription_component .= '<div class="mentorsearch-form-element-div2 mentorsearch-form-element-div8 container-inline" >';
+      			$subscription_component .= '<div class="mentorsearch-form-element-div2 mentorsearch-form-element-div9" >&nbsp;';
+      			$subscription_component .= drupal_render($element);
+      			$subscription_component .= '</div>';
+      			$subscription_component .= '</div>';
+      		}
+      		if($key == 'volunteer') {
+      			$subscription_component .= '<div class="mentorsearch-form-element-div2 container-inline" style = "min-width: 25%;">';
+      			$subscription_component .= '<div class="mentorsearch-form-element-div2" style = "min-width: 80%;">&nbsp;';
+      			$subscription_component .= drupal_render($element);
+      			$subscription_component .= '</div>';
+      			$subscription_component .= '</div>';
+      		}
+      		
+      		
+    	}
+    }
+    $name_component .= '</div>';
+    $subscription_component .= '</div>';
+    $region_component .= $mentorType_deg_component;
+    $region_component .= '</div>';
+
+    $areamentoring_component .= '</div>';
+    //$mentorType_deg_component .= '</div>';
+    
+   // $school_component .= '</div>';
+    
+    $spec_component .= '</div>';
+    
+    
+  $output = '<div style="border: 1px solid #c0c0c0">';
+	$output .= '<div  class = "mentorsearch-filter-heading1">
+			<b class="mentorsearch-filter-heading2">Search</b>';
+	$output .= $name_component.$region_component.$subscription_component;
+	$output .= $submit_rendered1.'</div>';
+	$output .= '<div id="advanceSearchPanel" class="button790 mentorsearch-filter-heading3">';
+	$output .= $areamentoring_component.$spec_component;
+	$output .= '</div>';
+	$output .= '</div>';
+	$output .= '<div><div id="filters" class="mentorsearch-filter-div1">
+			 <div class="button790 filterbar-filter-button" id="showASP">
+			<img id="updownArrow" style="max-width: 10px;" src="/sites/all/modules/custom/faqs/down.png"> Advance Search: </div></div>
+			<div id = "advancesearchGobutton" class="mentorsearch-form-element-div2 mentorsearch-form-element-div3">'.$submit_rendered.'</div>
+			</div>';
+	$output .= '<script type="text/javascript">
+		(function ($) {
+			$("#advancesearchGobutton").hide();
+			$("#edit-fieldofstudy").change(function(){
+								$("input:checkbox[id^=edit-fieldofspecialization]:checked").each(function(){
+									$(this).attr("checked",false);
+									$(this).change();
+								});
+							});	
+			$("#advanceSearchPanel").hide();
+			$("#showASP").click(function(){
+				$("#advanceSearchPanel").slideToggle(300);
+				$("#advancesearchGobutton").toggle();
+				if($("#advancesearchGobutton").is(":hidden")){
+					$("#updownArrow").attr("src","/sites/all/modules/custom/faqs/down.png");
+				}else{
+					$("#updownArrow").attr("src","/sites/all/modules/custom/faqs/up.png");
+				}			
+			});
+			$("h1").hide();
+			$("#fieldOfSpecializationCon").hide();
+			if($("#edit-fieldofstudy").val() > 0)
+					$("#fieldOfSpecializationCon").show();
+			$("#edit-fieldofstudy").change(function(){
+				if($("#edit-fieldofstudy").val() > 0)
+					$("#fieldOfSpecializationCon").show();
+				else
+					$("#fieldOfSpecializationCon").hide();
+			});
+			$("label").hide();
+			$("label").each(function(){
+				var textLabel = $(this).text();
+				if($(this).attr("for").indexOf("areaofmentoring") > -1){
+					$(this).show();
+				}else if($(this).attr("for").indexOf("fieldOfSpecialization") > -1){
+					$(this).show();
+				}else if($(this).attr("for").indexOf("fieldofspecialization") > -1){
+					$(this).show();
+				}else if($(this).attr("for").indexOf("fieldOfStudy") > -1){
+					$(this).show();
+				}else if($(this).attr("for").indexOf("edit-m-type") > -1){
+						$(this).show();
+				}else if($(this).attr("for").indexOf("edit-degree") > -1){
+						$(this).show();
+				}else if($(this).attr("for").indexOf("edit-engagement-model-with-mentee") > -1){
+						$(this).show();
+				}
+				
+			});
+			$("a.show_more_results").each(function(){
+						var name = this.name;
+						$(this).click(function(){
+								if(this.text == "More Filters"){
+									$("#"+name).css("height","auto");
+									$("#"+name).css("overflow","auto");
+									this.text = "Reduce Filters";
+								}else{
+									$("#"+name).css("height","30px");
+									$("#"+name).css("overflow","hidden");
+									this.text = "More Filters";
+								}
+							});
+			});
+			$(".form-text").each(function(){
+								var titleText = $(this).siblings("label").text();
+								if(!$(this).val()){
+									$(this).val(titleText) ;
+									$(this).css("color","#ABA6A6");
+							    }else if($(this).val() == titleText){
+									$(this).css("color","#ABA6A6");
+							    }
+								$(this).keydown(function(){
+									if(this.value == titleText) {
+							            this.value = "";
+							            $(this).css("color","black");
+									}
+							    });
+	
+							    $(this).blur(function(){
+							    	if(this.value == "") {
+							            this.value = titleText;
+							            $(this).css("color","#ABA6A6");
+									}
+							    });
+							});
+		})(jQuery);
+			Drupal.behaviors.mentorsearch = {
+ 					 attach: function (context, settings) {
+						(function ($) {
+              $("#edit-fieldofstudy").change(function(){
+                $("input:checkbox[id^=edit-fieldofspecialization]:checked").each(function(){
+                    $(this).attr("checked",false);
+                    $(this).change();
+                });
+              });
+							$(".form-checkbox").once("mentorsearch").each(function(){
+								var checkBoxId = $(this).attr("id");
+								if(checkBoxId.indexOf("edit-engagement-model-with-mentee") == -1){
+								if($(this).attr("checked") == true){
+										var labelText = $(this).siblings("label").text();
+										$("#filters").append("<div id=\""+$(this).attr("id")+"_filter_div\"class=\"filterbar-filter\">"+labelText+"<span id=\""+$(this).attr("id")+"_filter_span\"class=\"filterbar-filter-span\"><img style=\"height : 15px;vertical-align: middle;\" src=\"/sites/default/files/close.png\" ></span></div>");
+										$("#"+checkBoxId+"_filter_span").click(function(){
+											$(this).parent().remove();
+											$("#"+checkBoxId).attr("checked",false);	
+											});
+								}
+								$(this).change(function(){
+									if($(this).attr("checked") == true){
+									var labelText = $(this).siblings("label").text();
+									$("#filters").append("<div id=\""+$(this).attr("id")+"_filter_div\"class=\"filterbar-filter\">"+labelText+"<span id=\""+$(this).attr("id")+"_filter_span\"class=\"filterbar-filter-span\"><img style=\"height : 15px;vertical-align: middle;\" src=\"/sites/default/files/close.png\" ></span></div>");
+									$("#"+checkBoxId+"_filter_span").click(function(){
+										$(this).parent().remove();
+										$("#"+checkBoxId).attr("checked",false);	
+									});
+									}else{
+										$("#"+checkBoxId+"_filter_div").remove();
+									}
+								});
+							}
+							});
+						})(jQuery);								
+   		 	 		}
+			};
+			
+	</script>';
+	
+	return $output; 		
+}
+
+function mentorsearch_form($form, &$form_state) {
+	$form['filtersearch'] = array(
+	    '#type'   => 'container',    
+	    '#weight' => -10,
+	    '#theme' => 'mentorsearch_filtertheme_form',
+	    //'#attributes' => array('class' => array('container-inline')),
+	    	    
+  	);
+  	$form['filtersearch']['firstname'] = array(
+	    '#type' => 'textfield',
+	    '#title' => 'First Name',
+  		'#maxlength' => 255,
+	    '#default_value' => isset($_REQUEST['firstname']) ? (!empty($_REQUEST['firstname'])?$_REQUEST['firstname']:NULL) : NULL,
+	    '#size' => 20,
+  	);
+  	$form['filtersearch']['lastname'] = array(
+	    '#type' => 'textfield',
+	    '#title' => 'Last Name',
+  		'#maxlength' => 255,
+	    '#default_value' => isset($_REQUEST['lastname']) ? (!empty($_REQUEST['lastname'])?$_REQUEST['lastname']:NULL) : NULL,
+	    '#size' => 20,
+  	);
+  	$form['filtersearch']['city'] = array(
+	    '#type' => 'textfield',
+	    '#title' => 'City',
+  		'#maxlength' => 255,
+	    '#size' => 20,
+  		'#default_value' => isset($_REQUEST['city']) ? (!empty($_REQUEST['city'])?$_REQUEST['city']:NULL) : NULL,
+	    
+  	);
+  	$form['filtersearch']['state'] = array(
+	    '#type' => 'textfield',
+	    '#title' => 'State',
+  		'#maxlength' => 255,
+	    '#default_value' => isset($_REQUEST['state']) ? (!empty($_REQUEST['state'])?$_REQUEST['state']:NULL) : NULL,
+	    '#autocomplete_path' => 'states/autocomplete',
+  		'#size' => 20,
+  	);
+  	
+  	$form['filtersearch']['mentorType'] = array(
+    	'#type' => 'select',
+    	'#options' => array(t('--Type--'), t('Professional'), t('Student')),
+  		'#default_value' => isset($_REQUEST['mentorType']) ? (!empty($_REQUEST['mentorType'])?$_REQUEST['mentorType']:NULL) : NULL,
+  			 
+  	);
+  	$degree = array();
+  	$index = 0;
+  	if(isset($_REQUEST['degree'])){	
+  		foreach ($_REQUEST['degree'] as $key => $value){
+  			$degree[$index++] = $value;
+  		}
+  	}
+  	$entries = db_query("SELECT eid, name FROM {education_qualification}");
+
+  	$options = array();
+  	foreach($entries as $record)
+  	{
+    	$options[$record->eid] =$record->name;
+  	}
+   	$form['filtersearch']['degree'] = array(
+	    '#type' => 'checkboxes',
+	    '#options' =>  $options ,
+   		'#prefix' => '<div class="my_checkboxes">',
+   		'#suffix' => '</div>',
+   		'#theme' => array('multicolumn_options'),
+   		'#columns' => 2,
+   		'#default_value' => $degree,
+   );
+   
+   $form['filtersearch']['school'] = array(
+    	'#type' => 'textfield',
+	    '#title' => 'School',
+   		'#maxlength' => 255,
+	    '#default_value' => isset($_REQUEST['school']) ? (!empty($_REQUEST['school'])?$_REQUEST['school']:NULL) : NULL,
+  		'#size' => 20,
+  	);
+
+  $entries = db_query("SELECT aid, name FROM {area_mentoring}");
+  $options = array();
+  //$options[0] = '--- SELECT --------------';
+  foreach($entries as $record)
+  {
+    $options[$record->aid] =$record->name;
+  }
+  $aomDefaultValues;
+  $aomIndex = 0;
+  if(isset($_REQUEST['area_mentoring'])){
+    foreach ($_REQUEST['area_mentoring'] as $key => $value){
+      $aomDefaultValues[$aomIndex++] = $value;
+    }
+  }
+   $form['filtersearch']['areaofmentoring'] = array(
+    '#type' => 'checkboxes',
+    '#multiple' => true,
+    '#prefix' => '<div class="my_checkboxes">',
+    '#suffix' => '</div>',
+    '#options' =>  $options ,
+    '#theme' => array('multicolumn_options'),
+    '#columns' => 2,
+    '#default_value' => $aomDefaultValues,
+  );
+   
+   	$entries = db_query("SELECT cid, name FROM {specialization_category}");
+
+  	$options = array();
+  	$options[0] = '--- SELECT ---';
+  	foreach($entries as $record)
+  	{
+    	$options[$record->cid] =$record->name;
+  	}
+  	if(isset($_REQUEST['field_study'])){
+  		$form_state['values']['fieldOfStudy'] = $_REQUEST['field_study'];
+  	}
+  	$value_field_of_study = isset($form_state['values']['fieldOfStudy']) ? $form_state['values']['fieldOfStudy'] : key($options);
+			 
+  // 	drupal_set_message($value_field_of_study);
+    $form['filtersearch']['fieldOfStudy'] = array(
+   		'#type' => 'select',
+    	'#options' => $options,
+    	'#default_value' => $value_field_of_study,
+    	'#ajax' => array(
+   			'event' => 'change',
+        	'callback' => 'mentorsearch_ajax_callback',
+        	'progress' => array(
+        	'message' => '',
+      	),
+        'wrapper' => 'dropdown_mentorsearch_specialization_replace',
+    	
+      ),
+   );
+    $field_specs;
+    $index = 0;
+    if(isset($_REQUEST['field_spec'])){
+    	foreach ($_REQUEST['field_spec'] as $key => $value){
+    		$field_specs[$index++] = $value;
+    	}
+    }
+     
+  	$form['filtersearch']['fieldOfSpecialization'] = array(
+	    '#type' => 'checkboxes',
+	    '#multiple' => true,
+	    '#prefix' => '<div id="dropdown_mentorsearch_specialization_replace" >',
+	    '#suffix' => '</div>',
+	    '#options' => mentorsearch_specialization_dropdown_options($value_field_of_study),
+  		'#theme' => array('multicolumn_options'),
+  		'#columns' => 2,
+  		'#default_value' =>$field_specs,
+    /*'#states' => array(
+      		'invisible' => array(
+        		':input[name="fieldOfStudy"]' => array('value' => '0'),
+      		),
+    	),*/
+	    
+  	);
+  	
+  	$volunteerDefault = isset($_REQUEST['volunteer'])?(($_REQUEST['volunteer'] == "")?'--Should Be Volunteer--':$_REQUEST['volunteer']):'--Should Be Volunteer--';
+  	$form['filtersearch']['volunteer'] = array(
+  			'#type' => 'select',
+  			//'#title' => t('Mentor Available For Duratoion'),
+  			//'#required' => TRUE,
+  			'#options' => drupal_map_assoc(array(t('--Should Be Volunteer--'),t('No'), t('Yes'))),
+  			'#default_value' => $volunteerDefault,
+  	);
+  	if(isset($_REQUEST['subscription'])){
+        if($_REQUEST['subscription'] == "All of the above"){
+            $emwmDefault = 'All of the above';
+        }else if($_REQUEST['subscription'] == "monthly"){
+            $emwmDefault = '3 Month';
+        }else if($_REQUEST['subscription'] == "ondemand"){
+            $emwmDefault = 'On Demand 1 hour';
+        }else{
+            $emwmDefault = 'On Demand 30 minutes';
+        }
+    }else{
+        $emwmDefault = array('On Demand 30 minutes','On Demand 1 hour','3 Month');
+    }
+    $form['filtersearch']['engagement_model_with_mentee'] = array(
+        '#type' => 'radios',
+        '#title' => t('Mentor Available For Duration'),
+        //'#required' => TRUE,
+        '#options' => drupal_map_assoc(array(t('On Demand 30 minutes'), t('On Demand 1 hour'), t('3 Month'), t('All of the above'))),
+        '#default_value' => $emwmDefault,
+    );
+  	$form['filtersearch']['submit'] = array(
+    	'#type' => 'submit',
+    	'#value' => 'Go',
+  	);
+  	$form['filtersearch']['filtersubmit'] = array(
+  			'#type' => 'submit',
+  			'#value' => 'Go',
+  	);
+  	return $form;
+}
+
+function mentorsearch_ajax_callback($form, $form_state) {
+	return $form['filtersearch']['fieldOfSpecialization'];
+}
+
+function mentorsearch_specialization_dropdown_options($key = '') {
+	
+	//if(empty($key))
+	//	$key = 0;
+	$entries = db_query("SELECT scid, name FROM {specialization_subcategory} WHERE specialization_category_id = $key");
+
+  	$options = array();
+  	if($key == 0) {
+  		$options[0] = '--- SELECT ------';
+  	}
+  	foreach($entries as $record)
+  	{
+   	 	$options[$record->scid] =$record->name;
+  	}
+  	return $options;
+}
+
+function mentorsearch_keyword_form_submit($form, &$form_state) {
+	$form_state1['redirect'] = array(
+  		'mentor/searchResult',
+  		 array(
+    		'query' => array(
+    			'keyword' =>  $form_state['values']['keyword'],
+    		),
+    	),
+    );
+    return drupal_redirect_form($form_state1);
+}
+
+function mentorsearch_form_submit($form, &$form_state) {
+	//drupal_set_message( '<pre>' . print_r($form_state['values'], true) . '</pre>');
+$degree = '';
+$area_mentoring = '';
+$field_study = 0;
+$field_spec = '';
+$mentorType = '';
+//drupal_set_message('<pre>'.print_r($form_state['values']['engagement_model_with_mentee'],true).'</pre>');
+//drupal_set_message(is_numeric($form_state['values']['engagement_model_with_mentee']['3 Month']).'next'.is_numeric($form_state['values']['engagement_model_with_mentee']['On Demand 1 hr']));
+
+$subscription = 'All of the above';
+if(isset($form_state['values']['engagement_model_with_mentee'])){
+    if($form_state['values']['engagement_model_with_mentee'] == 'All of the above'){
+        $subscription = 'All of the above';
+    } else if ($form_state['values']['engagement_model_with_mentee'] == 'On Demand 30 minutes') {
+        $subscription = '30mins';
+    }else if ($form_state['values']['engagement_model_with_mentee'] == 'On Demand 1 hour') {
+        $subscription = 'ondemand';
+    } else if ($form_state['values']['engagement_model_with_mentee'] == '3 Month') {
+        $subscription = 'monthly';
+    }
+}
+//$subscription = ($form_state['values']['engagement_model_with_mentee']['3 Month'] == 1) ? (($form_state['values']['engagement_model_with_mentee']['On Demand 1 hr'] == 0)?'Both':'monthly') : (($form_state['values']['engagement_model_with_mentee']['On Demand 1 hr'] == 0)?'Both':'ondemand');
+$school = ($form_state['values']['school'] == "School ") ? '' : $form_state['values']['school'];
+$city = ($form_state['values']['city']== "City ") ? '' : $form_state['values']['city'];
+$state = ($form_state['values']['state'] == "State ") ? '' : $form_state['values']['state'];
+$firstname = ($form_state['values']['firstname'] == "First Name ") ? '' : $form_state['values']['firstname'];
+$lastname = ($form_state['values']['lastname'] == "Last Name ") ? '' : $form_state['values']['lastname'];
+$volunteer = ($form_state['values']['volunteer'] == "--Should Be Volunteer--") ? '' : $form_state['values']['volunteer'];
+if($form_state['values']['degree'] != 0) {
+  	$degree = array_filter($form_state['values']['degree']);	
+}
+
+if($form_state['values']['fieldOfStudy'] != 0) {
+  	$field_study = $form_state['values']['fieldOfStudy'];
+}
+/*$selected = array_filter($form_state['values']['fieldOfSpecialization']);
+if($form_state['values']['fieldOfSpecialization'] != 0) {
+  	$field_spec = $form_state['values']['fieldOfSpecialization'];
+}*/
+
+$selected_aom = array_filter($form_state['values']['areaofmentoring']);
+$selected_spec = array_filter($form_state['values']['fieldOfSpecialization']);
+$selected_spec_ids = '';
+$specialization = '';
+$entries = '';
+if(! empty($selected_spec)) {
+  $query = "SELECT name FROM {specialization_subcategory} WHERE scid = ";
+  $max = count($selected_spec);
+  foreach($selected_spec as $key => $value) {
+    $query .= $key;
+    if($max > 1) {
+      $query .= " or scid = ";
+      $max = $max - 1;
+    }
+  }
+  $entries = db_query($query);
+} else {
+  $entries = db_query("SELECT name FROM {specialization_subcategory} WHERE specialization_category_id = " . $field_study);
+}
+
+foreach($entries as $record) {
+  $specialization .= $record->name . ', ';
+}
+$specialization = substr($specialization, 0, (strlen($specialization) - 2));
+
+if($form_state['values']['mentorType'] != 0) {
+  	$mentorType = $form_state['values']['mentorType'];	
+}
+//drupal_set_message($field_study);
+//drupal_set_message('<pre>' . print_r($field_spec, true) . '</pre>');
+$form_state1['redirect'] = array(
+  'mentor/searchResult',
+  
+   
+  array(
+    'query' => array(
+      'mentorType' => $mentorType,
+      'school' => $school,
+      'degree' => $degree,
+      'field_study' => $field_study,
+      'field_spec' => $selected_spec,
+      'area_mentoring' => $selected_aom,
+      'state' => $state,
+	  'city' => $city,
+	  'firstname' => $firstname,
+	  'lastname' => $lastname,
+      'subscription' => $subscription,
+      'volunteer' => $volunteer,
+    ),
+  ),
+);
+
+ return drupal_redirect_form($form_state1);
+}

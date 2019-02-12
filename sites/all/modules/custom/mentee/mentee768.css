@@ -1,0 +1,17 @@
+.mentee-profile-form-heading1 { width: 100%;margin: 1%; }
+.mentee-profile-form-heading2 { width: 80%;float: left;text-align: center;font-size: 26px;color: black; }
+.mentee-profile-form-heading3 { width: 100%; overflow: hidden; padding-left: 13px;padding-top: 10px; }
+
+.mentee-profile-form-element1 { float: left; margin-bottom: 5px; }
+.mentee-profile-form-element2 { width: 100%; }
+.mentee-profile-form-element3 { margin-left: 2%; color: orange; }
+.mentee-profile-form-element4 { float: left; background-color: white; border-radius: 3px; border: 1px solid black; width: 90%; padding: 1%; margin: 1%; }
+.mentee-profile-form-element5 { float: left; overflow: auto; height: 100px;width: 100%; }
+.mentee-profile-form-element6 { float: left;width: 97%; }
+.mentee-profile-form-element7 { margin-left: 3%; color: black; }
+.mentee-profile-form-element10 { min-width: 35%; }
+
+.mentee-profile-form-block-heading1 { padding-top: 10px; padding-bottom: 10px; font-size: 14px;background-color: #E3E3F8; }
+.mentee-profile-form-block-heading2 { color: black; font-size: 16px; background-color: rgb(245, 253, 255); margin-top: 5%; padding: 2%; width: 96%; border-top: 2px solid black; } 
+
+#mentee-form .form-textarea , #mentee-form .form-text { font-weight:bold; height:40%; border:1px solid #514B4B; }

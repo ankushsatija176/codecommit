@@ -1,0 +1,77 @@
+ ctools.module      | 15 +++++++++++++++
+ js/autocomplete.js | 40 ++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 55 insertions(+)
+
+diff --git a/ctools.module b/ctools.module
+index 7dfc989..3136ca9 100644
+--- a/ctools.module
++++ b/ctools.module
+@@ -800,6 +800,21 @@ function ctools_modules_enabled($modules) {
+ }
+ 
+ /**
++ * Implements hook_library_alter().
++ */
++function ctools_library_alter(&$libraries, $module) {
++  if ($module == 'system' && isset($libraries['drupal.autocomplete'])) {
++    $libraries['drupal.autocomplete']['js'] += array(
++      drupal_get_path('module', 'ctools') . '/js/autocomplete.js' => array(
++        'group' => JS_DEFAULT,
++        // Load this file after the core autocomplete.js.
++        'weight' => 1,
++      ),
++    );
++  }
++}
++
++/**
+  * Menu theme callback.
+  *
+  * This simply ensures that Panels ajax calls are rendered in the same
+diff --git a/js/autocomplete.js b/js/autocomplete.js
+new file mode 100644
+index 0000000..1099618
+--- /dev/null
++++ b/js/autocomplete.js
+@@ -0,0 +1,40 @@
++(function ($) {
++
++/**
++ * Positions the suggestions popup and starts a search.
++ *
++ * Overrides the core function to account for the scroll offset of a CTools
++ * modal. The core overlay uses the entire window for the scrolling so it does
++ * not encounter this problem.
++ */
++Drupal.jsAC.prototype.populatePopup = function () {
++  var $input = $(this.input);
++  var position = $input.position();
++
++  var $modalContent = $('#modal-content');
++  var scrollOffset = 0;
++  if ($modalContent) {
++    scrollOffset = $('#modal-content').scrollTop();
++  }
++
++  // Show popup.
++  if (this.popup) {
++    $(this.popup).remove();
++  }
++  this.selected = false;
++  this.popup = $('<div id="autocomplete"></div>')[0];
++  this.popup.owner	 = this;
++  $(this.popup).css({
++    top: parseInt(position.top + this.input.offsetHeight + scrollOffset, 10) + 'px',
++    left: parseInt(position.left, 10) + 'px',
++    width: $input.innerWidth() + 'px',
++    display: 'none'
++  });
++  $input.before(this.popup);
++
++  // Do search.
++  this.db.owner = this;
++  this.db.search(this.input.value);
++};
++
++})(jQuery);
+

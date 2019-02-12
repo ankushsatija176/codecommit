@@ -1,0 +1,9 @@
+.rftextarea {
+    border: 1px solid #C0C0C0;
+  }
+  .email-textarea{
+  height: 20px;
+  }
+  .textAreaForEmail {
+  height: 50px !important;
+  }

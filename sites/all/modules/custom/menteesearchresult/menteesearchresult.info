@@ -1,0 +1,4 @@
+name = Mentee Search Result 
+description = "Mentee Search Results"
+package = menteesearchresult
+core = 7.x
